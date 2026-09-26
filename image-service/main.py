@@ -11,9 +11,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "image-service"}
+
 
 @app.get("/")
 def root():

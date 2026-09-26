@@ -123,14 +123,19 @@ Debido al aislamiento de dependencias entre Windows y Linux, cuando agregas una 
    * `vagrant rsync-auto` sincronizará inmediatamente estos dos archivos a la VM.
 
 2. **Instalar en el Contenedor Docker (para Ejecución en Linux):**
+   > [!IMPORTANT]
+   > Al entrar por SSH (`vagrant ssh`), inicias en `/home/vagrant`. **Siempre debes hacer `cd` a la carpeta del proyecto** (`/home/vagrant/palabrio`) antes de invocar `docker compose`, o de lo contrario Docker no encontrará el archivo de configuración.
+
    * **Opción Rápida (Recomendada, en caliente):**
      ```bash
-     # Dentro de la VM Vagrant (o vía docker compose exec):
+     # Dentro de la VM Vagrant:
+     cd /home/vagrant/palabrio
      docker compose exec core-service bun add elysia
      ```
      *Toma un par de segundos y no detiene los contenedores.*
    * **Opción Reconstrucción Limpia:**
      ```bash
+     cd /home/vagrant/palabrio
      docker compose up -d --build core-service
      ```
 
@@ -140,14 +145,51 @@ Debido al aislamiento de dependencias entre Windows y Linux, cuando agregas una 
    Edita [image-service/requirements.txt](file:///C:/Users/OGSha/OneDrive/Escritorio/Developer/Web%20Development/Palabrario/image-service/requirements.txt) agregando el paquete (ejemplo: `httpx>=0.27.0`).
 2. **Aplicar en el Contenedor Docker:**
    ```bash
+   cd /home/vagrant/palabrio
    docker compose exec image-service pip install -r requirements.txt
    ```
    *(O si prefieres build limpio: `docker compose up -d --build image-service`)*.
 
 ### Tabla Resumen de Comandos
 
-| Acción | Comando en Windows (Terminal Host) | Comando en Docker (Dentro de Vagrant) |
+| Acción | Comando en Windows (Terminal Host) | Comando en Docker (Dentro de Vagrant tras `cd /home/vagrant/palabrio`) |
 | :--- | :--- | :--- |
 | **Añadir dependencia Bun** | `cd core-service; bun add <pkg>` | `docker compose exec core-service bun add <pkg>` |
 | **Remover dependencia Bun** | `cd core-service; bun remove <pkg>` | `docker compose exec core-service bun remove <pkg>` |
 | **Añadir dependencia Python**| Editar `requirements.txt` | `docker compose exec image-service pip install -r requirements.txt` |
+
+---
+
+## 6. Procedimiento de Cerrado y Apagado Ordenado
+
+Para evitar corrupción de datos en **PostgreSQL** (evitar que queden bloqueos o archivos `postmaster.pid` huérfanos) y cerrar la infraestructura limpiamente al terminar tu jornada:
+
+```mermaid
+flowchart LR
+    A["1. Detener rsync en Windows (Ctrl + C)"] --> B["2. Detener contenedores Docker"]
+    B --> C["3. Salir del SSH (exit)"]
+    C --> D["4. Apagar VM (vagrant halt)"]
+```
+
+### Paso a paso:
+
+1. **Detener la sincronización en Windows:**
+   En la terminal donde corre `vagrant rsync-auto`, presiona `Ctrl + C`.
+
+2. **Detener los Contenedores Docker (Dentro de la VM):**
+   ```bash
+   # Dentro de /home/vagrant/palabrio:
+   docker compose down
+   # (o 'docker compose stop' si solo deseas pausarlos rápidamente)
+   ```
+
+3. **Salir de la sesión SSH:**
+   ```bash
+   exit
+   ```
+
+4. **Apagar la Máquina Virtual (Desde Windows):**
+   En tu terminal de PowerShell en Windows:
+   ```powershell
+   vagrant halt
+   ```

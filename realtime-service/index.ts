@@ -1,13 +1,10 @@
-const server = Bun.serve({
-  port: Number(process.env.PORT) || 8001,
-  hostname: "0.0.0.0",
-  fetch(req, server) {
-    const url = new URL(req.url);
-    if (url.pathname === "/health") {
-      return Response.json({ status: "ok", service: "realtime-service" });
-    }
-    return Response.json({ message: "Palabrario Realtime Service activo" });
-  },
-});
+import Elysia from "elysia";
 
-console.log(`⚡ [realtime-service] corriendo en http://${server.hostname}:${server.port}`);
+const app = new Elysia()
+  .get("/", "Bienvenido a Palabrario Realtime Service (Bun + Elysia)")
+  .get("/health", { status: "ok", service: "realtime-service" });
+
+app.listen(process.env.PORT || 8001);
+console.log(
+  `⚡ [realtime-service] corriendo en http://${app.server?.hostname}:${app.server?.port}`,
+);

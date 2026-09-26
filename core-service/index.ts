@@ -1,13 +1,11 @@
-const server = Bun.serve({
-  port: Number(process.env.PORT) || 8000,
-  hostname: "0.0.0.0",
-  fetch(req) {
-    const url = new URL(req.url);
-    if (url.pathname === "/health") {
-      return Response.json({ status: "ok", service: "core-service" });
-    }
-    return Response.json({ message: "Bienvenido a Palabrario Core API (Bun)" });
-  },
-});
+import Elysia from "elysia";
 
-console.log(`🚀 [core-service] corriendo en http://${server.hostname}:${server.port}`);
+const app = new Elysia()
+  .get("/", "Bienvenido a Palabrario Core API (Bun + Elysia)")
+  .get("/health", () => ({ status: "ok", service: "core-service" }));
+
+app.listen(process.env.PORT || 8000);
+
+console.log(
+  `🚀 [core-service] corriendo en http://${app.server?.hostname}:${app.server?.port}`,
+);
