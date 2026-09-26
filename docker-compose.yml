@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PGUSER:-postgres}
+      POSTGRES_PASSWORD: ${PGPASSWORD:-postgres}
+      POSTGRES_DB: ${PGDATABASE:-palabrario}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  core-service:
+    build:
+      context: ./core-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    env_file:
+      - ./core-service/.env
+    volumes:
+      # Sincronización en vivo del código
+      - ./core-service:/app
+      # Aislamiento para evitar sobreescribir dependencias de Linux con Windows
+      - /app/node_modules
+    command: bun --watch run index.ts
+
+  realtime-service:
+    build:
+      context: ./realtime-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./realtime-service/.env
+    volumes:
+      - ./realtime-service:/app
+      - /app/node_modules
+    command: bun --watch run index.ts
+
+  image-service:
+    build:
+      context: ./image-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    env_file:
+      - ./image-service/.env
+    volumes:
+      # Montaje para hot-reload de FastAPI/Uvicorn
+      - ./image-service:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8002 --reload
+
+volumes:
+  postgres_data:

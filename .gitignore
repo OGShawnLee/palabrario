@@ -1,0 +1,68 @@
+# ==========================================
+# Vagrant & VirtualBox
+# ==========================================
+.vagrant/
+*.log
+
+# ==========================================
+# Environment Variables & Secrets
+# ==========================================
+.env
+.env*.local
+!.env.example
+
+# ==========================================
+# JavaScript / TypeScript / Bun
+# ==========================================
+**/node_modules/
+dist/
+build/
+out/
+.cache/
+*.tsbuildinfo
+.eslintcache
+
+# ==========================================
+# Python & FastAPI (image-service)
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+
+# ==========================================
+# Databases & Docker
+# ==========================================
+postgres_data/
+*.sqlite
+*.sqlite3
+
+# ==========================================
+# OS & IDEs
+# ==========================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editors
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.sublime-workspace
+*.sublime-project
