@@ -9,7 +9,7 @@ Vagrant.configure("2") do |config|
 
   config.vm.synced_folder ".", "/home/vagrant/palabrio",
     type: "rsync",
-    rsync__exclude: ["**/build/", "**/node_modules/", ".git/", "local-app/"]
+    rsync__exclude: ["**/build/", "**/node_modules/", ".git/", "local-app/", "local-app-prototype/"]
 
   config.vm.network "forwarded_port", guest: 8000, host: 8000  # core-service
   config.vm.network "forwarded_port", guest: 8001, host: 8001  # realtime-service

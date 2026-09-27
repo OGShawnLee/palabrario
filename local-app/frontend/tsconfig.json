@@ -14,7 +14,13 @@
       "ESNext",
       "DOM"
     ],
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@view/*": ["./src/view/*"],
+      "@component/*": ["./src/component/*"]
+    }
   },
   "include": [
     "src/**/*.ts",

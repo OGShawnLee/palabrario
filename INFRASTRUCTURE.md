@@ -157,10 +157,31 @@ Debido al aislamiento de dependencias entre Windows y Linux, cuando agregas una 
 | **Añadir dependencia Bun** | `cd core-service; bun add <pkg>` | `docker compose exec core-service bun add <pkg>` |
 | **Remover dependencia Bun** | `cd core-service; bun remove <pkg>` | `docker compose exec core-service bun remove <pkg>` |
 | **Añadir dependencia Python**| Editar `requirements.txt` | `docker compose exec image-service pip install -r requirements.txt` |
+| **Introspección Drizzle (SQL-First)** | `cd core-service; bun run db:pull` | `docker compose exec core-service bun run db:pull` |
 
 ---
 
-## 6. Procedimiento de Cerrado y Apagado Ordenado
+## 6. Flujo de Base de Datos (SQL Schema-First con Drizzle)
+
+El proyecto sigue una arquitectura **SQL-First**:
+1. **Definición Canónica:** Todo el esquema vive en [SCHEMA_FINAL.sql](file:///C:/Users/OGSha/OneDrive/Escritorio/Developer/Web%20Development/Palabrario/SCHEMA_FINAL.sql) en la raíz, incluyendo extensiones (`unaccent`, `pg_trgm`), índices GIN de búsqueda FTS y triggers.
+2. **Inicialización Automática en Docker:**
+   En [docker-compose.yml](file:///C:/Users/OGSha/OneDrive/Escritorio/Developer/Web%20Development/Palabrario/docker-compose.yml), el archivo `SCHEMA_FINAL.sql` se monta como volumen en:
+   ```yaml
+   - ./SCHEMA_FINAL.sql:/docker-entrypoint-initdb.d/init.sql:ro
+   ```
+   PostgreSQL ejecuta este archivo automáticamente en su primer arranque.
+3. **Generación de Tipos TypeScript (Introspección):**
+   Para extraer el esquema hacia TypeScript sin programarlo manualmente:
+   ```bash
+   cd core-service
+   bun run db:pull
+   ```
+   Drizzle leerá las tablas creadas en PostgreSQL y generará el esquema tipado en TypeScript.
+
+---
+
+## 7. Procedimiento de Cerrado y Apagado Ordenado
 
 Para evitar corrupción de datos en **PostgreSQL** (evitar que queden bloqueos o archivos `postmaster.pid` huérfanos) y cerrar la infraestructura limpiamente al terminar tu jornada:
 

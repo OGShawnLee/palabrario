@@ -5,7 +5,9 @@ export default defineConfig({
     presetWebFonts({
       provider: "fontshare",
       fonts: {
-        "satoshi": "Satoshi"
+        "satoshi": "Satoshi",
+        "ranade": "Ranade",
+        "mono": "Supreme",
       }
     }),
     presetWind3()

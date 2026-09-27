@@ -9,6 +9,13 @@
     "allowJs": true,
     "types": ["bun"],
 
+    "paths": {
+      "@router/*": ["./src/router/*"],
+      "@drizzle/*": ["./src/drizzle/*"],
+      "@db/*": ["./src/db/*"],
+      "@schema": ["./drizzle/schema.ts"]
+    },
+
     // Bundler mode
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
