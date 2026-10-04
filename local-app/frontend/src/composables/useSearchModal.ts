@@ -1,5 +1,6 @@
 import { ref } from "vue";
 import { onKeyStroke } from "@vueuse/core";
+import router from "@/router";
 
 // Estado reactivo global del SearchModal
 const isSearchOpen = ref(false);
@@ -21,6 +22,13 @@ export function useSearchModal() {
   onKeyStroke(["k", "K"], (e) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
+      // Si estamos en la ruta de Diccionario, delegamos al buscador principal de la vista
+      if (router.currentRoute.value?.path === "/dictionary") {
+        window.dispatchEvent(
+          new CustomEvent("palabrario:focus-dictionary-search")
+        );
+        return;
+      }
       toggleSearch();
     }
   });

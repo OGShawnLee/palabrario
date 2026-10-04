@@ -1,434 +1,214 @@
 <script lang="ts" setup>
 import { ref } from "vue";
 
-// Feedback al copiar códigos HEX
-const copiedColor = ref<string | null>(null);
+// Feedback al copiar códigos HEX o clases
+const copiedToken = ref<string | null>(null);
 
 function copyToClipboard(text: string) {
   navigator.clipboard.writeText(text);
-  copiedColor.value = text;
+  copiedToken.value = text;
   setTimeout(() => {
-    copiedColor.value = null;
+    copiedToken.value = null;
   }, 1800);
 }
 
-// 1. Colores de Fondo y Superficie (Canvas & Containers)
-const surfaceColors = [
+// 1. Pilares Esenciales del Sistema (Tokens Canónicos de uno.config.ts)
+const coreTokens = [
   {
-    name: "Peach Cream (Canvas Base)",
-    hex: "#F8D9C8",
-    category: "Canvas Principal",
-    role: "Fondo global de la aplicación, cálido, retro y acogedor",
-  },
-  {
-    name: "Pure Ivory White (Surface)",
-    hex: "#FFFFFF",
-    category: "Superficie Limpia",
-    role: "Tarjeta hero destacada (Palabra del día), tags y botones inactivos",
-  },
-  {
-    name: "Warm Cream Soft (Blurb / Callout)",
-    hex: "#FAF0E8",
-    category: "Contenedores Internos",
-    role: "Fondos de cajas de texto explicativo (blurbs) y pills informativas",
-  },
-  {
-    name: "Nav Shell Peach",
-    hex: "#F2C9B5",
-    category: "Navegación",
-    role: "Cápsula contenedora de píldoras de navegación en el header",
-  },
-  {
-    name: "Melocotón Cálido (Card Popote)",
-    hex: "#F3C68F",
-    category: "Tarjeta Pastel",
-    role: "Fondo tarjeta 1: modismos populares y expresiones alegres",
-  },
-  {
-    name: "Menta Pastel (Card Guagua)",
-    hex: "#A7C8C7",
-    category: "Tarjeta Pastel",
-    role: "Fondo tarjeta 2: palabras caribeñas, andinas y contrastes frescos",
-  },
-  {
-    name: "Terracota Pastel (Card Tianguis)",
-    hex: "#E6AA94",
-    category: "Tarjeta Pastel",
-    role: "Fondo tarjeta 3: palabras de origen náhuatl, mercados e identidad",
-  },
-  {
-    name: "Trigo Dorado Pastel (Card Chamba)",
-    hex: "#F7D8A5",
-    category: "Tarjeta Pastel",
-    role: "Fondo tarjeta 4: jerga laboral, esfuerzo cotidiano y dichos",
-  },
-];
-
-// 2. Colores de Texto y Tipografía (Typography Tokens escaneados de GUIHomeView)
-const typographyColors = [
-  {
-    name: "Chocolate Deep (Titulares / Maestro)",
-    hex: "#5C2B16",
-    role: "Titular principal de sección, logo, definiciones destacadas y lemas",
-  },
-  {
-    name: "Chocolate Popote (Card Text 1)",
-    hex: "#5C2B16",
-    role: "Texto principal, tag y descripción sobre fondo Melocotón (#F3C68F)",
-  },
-  {
-    name: "Deep Forest Teal (Card Text 2)",
-    hex: "#1C3D3C",
-    role: "Texto exclusivo de alto contraste sobre fondo Menta (#A7C8C7)",
-  },
-  {
-    name: "Clay Rust Mocha (Card Text 3)",
-    hex: "#4A2016",
-    role: "Texto exclusivo de alto contraste sobre fondo Terracota (#E6AA94)",
-  },
-  {
-    name: "Deep Golden Bronze (Card Text 4)",
-    hex: "#54350A",
-    role: "Texto exclusivo de alto contraste sobre fondo Trigo Dorado (#F7D8A5)",
-  },
-  {
-    name: "Warm Earth Brown (Subtítulos Hero)",
-    hex: "#6E3620",
-    role: "Párrafos descriptivos debajo de títulos masivos en fondo melocotón",
-  },
-  {
-    name: "Soft Roast Brown (Blurbs Explicativos)",
-    hex: "#7A3F29",
-    role: "Párrafos amenos dentro de cajas de notas y orígenes lingüísticos",
-  },
-  {
-    name: "Rust Terracotta (Fonética & Raíces)",
-    hex: "#9D5438",
-    role: "Etimología náhuatl/latina, transcripción fonética AFI y metadatos",
-  },
-  {
-    name: "Terracotta Accent (Enlaces & Acentos)",
+    name: "Terracota Brand",
+    token: "bg-brand",
+    textClass: "text-brand",
     hex: "#8D3B2B",
-    role: "Textos interactivos, 'Ver más', subtítulo del logo y preguntas reflexivas",
+    category: "Marca & Acción",
+    role: "Botones primarios, enlaces activos y acentos destacados",
   },
   {
-    name: "Display Ivory White (Texto Hero)",
-    hex: "#FFFFFF",
-    role: "Texto masivo 'HABLAMOS' de 72px sobre el canvas melocotón",
-  },
-];
-
-// 3. Acentos, Bordes y Estados Interactivos
-const interactiveAndBorders = [
-  {
-    name: "Terracotta Brand (Primary / Pill)",
-    hex: "#8D3B2B",
-    role: "Botones principales ('Jugar Trivia', 'Ver'), píldora activa y logo",
-  },
-  {
-    name: "Deep Terracotta (Hover Estado 1)",
-    hex: "#772F21",
-    role: "Estado hover del botón píldora 'Jugar Trivia'",
-  },
-  {
-    name: "Dark Rust (Hover Estado 2)",
+    name: "Terracota Dark",
+    token: "bg-brand-dark",
+    textClass: "text-brand-dark",
     hex: "#722A1E",
-    role: "Estado hover del botón circular 'Ver' de la tarjeta Hero",
+    category: "Marca (Hover)",
+    role: "Estados hover y active de botones de acción",
   },
   {
-    name: "Salmon Border Primary",
+    name: "Canvas Melocotón",
+    token: "bg-canvas",
+    textClass: "text-chocolate",
+    hex: "#F8D9C8",
+    category: "Canvas Global",
+    role: "Fondo cálido y acogedor de toda la aplicación",
+  },
+  {
+    name: "Superficie Crema",
+    token: "bg-surface",
+    textClass: "text-chocolate",
+    hex: "#FAF0E8",
+    category: "Superficie Suave",
+    role: "Fondo de modales, blurbs y contenedores secundarios",
+  },
+  {
+    name: "Chocolate Profundo",
+    token: "text-chocolate",
+    textClass: "text-chocolate",
+    hex: "#5C2B16",
+    category: "Tipografía Única",
+    role: "Color único de texto (la jerarquía se logra con opacidades)",
+  },
+  {
+    name: "Borde Salmón",
+    token: "border-border",
+    textClass: "text-chocolate",
     hex: "#EFC1AC",
-    role: "Borde principal de tarjetas hero, divisores y píldora de sección",
-  },
-  {
-    name: "Nav Border Ochre",
-    hex: "#E8B8A2",
-    role: "Borde de contorno de la barra de navegación del header",
-  },
-  {
-    name: "Badge Border Ochre",
-    hex: "#DEAC96",
-    role: "Borde del pill 'Diccionario Dialectal Vivo'",
-  },
-  {
-    name: "Blurb Border Sand",
-    hex: "#F0D5C5",
-    role: "Borde sutil para la caja de explicaciones lingüísticas",
+    category: "Borde Canónico",
+    role: "Divisor único y contorno estándar de toda la UI",
   },
 ];
 
-// 4. Pares Oficiales: Fondo + Color de Texto Correspondiente
-const colorPairings = [
+// 2. Acentos Pasteles Temáticos (Colecciones Dialectales)
+const thematicAccents = [
   {
-    id: "card-popote",
-    title: "Tarjeta Popote • Melocotón + Chocolate",
-    bgHex: "#F3C68F",
-    bgName: "Melocotón Cálido",
+    name: "Melocotón Pastel",
+    bgClass: "bg-pastel-peach",
+    textClass: "text-chocolate",
+    hex: "#F3C68F",
     textHex: "#5C2B16",
-    textName: "Chocolate Profundo",
-    tagHex: "#5C2B16",
-    tagBg: "rgba(255, 255, 255, 0.7)",
-    sampleWord: "POPOTE",
-    sampleSub: "Tubo para beber",
-    sampleDesc: "En Colombia dicen 'pitillo', en Argentina 'sorbete' y en España 'pajita'.",
+    tag: "TRADICIÓN POPULAR",
+    lemma: "POPOTE",
+    sub: "Tubo para beber",
+    desc: "En Colombia dicen 'pitillo', en Argentina 'sorbete' y en España 'pajita'.",
     emoji: "🥤",
-    tagText: "MÉXICO 🇲🇽",
-    notes: "Máximo confort visual; el chocolate oscuro (#5C2B16) sobre el melocotón anaranjado suave garantiza legibilidad óptima sin dureza.",
   },
   {
-    id: "card-guagua",
-    title: "Tarjeta Guagua • Menta + Forest Teal",
-    bgHex: "#A7C8C7",
-    bgName: "Menta Pastel Suave",
+    name: "Menta Pastel",
+    bgClass: "bg-pastel-mint",
+    textClass: "text-forest",
+    hex: "#A7C8C7",
     textHex: "#1C3D3C",
-    textName: "Deep Forest Teal",
-    tagHex: "#1C3D3C",
-    tagBg: "rgba(255, 255, 255, 0.7)",
-    sampleWord: "GUAGUA",
-    sampleSub: "Autobús / Bebé",
-    sampleDesc: "En La Habana es el camión urbano; en Santiago es un tierno bebé de brazos.",
+    tag: "CARIBE & CHILE",
+    lemma: "GUAGUA",
+    sub: "Autobús / Bebé de brazos",
+    desc: "En La Habana es el camión urbano; en Santiago es un tierno bebé.",
     emoji: "🚌",
-    tagText: "CARIBE & CHILE 🇨🇺 🇨🇱",
-    notes: "Uso crucial de verde bosque profundo (#1C3D3C) para evitar la pérdida de contraste propia de tipografías marrones sobre cian/menta.",
   },
   {
-    id: "card-tianguis",
-    title: "Tarjeta Tianguis • Rosa Arcilla + Mocha Rust",
-    bgHex: "#E6AA94",
-    bgName: "Rosa Arcilla Pastel",
-    textHex: "#4A2016",
-    textName: "Mocha Rust Oscuro",
-    tagHex: "#4A2016",
-    tagBg: "rgba(255, 255, 255, 0.7)",
-    sampleWord: "TIANGUIS",
-    sampleSub: "Mercado ambulante",
-    sampleDesc: "Bazar sobre ruedas con toldos coloridos que se instala una vez por semana.",
+    name: "Arcilla Pastel",
+    bgClass: "bg-pastel-clay",
+    textClass: "text-chocolate",
+    hex: "#E6AA94",
+    textHex: "#5C2B16",
+    tag: "NÁHUATL 🇲🇽",
+    lemma: "TIANGUIS",
+    sub: "Mercado ambulante",
+    desc: "Bazar sobre ruedas con toldos coloridos que se instala una vez por semana.",
     emoji: "🎪",
-    tagText: "NÁHUATL 🇲🇽",
-    notes: "Tonalidad etimológica que evoca cerámica y tierra. El marrón rojizo (#4A2016) realza la calidez cultural del náhuatl.",
   },
   {
-    id: "card-chamba",
-    title: "Tarjeta Chamba • Trigo Cremoso + Bronce Ambarino",
-    bgHex: "#F7D8A5",
-    bgName: "Trigo Cremoso Pastel",
+    name: "Trigo Pastel",
+    bgClass: "bg-pastel-wheat",
+    textClass: "text-bronze",
+    hex: "#F7D8A5",
     textHex: "#54350A",
-    textName: "Deep Golden Bronze",
-    tagHex: "#54350A",
-    tagBg: "rgba(255, 255, 255, 0.7)",
-    sampleWord: "CHAMBA",
-    sampleSub: "Trabajo / Empleo",
-    sampleDesc: "Labor cotidiana y honrada para ganarse el pan con orgullo.",
+    tag: "COLOQUIAL",
+    lemma: "CHAMBA",
+    sub: "Trabajo / Empleo",
+    desc: "Labor cotidiana y honrada para ganarse el pan con orgullo.",
     emoji: "💼",
-    tagText: "COLOQUIAL 🇲🇽",
-    notes: "El color de texto (#54350A) incorpora pigmentos dorados oscuros que respetan la armonía cromática del amarillo crema.",
+  },
+];
+
+// 3. Jerarquía Tipográfica por Opacidad con un solo color (Chocolate)
+const typographyLevels = [
+  {
+    title: "Titulares Masivos & Énfasis (100%)",
+    token: "text-chocolate",
+    specimen: "HABLAMOS MIL ESPAÑOLES",
+    desc: "Títulos principales, nombres de palabras (lemmas), números de conteo y logotipo.",
+    classes: "text-2xl sm:text-3xl font-black uppercase tracking-tight text-chocolate",
   },
   {
-    id: "canvas-hero",
-    title: "Canvas Maestro • Melocotón Base + Titular Doble Tono",
-    bgHex: "#F8D9C8",
-    bgName: "Peach Cream Base",
-    textHex: "#5C2B16",
-    textName: "Chocolate & Blanco Nieve",
-    tagHex: "#8D3B2B",
-    tagBg: "#EFC1AC",
-    sampleWord: "HABLAMOS MIL ESPAÑOLES",
-    sampleSub: "Párrafo en #6E3620 (Warm Earth Brown)",
-    sampleDesc: "Descubre los giros, modismos y palabras únicas que nos unen y nos distinguen en México e Hispanoamérica.",
-    emoji: "🗣️",
-    tagText: "DICCIONARIO VIVO",
-    notes: "El fondo de la app utiliza un titular híbrido: la primera línea en blanco puro (#FFFFFF) y la segunda en marrón chocolate (#5C2B16).",
+    title: "Cuerpo y Lectura Principal (80%)",
+    token: "text-chocolate/80",
+    specimen: "Descubre los giros, modismos y palabras únicas que nos unen y nos distinguen en México y toda Hispanoamérica.",
+    desc: "Párrafos de bienvenida, explicaciones amenas y descripciones principales de tarjetas.",
+    classes: "text-sm sm:text-base font-medium text-chocolate/80 leading-relaxed",
   },
   {
-    id: "hero-card",
-    title: "Tarjeta Hero • Marfil Puro + Chocolate + Blurb Sand",
-    bgHex: "#FFFFFF",
-    bgName: "Ivory White (Surface)",
-    textHex: "#5C2B16",
-    textName: "Chocolate + Nota #7A3F29",
-    tagHex: "#8D3B2B",
-    tagBg: "#F8D9C8",
-    sampleWord: "APAPACHAR",
-    sampleSub: "Del náhuatl papatzoa • /a.pa.pa't͡ʃaɾ/ (#9D5438)",
-    sampleDesc: "Caja de lectura en fondo #FAF0E8 con borde #F0D5C5 y texto #7A3F29.",
-    emoji: "💖",
-    tagText: "PALABRA DEL DÍA",
-    notes: "Contenedor principal de máxima jerarquía con borde #EFC1AC, botón circular de acción #8D3B2B y texto enriquecido con fonética.",
+    title: "Metadatos, Fonética y Etiquetas (70%)",
+    token: "text-chocolate/70",
+    specimen: "Del náhuatl papatzoa • /a.pa.pa't͡ʃaɾ/ • 38 Palabras disponibles",
+    desc: "Transcripción fonética AFI, etimologías, glosas secundarias y contadores.",
+    classes: "text-xs font-bold text-chocolate/70",
+  },
+  {
+    title: "Placeholders y Atajos Tenues (40%)",
+    token: "text-chocolate/40",
+    specimen: "Buscar palabra, giro dialectal o raíz... (Ctrl + K)",
+    desc: "Textos de ayuda dentro de cajas de búsqueda, divisores o indicadores discretos.",
+    classes: "text-xs font-bold text-chocolate/40 tracking-tight",
   },
 ];
 </script>
 
 <template>
   <div
-    class="flex-1 max-w-6xl w-full mx-auto px-6 py-10 space-y-14 animate-fade-in"
+    class="flex-1 max-w-6xl w-full mx-auto px-6 py-10 space-y-14 animate-fade-in font-['Satoshi',sans-serif]"
   >
     <!-- Encabezado del Design System -->
-    <section class="border-b-2 border-[#EFC1AC] pb-8">
+    <section class="border-b-2 border-border pb-8">
       <div class="flex items-center gap-2 mb-3">
         <span
-          class="px-3.5 py-1 rounded-full bg-[#8D3B2B] text-white text-xs font-black uppercase tracking-widest"
+          class="px-3.5 py-1 rounded-full bg-brand text-white text-xs font-black uppercase tracking-widest"
         >
-          Design Tokens & Guidelines v1.1
+          Design System Esencial
         </span>
         <span
-          class="px-3 py-1 rounded-full bg-[#EFC1AC] text-[#8D3B2B] text-xs font-black uppercase tracking-wider"
+          class="px-3 py-1 rounded-full bg-surface border border-border text-brand text-xs font-black uppercase tracking-wider"
         >
-          UI Scan Completo
+          Paleta Podada • 5 Pilares
         </span>
       </div>
       <h1
-        class="text-4xl sm:text-5xl font-black text-[#5C2B16] uppercase tracking-tight"
+        class="text-4xl sm:text-5xl font-black text-chocolate uppercase tracking-tight"
       >
         Palabrario Design Language
       </h1>
       <p
-        class="text-base text-[#6E3620] font-medium mt-2 max-w-3xl leading-relaxed"
+        class="text-base text-chocolate/80 font-medium mt-2 max-w-3xl leading-relaxed"
       >
-        Sistema de diseño escaneado directamente de la interfaz de Palabrario.
-        Combina una paleta retro-cálida inspirada en tonos melocotón, chocolates
-        orgánicos y colores pastel temáticos con combinaciones calibradas de
-        texto y fondo para garantizar contraste y calidez.
+        Sistema de diseño consolidado y libre de redundancias. Se eliminaron micro-tonos
+        duplicados para dejar solo los 5 pilares esenciales de Palabrario, usando opacidades
+        nativas para la jerarquía textual.
       </p>
     </section>
 
-    <!-- NUEVA SECCIÓN DESTACADA: COMBINACIONES COLOR DE TEXTO + FONDO CORRESPONDIENTE -->
-    <section class="space-y-6">
-      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-[#EFC1AC] pb-4">
-        <div>
-          <div class="inline-block px-3 py-0.5 rounded-full bg-[#8D3B2B] text-white text-[10px] font-black uppercase tracking-widest mb-1.5">
-            Pares Calibrados de Contraste
-          </div>
-          <h2 class="text-2xl sm:text-3xl font-black uppercase tracking-tight text-[#5C2B16]">
-            1. Text & Background Pairings (Color de Texto con su Fondo)
-          </h2>
-          <p class="text-xs font-bold uppercase tracking-wider text-[#8D3B2B] mt-1">
-            Cada tarjeta y superficie utiliza su propio color de texto calibrado para evitar pérdida de legibilidad en tonos pastel.
-          </p>
-        </div>
-      </div>
-
-      <!-- Cuadrícula interactiva de combinaciones -->
-      <div class="grid md:grid-cols-2 gap-6">
-        <div
-          v-for="pair in colorPairings"
-          :key="pair.id"
-          class="rounded-[30px] p-6 border-2 border-white/60 shadow-md flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-lg relative overflow-hidden"
-          :style="{ backgroundColor: pair.bgHex, color: pair.textHex }"
-        >
-          <!-- Contenido Visual de la Muestra -->
-          <div>
-            <!-- Header de la tarjeta con emoji y píldora de tag -->
-            <div class="flex items-center justify-between mb-4">
-              <span class="text-3xl select-none">{{ pair.emoji }}</span>
-              <span
-                class="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-xs"
-                :style="{ backgroundColor: pair.tagBg, color: pair.tagHex }"
-              >
-                {{ pair.tagText }}
-              </span>
-            </div>
-
-            <!-- Título & Subtítulo con el color exacto -->
-            <h3 class="text-2xl font-black uppercase tracking-tight leading-none mb-1">
-              {{ pair.sampleWord }}
-            </h3>
-            <p class="text-xs font-bold opacity-85 mb-3">
-              {{ pair.sampleSub }}
-            </p>
-
-            <!-- Párrafo demostrativo -->
-            <p class="text-xs leading-relaxed opacity-95 mb-4">
-              {{ pair.sampleDesc }}
-            </p>
-
-            <!-- Nota de Accesibilidad / Diseño -->
-            <div
-              class="p-3 rounded-2xl text-[11px] font-medium leading-snug mb-5 border"
-              :style="{
-                backgroundColor: 'rgba(255, 255, 255, 0.45)',
-                borderColor: 'rgba(0, 0, 0, 0.08)',
-                color: pair.textHex
-              }"
-            >
-              <strong class="font-black uppercase tracking-wider block mb-0.5 text-[10px]">
-                Regla de Aplicación:
-              </strong>
-              {{ pair.notes }}
-            </div>
-          </div>
-
-          <!-- Tokens de Color con Botones de Copiar -->
-          <div class="pt-4 border-t border-black/10 space-y-2">
-            <div class="text-[10px] font-black uppercase tracking-widest opacity-70">
-              Tokens de este Par:
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <!-- Botón Copiar Fondo -->
-              <button
-                @click="copyToClipboard(pair.bgHex)"
-                class="p-2 rounded-xl bg-white/80 hover:bg-white text-black font-mono text-[11px] font-bold border border-black/10 transition-all flex items-center justify-between cursor-pointer active:scale-95 shadow-2xs"
-                :title="`Copiar Fondo ${pair.bgHex}`"
-              >
-                <div class="flex items-center gap-1.5 overflow-hidden text-left">
-                  <span
-                    class="w-3.5 h-3.5 rounded-full border border-black/20 shrink-0"
-                    :style="{ backgroundColor: pair.bgHex }"
-                  ></span>
-                  <span class="truncate">{{ pair.bgHex }}</span>
-                </div>
-                <span class="text-[9px] font-sans font-black shrink-0 ml-1">
-                  {{ copiedColor === pair.bgHex ? '✓' : 'Fondo' }}
-                </span>
-              </button>
-
-              <!-- Botón Copiar Texto -->
-              <button
-                @click="copyToClipboard(pair.textHex)"
-                class="p-2 rounded-xl bg-white/80 hover:bg-white text-black font-mono text-[11px] font-bold border border-black/10 transition-all flex items-center justify-between cursor-pointer active:scale-95 shadow-2xs"
-                :title="`Copiar Texto ${pair.textHex}`"
-              >
-                <div class="flex items-center gap-1.5 overflow-hidden text-left">
-                  <span
-                    class="w-3.5 h-3.5 rounded-full border border-black/20 shrink-0"
-                    :style="{ backgroundColor: pair.textHex }"
-                  ></span>
-                  <span class="truncate">{{ pair.textHex }}</span>
-                </div>
-                <span class="text-[9px] font-sans font-black shrink-0 ml-1">
-                  {{ copiedColor === pair.textHex ? '✓' : 'Texto' }}
-                </span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- SECCIÓN 2: PALETA DE SUPERFICIES Y FONDOS -->
+    <!-- SECCIÓN 1: LOS 5 PILARES ESENCIALES (6 CORE TOKENS) -->
     <section class="space-y-4">
       <div>
-        <h2 class="text-2xl font-black uppercase tracking-tight text-[#5C2B16]">
-          2. Surface & Card Backgrounds (Fondos y Superficies)
+        <div class="inline-block px-3 py-0.5 rounded-full bg-brand text-white text-[10px] font-black uppercase tracking-widest mb-1.5">
+          Núcleo de la Interfaz
+        </div>
+        <h2 class="text-2xl font-black uppercase tracking-tight text-chocolate">
+          1. Pilares Esenciales (Core Tokens)
         </h2>
-        <p class="text-xs font-bold uppercase tracking-wider text-[#8D3B2B] mt-0.5">
-          Haz clic en cualquier botón para copiar el valor HEX al portapapeles.
+        <p class="text-xs font-bold uppercase tracking-wider text-brand mt-0.5">
+          Haz clic en cualquier token o código HEX para copiarlo al portapapeles.
         </p>
       </div>
 
-      <div class="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div
-          v-for="color in surfaceColors"
-          :key="color.hex + color.name"
-          class="bg-white/95 rounded-[24px] p-4 border-2 border-[#EFC1AC] shadow-xs flex flex-col justify-between hover:shadow-md transition-all"
+          v-for="token in coreTokens"
+          :key="token.name"
+          class="bg-white/95 rounded-[24px] p-4 border-2 border-border shadow-xs flex flex-col justify-between hover:shadow-md transition-all"
         >
           <!-- Muestra de color -->
           <div
             class="w-full h-20 rounded-2xl border border-black/10 shadow-inner mb-3 flex items-center justify-center font-black text-xs uppercase"
-            :style="{ backgroundColor: color.hex }"
+            :style="{ backgroundColor: token.hex }"
           >
             <span
-              v-if="copiedColor === color.hex"
-              class="px-2.5 py-1 rounded-full bg-[#5C2B16] text-white text-[10px] font-black uppercase tracking-widest animate-bounce shadow-md"
+              v-if="copiedToken === token.hex || copiedToken === token.token"
+              class="px-2.5 py-1 rounded-full bg-white text-chocolate text-[10px] font-black uppercase tracking-widest animate-bounce shadow-md"
             >
               ¡Copiado! ✓
             </span>
@@ -436,248 +216,198 @@ const colorPairings = [
 
           <!-- Información -->
           <div class="space-y-1 mb-3">
-            <span class="text-[9px] font-black uppercase tracking-widest text-[#8D3B2B] block">
-              {{ color.category }}
+            <span class="text-[9px] font-black uppercase tracking-widest text-brand block">
+              {{ token.category }}
             </span>
-            <h3 class="text-xs font-black uppercase text-[#5C2B16] leading-tight">
-              {{ color.name }}
+            <h3 class="text-sm font-black uppercase text-chocolate leading-tight">
+              {{ token.name }}
             </h3>
-            <p class="text-[11px] text-[#7A3F29] leading-snug">
-              {{ color.role }}
+            <p class="text-[11px] text-chocolate/70 leading-snug">
+              {{ token.role }}
             </p>
           </div>
 
-          <!-- Botón de Copiar -->
-          <button
-            @click="copyToClipboard(color.hex)"
-            class="w-full py-1.5 px-3 rounded-full bg-[#FAF0E8] hover:bg-[#8D3B2B] text-[#5C2B16] hover:text-white font-mono font-bold text-xs uppercase tracking-wider border border-[#EFC1AC] transition-all flex items-center justify-between cursor-pointer active:scale-95"
-          >
-            <span>{{ color.hex }}</span>
-            <span class="text-[10px] font-black">Copiar 📋</span>
-          </button>
+          <!-- Botones de Copiar (HEX y Clase) -->
+          <div class="grid grid-cols-2 gap-2 pt-1 border-t border-border/60">
+            <button
+              @click="copyToClipboard(token.hex)"
+              class="py-1 px-2.5 rounded-full bg-surface hover:bg-brand text-chocolate hover:text-white font-supreme font-bold text-xs uppercase transition-all flex items-center justify-between cursor-pointer active:scale-95"
+              title="Copiar código HEX"
+            >
+              <span>{{ token.hex }}</span>
+              <span class="text-[10px]">📋</span>
+            </button>
+            <button
+              @click="copyToClipboard(token.token)"
+              class="py-1 px-2.5 rounded-full bg-surface hover:bg-brand text-brand hover:text-white font-supreme font-bold text-[11px] transition-all flex items-center justify-between cursor-pointer active:scale-95 truncate"
+              title="Copiar clase de UnoCSS"
+            >
+              <span class="truncate">{{ token.token }}</span>
+              <span class="text-[10px] shrink-0 ml-1">✓</span>
+            </button>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- SECCIÓN 3: PALETA DE TEXTO Y TIPOGRAFÍA ESCANEADA -->
+    <!-- SECCIÓN 2: JERARQUÍA TIPOGRÁFICA CON UN SOLO COLOR (CHOCOLATE + OPACIDADES) -->
     <section class="space-y-4">
       <div>
-        <h2 class="text-2xl font-black uppercase tracking-tight text-[#5C2B16]">
-          3. Typography Colors (Colores de Texto Escaneados)
+        <div class="inline-block px-3 py-0.5 rounded-full bg-brand text-white text-[10px] font-black uppercase tracking-widest mb-1.5">
+          Jerarquía Limpia
+        </div>
+        <h2 class="text-2xl font-black uppercase tracking-tight text-chocolate">
+          2. Tipografía & Jerarquía por Opacidad
         </h2>
-        <p class="text-xs font-bold uppercase tracking-wider text-[#8D3B2B] mt-0.5">
-          Todos los tonos de texto detectados en la interfaz, desde titulares pesados hasta fonética y acentos.
+        <p class="text-xs font-bold uppercase tracking-wider text-brand mt-0.5">
+          Un solo color base (<code class="font-supreme text-chocolate font-bold">#5C2B16</code>) resuelve toda la interfaz mediante opacidades nativas.
         </p>
       </div>
 
-      <div class="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div class="bg-white/95 rounded-[32px] p-6 sm:p-8 border-2 border-border shadow-xs space-y-6">
         <div
-          v-for="color in typographyColors"
-          :key="color.name"
-          class="bg-white/95 rounded-[24px] p-4 border-2 border-[#EFC1AC] shadow-xs flex flex-col justify-between hover:shadow-md transition-all"
+          v-for="(item, idx) in typographyLevels"
+          :key="item.title"
+          :class="[
+            'pb-5 space-y-1.5',
+            idx < typographyLevels.length - 1 ? 'border-b border-border' : ''
+          ]"
         >
-          <!-- Muestra de color con texto representativo -->
-          <div
-            class="w-full h-20 rounded-2xl border border-black/10 shadow-inner mb-3 flex flex-col items-center justify-center font-black text-center p-2"
-            :style="{ backgroundColor: color.hex === '#FFFFFF' ? '#5C2B16' : '#FAF0E8' }"
-          >
-            <span
-              class="text-base font-black tracking-tight uppercase"
-              :style="{ color: color.hex }"
-            >
-              Aa Bb
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <span class="text-[10px] font-black uppercase tracking-widest text-brand">
+              {{ item.title }}
             </span>
-            <span
-              v-if="copiedColor === color.hex"
-              class="px-2 py-0.5 mt-1 rounded-full bg-[#8D3B2B] text-white text-[9px] font-black uppercase tracking-widest"
+            <button
+              @click="copyToClipboard(item.token)"
+              class="text-[10px] font-supreme font-black px-2 py-0.5 rounded-full bg-surface hover:bg-brand text-chocolate hover:text-white border border-border cursor-pointer transition"
             >
-              ¡Copiado!
-            </span>
+              {{ item.token }} 📋
+            </button>
           </div>
 
-          <!-- Información -->
-          <div class="space-y-1 mb-3">
-            <h3 class="text-xs font-black uppercase text-[#5C2B16] leading-tight">
-              {{ color.name }}
-            </h3>
-            <p class="text-[11px] text-[#7A3F29] leading-snug">
-              {{ color.role }}
-            </p>
+          <div :class="item.classes">
+            {{ item.specimen }}
           </div>
 
-          <!-- Botón de Copiar -->
-          <button
-            @click="copyToClipboard(color.hex)"
-            class="w-full py-1.5 px-3 rounded-full bg-[#FAF0E8] hover:bg-[#8D3B2B] text-[#5C2B16] hover:text-white font-mono font-bold text-xs uppercase tracking-wider border border-[#EFC1AC] transition-all flex items-center justify-between cursor-pointer active:scale-95"
-          >
-            <span>{{ color.hex }}</span>
-            <span class="text-[10px] font-black">Copiar 📋</span>
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- SECCIÓN 4: ACENTOS, BORDES & ESTADOS HOVER -->
-    <section class="space-y-4">
-      <div>
-        <h2 class="text-2xl font-black uppercase tracking-tight text-[#5C2B16]">
-          4. Interactive States, Accents & Borders (Acentos y Bordes)
-        </h2>
-        <p class="text-xs font-bold uppercase tracking-wider text-[#8D3B2B] mt-0.5">
-          Bordes decorativos, estados hover de botones y elementos interactivos.
-        </p>
-      </div>
-
-      <div class="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        <div
-          v-for="color in interactiveAndBorders"
-          :key="color.hex + color.name"
-          class="bg-white/95 rounded-[24px] p-4 border-2 border-[#EFC1AC] shadow-xs flex flex-col justify-between hover:shadow-md transition-all"
-        >
-          <div
-            class="w-full h-16 rounded-2xl border border-black/10 shadow-inner mb-3 flex items-center justify-center font-black text-xs uppercase"
-            :style="{ backgroundColor: color.hex }"
-          >
-            <span
-              v-if="copiedColor === color.hex"
-              class="px-2.5 py-1 rounded-full bg-[#5C2B16] text-white text-[10px] font-black uppercase tracking-widest animate-bounce shadow-md"
-            >
-              ¡Copiado! ✓
-            </span>
-          </div>
-
-          <div class="space-y-1 mb-3">
-            <h3 class="text-xs font-black uppercase text-[#5C2B16] leading-tight">
-              {{ color.name }}
-            </h3>
-            <p class="text-[11px] text-[#7A3F29] leading-snug">
-              {{ color.role }}
-            </p>
-          </div>
-
-          <button
-            @click="copyToClipboard(color.hex)"
-            class="w-full py-1.5 px-3 rounded-full bg-[#FAF0E8] hover:bg-[#8D3B2B] text-[#5C2B16] hover:text-white font-mono font-bold text-xs uppercase tracking-wider border border-[#EFC1AC] transition-all flex items-center justify-between cursor-pointer active:scale-95"
-          >
-            <span>{{ color.hex }}</span>
-            <span class="text-[10px] font-black">Copiar 📋</span>
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- SECCIÓN 5: TIPOGRAFÍA & JERARQUÍA -->
-    <section class="space-y-4">
-      <div>
-        <h2 class="text-2xl font-black uppercase tracking-tight text-[#5C2B16]">
-          5. Typography & Hierarchy (Tipografía y Jerarquía)
-        </h2>
-        <p class="text-xs font-bold uppercase tracking-wider text-[#8D3B2B] mt-0.5">
-          Fuente principal: <strong>Satoshi</strong> (Geométrica / Grotesque) con pesos de impacto (Bold 700 / Black 900).
-        </p>
-      </div>
-
-      <div
-        class="bg-white/95 rounded-[32px] p-8 border-2 border-[#EFC1AC] shadow-xs space-y-6"
-      >
-        <div class="border-b border-[#EFC1AC] pb-4">
-          <span class="text-[10px] font-black uppercase tracking-widest text-[#8D3B2B] block mb-1">
-            Display Hero • font-black • 72px • text-white / text-[#5C2B16]
-          </span>
-          <span class="text-4xl sm:text-6xl font-black uppercase tracking-tight text-[#5C2B16] leading-none">
-            HABLAMOS MIL ESPAÑOLES
-          </span>
-        </div>
-
-        <div class="border-b border-[#EFC1AC] pb-4">
-          <span class="text-[10px] font-black uppercase tracking-widest text-[#8D3B2B] block mb-1">
-            Heading 1 (Secciones) • font-black • 32px • text-[#5C2B16]
-          </span>
-          <span class="text-2xl sm:text-3xl font-black uppercase tracking-tight text-[#5C2B16]">
-            EXPLORAR VOCABULARIO DESTACADO
-          </span>
-        </div>
-
-        <div class="border-b border-[#EFC1AC] pb-4">
-          <span class="text-[10px] font-black uppercase tracking-widest text-[#8D3B2B] block mb-1">
-            Heading 2 (Card Title) • font-black • 20px • texto específico por tarjeta
-          </span>
-          <div class="flex flex-wrap gap-4 text-xl font-black uppercase tracking-tight">
-            <span class="text-[#5C2B16]">POPOTE</span>
-            <span class="text-[#1C3D3C]">GUAGUA</span>
-            <span class="text-[#4A2016]">TIANGUIS</span>
-            <span class="text-[#54350A]">CHAMBA</span>
-          </div>
-        </div>
-
-        <div class="border-b border-[#EFC1AC] pb-4">
-          <span class="text-[10px] font-black uppercase tracking-widest text-[#8D3B2B] block mb-1">
-            Phonetic & Origin • font-bold • 12px • text-[#9D5438]
-          </span>
-          <p class="text-xs font-bold text-[#9D5438]">
-            Del náhuatl papatzoa • /a.pa.pa't͡ʃaɾ/
-          </p>
-        </div>
-
-        <div>
-          <span class="text-[10px] font-black uppercase tracking-widest text-[#8D3B2B] block mb-1">
-            Body & Friendly Blurb • font-medium • 14-16px • leading-relaxed • text-[#7A3F29] / text-[#6E3620]
-          </span>
-          <p class="text-sm sm:text-base text-[#6E3620] font-medium leading-relaxed max-w-2xl">
-            "En México no solo abrazamos: apapachamos. Es una palabra que no tiene traducción exacta en otros idiomas; implica arropar emocionalmente a alguien cuando más lo necesita."
+          <p class="text-[11px] text-chocolate/70">
+            <strong>Uso:</strong> {{ item.desc }}
           </p>
         </div>
       </div>
     </section>
 
-    <!-- SECCIÓN 6: FORMAS, BORDES Y COMPONENTES -->
+    <!-- SECCIÓN 3: ACENTOS TEMÁTICOS Y TARJETAS DE DESCUBRIMIENTO -->
     <section class="space-y-4">
       <div>
-        <h2 class="text-2xl font-black uppercase tracking-tight text-[#5C2B16]">
-          6. Shapes, Radii & Components (Bordes, Radios y Botones)
+        <div class="inline-block px-3 py-0.5 rounded-full bg-brand text-white text-[10px] font-black uppercase tracking-widest mb-1.5">
+          Colecciones Culturales
+        </div>
+        <h2 class="text-2xl font-black uppercase tracking-tight text-chocolate">
+          3. Tarjetas Culturales de Descubrimiento (4 Variantes)
         </h2>
-        <p class="text-xs font-bold uppercase tracking-wider text-[#8D3B2B] mt-0.5">
-          Geometría orgánica basada en cápsulas (pill) y radios pronunciados (24px a 32px).
+        <p class="text-xs font-bold uppercase tracking-wider text-brand mt-0.5">
+          Los 4 colores pastel reservados para dialectos y colecciones temáticas con su texto calibrado.
+        </p>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div
+          v-for="card in thematicAccents"
+          :key="card.name"
+          :class="[
+            'rounded-[28px] p-5 border-2 border-white shadow-sm flex flex-col justify-between hover:-translate-y-1 transition-all',
+            card.bgClass,
+            card.textClass
+          ]"
+        >
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-3xl select-none">{{ card.emoji }}</span>
+              <span class="text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full bg-white/80 shadow-2xs">
+                {{ card.tag }}
+              </span>
+            </div>
+
+            <h3 class="text-xl font-black uppercase tracking-tight mb-0.5">
+              {{ card.lemma }}
+            </h3>
+            <p class="text-xs font-bold opacity-80 mb-2">
+              {{ card.sub }}
+            </p>
+            <p class="text-xs leading-relaxed opacity-90 mb-4">
+              {{ card.desc }}
+            </p>
+          </div>
+
+          <div class="pt-3 border-t border-black/10 flex items-center justify-between text-[11px] font-black uppercase">
+            <span>{{ card.name }}</span>
+            <button
+              @click="copyToClipboard(card.hex)"
+              class="font-supreme text-[10px] px-2 py-0.5 rounded-md bg-white/80 hover:bg-white text-chocolate cursor-pointer transition shadow-2xs"
+            >
+              {{ card.hex }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 4: COMPONENTES, BORDES Y FORMAS -->
+    <section class="space-y-4">
+      <div>
+        <div class="inline-block px-3 py-0.5 rounded-full bg-brand text-white text-[10px] font-black uppercase tracking-widest mb-1.5">
+          Elementos Visuales
+        </div>
+        <h2 class="text-2xl font-black uppercase tracking-tight text-chocolate">
+          4. Formas, Radios y Botones
+        </h2>
+        <p class="text-xs font-bold uppercase tracking-wider text-brand mt-0.5">
+          Diseño orgánico y amigable con esquinas redondeadas y botones píldora.
         </p>
       </div>
 
       <div class="grid md:grid-cols-3 gap-6">
-        <!-- Card de Radios -->
-        <div class="bg-white/95 rounded-[28px] p-6 border-2 border-[#EFC1AC] space-y-3">
-          <h3 class="text-sm font-black uppercase text-[#5C2B16]">
-            Border Radii (Esquinas)
+        <!-- Radios -->
+        <div class="bg-white/95 rounded-[28px] p-6 border-2 border-border space-y-3">
+          <h3 class="text-sm font-black uppercase text-chocolate">
+            Escala de Radios (Border Radii)
           </h3>
-          <div class="space-y-2 text-xs font-mono text-[#7A3F29]">
-            <div class="p-3 bg-[#FAF0E8] rounded-full border border-[#EFC1AC] text-center font-bold">
+          <div class="space-y-2 text-xs font-supreme text-chocolate/70">
+            <div class="p-3 bg-surface rounded-full border border-border text-center font-bold">
               rounded-full (Píldoras y botones)
             </div>
-            <div class="p-3 bg-[#FAF0E8] rounded-[32px] border border-[#EFC1AC] text-center font-bold">
-              rounded-[32px] (Tarjetas Hero)
+            <div class="p-3 bg-surface rounded-[32px] border border-border text-center font-bold">
+              rounded-[32px] (Tarjetas Hero y Modales)
             </div>
-            <div class="p-3 bg-[#FAF0E8] rounded-[28px] border border-[#EFC1AC] text-center font-bold">
+            <div class="p-3 bg-surface rounded-[28px] border border-border text-center font-bold">
               rounded-[28px] (Tarjetas Grid)
             </div>
-            <div class="p-3 bg-[#FAF0E8] rounded-[24px] border border-[#EFC1AC] text-center font-bold">
+            <div class="p-3 bg-surface rounded-[24px] border border-border text-center font-bold">
               rounded-[24px] (Token Cards)
             </div>
           </div>
         </div>
 
-        <!-- Card de Botones -->
-        <div class="bg-white/95 rounded-[28px] p-6 border-2 border-[#EFC1AC] space-y-4">
-          <h3 class="text-sm font-black uppercase text-[#5C2B16]">
-            Botones & Acciones
+        <!-- Botones -->
+        <div class="bg-white/95 rounded-[28px] p-6 border-2 border-border space-y-4">
+          <h3 class="text-sm font-black uppercase text-chocolate">
+            Botones y Acciones
           </h3>
           <div class="flex flex-col gap-3">
             <button
-              class="px-5 py-2.5 rounded-full bg-[#8D3B2B] hover:bg-[#772F21] text-white font-black text-xs uppercase tracking-wider shadow-sm transition-all cursor-pointer"
+              class="px-5 py-2.5 rounded-full bg-brand hover:bg-brand-dark text-white font-black text-xs uppercase tracking-wider shadow-sm transition-all cursor-pointer"
             >
-              Botón Primario Pill (#8D3B2B)
+              Botón Primario Pill
             </button>
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-[#7A3F29]">Botón Circular CTA:</span>
+            <button
+              class="px-5 py-2.5 rounded-full bg-white hover:bg-canvas text-chocolate font-black text-xs uppercase tracking-wider border-2 border-border transition-all shadow-xs cursor-pointer"
+            >
+              Botón Secundario Outline
+            </button>
+            <div class="flex items-center justify-between pt-1">
+              <span class="text-xs font-bold text-chocolate/70">Botón Circular CTA:</span>
               <button
-                class="w-12 h-12 rounded-full bg-[#8D3B2B] hover:bg-[#722A1E] text-white font-black text-xs uppercase shadow-sm transition-all cursor-pointer flex items-center justify-center"
+                class="w-12 h-12 rounded-full bg-brand hover:bg-brand-dark text-white font-black text-xs uppercase shadow-sm transition-all cursor-pointer flex items-center justify-center"
               >
                 Ver →
               </button>
@@ -685,29 +415,29 @@ const colorPairings = [
           </div>
         </div>
 
-        <!-- Card de Badges & Píldoras -->
-        <div class="bg-white/95 rounded-[28px] p-6 border-2 border-[#EFC1AC] space-y-4">
-          <h3 class="text-sm font-black uppercase text-[#5C2B16]">
-            Píldoras e Insignias
+        <!-- Píldoras e Insignias -->
+        <div class="bg-white/95 rounded-[28px] p-6 border-2 border-border space-y-4">
+          <h3 class="text-sm font-black uppercase text-chocolate">
+            Píldoras e Insignias (Badges)
           </h3>
           <div class="flex flex-wrap gap-2">
             <span
-              class="px-3 py-1 rounded-full bg-[#F8D9C8] text-[#8D3B2B] text-[10px] font-black uppercase tracking-wider border border-[#EFC1AC]"
+              class="px-3 py-1 rounded-full bg-canvas text-brand text-[10px] font-black uppercase tracking-wider border border-border"
             >
               Palabra del Día
             </span>
             <span
-              class="px-3 py-1 rounded-full bg-[#8D3B2B] text-white text-[10px] font-black uppercase tracking-wider"
+              class="px-3 py-1 rounded-full bg-brand text-white text-[10px] font-black uppercase tracking-wider"
             >
               México 🇲🇽
             </span>
             <span
-              class="px-3 py-1 rounded-full bg-[#A7C8C7] text-[#1C3D3C] text-[10px] font-black uppercase tracking-wider"
+              class="px-3 py-1 rounded-full bg-pastel-mint text-forest text-[10px] font-black uppercase tracking-wider"
             >
               Caribe 🇨🇺
             </span>
             <span
-              class="px-2.5 py-0.5 rounded-full bg-white/70 text-[#4A2016] text-[10px] font-black uppercase tracking-wider"
+              class="px-2.5 py-0.5 rounded-full bg-surface text-chocolate text-[10px] font-black uppercase tracking-wider border border-border"
             >
               Náhuatl 🇲🇽
             </span>

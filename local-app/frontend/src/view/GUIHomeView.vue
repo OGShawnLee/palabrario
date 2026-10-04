@@ -1,19 +1,28 @@
 <script setup lang="ts">
 import GUICard from "@/component/GUICard.vue";
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 import { Search } from "lucide-vue-next";
 import { useSearchModal } from "@/composables/useSearchModal";
 
+const router = useRouter();
 const { openSearch } = useSearchModal();
 
 // Píldoras de navegación principales de la aplicación
 const activeNav = ref("Inicio");
 const navItems = [
-  "Inicio",
-  "Diccionario",
-  "Colecciones",
-  "Studio",
+  { label: "Inicio", path: "/" },
+  { label: "Diccionario", path: "/dictionary" },
+  { label: "Colecciones", path: "/dictionary" },
+  { label: "Studio", path: "/dictionary" },
 ];
+
+function handleNavClick(item: { label: string; path: string }) {
+  activeNav.value = item.label;
+  if (item.path !== "/") {
+    router.push(item.path);
+  }
+}
 
 // Filtros dialectales para explorar vocabulario
 const activeDialect = ref("Todos");
@@ -44,8 +53,8 @@ const cards = [
     title: "POPOTE",
     subtitle: "Tubo para beber",
     tag: "MÉXICO",
-    bgClass: "bg-[#F3C68F]", // Melocotón cálido
-    textColor: "text-[#5C2B16]",
+    bgClass: "bg-pastel-peach",
+    textColor: "text-chocolate",
     desc: "En Colombia dicen 'pitillo', en Argentina 'sorbete' y en España 'pajita'.",
     emoji: "🥤",
   },
@@ -54,8 +63,8 @@ const cards = [
     title: "GUAGUA",
     subtitle: "Autobús / Bebé",
     tag: "CARIBE & CHILE",
-    bgClass: "bg-[#A7C8C7]", // Menta / Azul pastel suave
-    textColor: "text-[#1C3D3C]",
+    bgClass: "bg-pastel-mint",
+    textColor: "text-forest",
     desc: "En La Habana es el camión urbano; en Santiago es un tierno bebé de brazos.",
     emoji: "🚌",
   },
@@ -64,8 +73,8 @@ const cards = [
     title: "TIANGUIS",
     subtitle: "Mercado ambulante",
     tag: "NÁHUATL",
-    bgClass: "bg-[#E6AA94]", // Rosa arcilla / terracota pastel
-    textColor: "text-[#4A2016]",
+    bgClass: "bg-pastel-clay",
+    textColor: "text-chocolate",
     desc: "Bazar sobre ruedas con toldos coloridos que se instala una vez por semana.",
     emoji: "🎪",
   },
@@ -74,8 +83,8 @@ const cards = [
     title: "CHAMBA",
     subtitle: "Trabajo / Empleo",
     tag: "COLOQUIAL",
-    bgClass: "bg-[#F7D8A5]", // Trigo / Amarillo crema
-    textColor: "text-[#54350A]",
+    bgClass: "bg-pastel-wheat",
+    textColor: "text-bronze",
     desc: "Labor cotidiana y honrada para ganarse el pan con orgullo.",
     emoji: "💼",
   },
@@ -83,10 +92,8 @@ const cards = [
 </script>
 
 <template>
-  <!-- Contenedor principal con la paleta retro-cálida de la imagen:
-       Fondo melocotón cálido (#F8D9C8), tipografías pesadas redondeadas y marrón chocolate (#5C2B16) -->
-   <div
-    class="min-h-screen bg-[#F8D9C8] text-[#5C2B16] selection:bg-[#8D3B2B] selection:text-white flex flex-col justify-between animate-fade-in"
+  <div
+    class="min-h-screen bg-canvas text-chocolate selection:bg-brand selection:text-white flex flex-col justify-between animate-fade-in"
   >
     <!-- Top Bar / Header Flotante -->
     <header
@@ -95,18 +102,18 @@ const cards = [
       <!-- Logo redondeado con el estilo de la imagen -->
       <div class="flex items-center gap-3">
         <div
-          class="w-11 h-11 rounded-2xl bg-[#8D3B2B] text-white flex items-center justify-center font-black text-xl tracking-tighter shadow-sm"
+          class="w-11 h-11 rounded-2xl bg-brand text-white flex items-center justify-center font-black text-xl tracking-tighter shadow-sm"
         >
           P
         </div>
         <div>
           <span
-            class="text-xl font-black tracking-tight text-[#5C2B16] uppercase block leading-none"
+            class="text-xl font-black tracking-tight text-chocolate uppercase block leading-none"
           >
             Palabrario
           </span>
           <span
-            class="text-[10px] font-bold tracking-widest text-[#8D3B2B] uppercase"
+            class="text-[10px] font-bold tracking-widest text-brand uppercase"
           >
             Dialectos Hispanos
           </span>
@@ -115,20 +122,20 @@ const cards = [
 
       <!-- Píldoras de Navegación Principal (Inicio, Diccionario, Colecciones, Studio) -->
       <nav
-        class="hidden md:flex items-center gap-2 bg-[#F2C9B5]/70 p-1.5 rounded-full border border-[#E8B8A2]"
+        class="hidden md:flex items-center gap-2 bg-canvas/80 p-1.5 rounded-full border border-border"
       >
         <button
           v-for="item in navItems"
-          :key="item"
-          @click="activeNav = item"
+          :key="item.label"
+          @click="handleNavClick(item)"
           :class="[
             'px-4 py-1.5 rounded-full text-xs font-black tracking-wide transition-all cursor-pointer uppercase',
-            activeNav === item
-              ? 'bg-[#8D3B2B] text-white shadow-sm'
-              : 'text-[#5C2B16] bg-white hover:bg-[#E8B8A2]/60',
+            activeNav === item.label
+              ? 'bg-brand text-white shadow-sm'
+              : 'text-chocolate bg-white hover:bg-canvas',
           ]"
         >
-          {{ item }}
+          {{ item.label }}
         </button>
       </nav>
 
@@ -136,13 +143,13 @@ const cards = [
       <div class="flex items-center gap-2.5">
         <button
           @click="openSearch"
-          class="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/80 hover:bg-white text-[#5C2B16] border border-[#DEAC96] text-xs font-black uppercase tracking-wider transition-all shadow-xs cursor-pointer active:scale-95"
+          class="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/80 hover:bg-white text-chocolate border border-border text-xs font-black uppercase tracking-wider transition-all shadow-xs cursor-pointer active:scale-95"
           title="Buscar palabra (Ctrl + K)"
         >
-          <Search class="w-3.5 h-3.5 text-[#8D3B2B]" />
+          <Search class="w-3.5 h-3.5 text-brand" />
           <span>Buscar</span>
           <kbd
-            class="font-mono text-[9px] font-black px-1.5 py-0.5 rounded-full bg-[#FAF0E8] border border-[#EFC1AC] text-[#8D3B2B]"
+            class="font-supreme text-[9px] font-black px-1.5 py-0.5 rounded-full bg-surface border border-border text-brand"
           >
             Ctrl K
           </kbd>
@@ -150,7 +157,7 @@ const cards = [
 
         <!-- Botón de acción con estilo 'cápsula' -->
         <button
-          class="px-5 py-2.5 rounded-full bg-[#8D3B2B] hover:bg-[#772F21] text-white font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer"
+          class="px-5 py-2.5 rounded-full bg-brand hover:bg-brand-hover text-white font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer"
         >
           Jugar Trivia
         </button>
@@ -166,7 +173,7 @@ const cards = [
         <!-- Bloque de texto principal -->
         <div class="lg:col-span-7 space-y-4">
           <div
-            class="inline-block px-3.5 py-1 rounded-full bg-[#EFC1AC] border border-[#DEAC96] text-[#8D3B2B] text-xs font-black uppercase tracking-widest"
+            class="inline-block px-3.5 py-1 rounded-full bg-border border border-border text-brand text-xs font-black uppercase tracking-widest"
           >
             Diccionario Dialectal Vivo
           </div>
@@ -176,11 +183,11 @@ const cards = [
             class="text-5xl sm:text-6xl md:text-7xl font-black text-white uppercase tracking-tight leading-[0.95] drop-shadow-xs"
           >
             Hablamos <br />
-            <span class="text-[#5C2B16]">Mil Españoles</span>
+            <span class="text-chocolate">Mil Españoles</span>
           </h1>
 
           <p
-            class="text-base sm:text-lg text-[#6E3620] font-medium max-w-xl leading-snug"
+            class="text-base sm:text-lg text-chocolate/80 font-medium max-w-xl leading-snug"
           >
             Descubre los giros, modismos y palabras únicas que nos unen y nos
             distinguen en México y toda Hispanoamérica.
@@ -190,16 +197,16 @@ const cards = [
         <!-- Columna Derecha: Tarjeta Nube / 'Palabra del Día' con bordes super redondeados -->
         <div class="lg:col-span-5">
           <div
-            class="bg-white/95 rounded-[32px] p-7 shadow-lg border-2 border-[#EFC1AC] relative overflow-hidden group hover:shadow-xl transition-all"
+            class="bg-white/95 rounded-[32px] p-7 shadow-lg border-2 border-border relative overflow-hidden group hover:shadow-xl transition-all"
           >
             <!-- Píldora superior -->
             <div class="flex items-center justify-between mb-4">
               <span
-                class="px-3 py-1 rounded-full bg-[#F8D9C8] text-[#8D3B2B] text-[10px] font-black uppercase tracking-wider"
+                class="px-3 py-1 rounded-full bg-canvas text-brand text-[10px] font-black uppercase tracking-wider"
               >
                 {{ featuredWord.badge }}
               </span>
-              <span class="text-xs font-bold text-[#8D3B2B]">
+              <span class="text-xs font-bold text-brand">
                 {{ featuredWord.region }}
               </span>
             </div>
@@ -207,35 +214,35 @@ const cards = [
             <!-- Título y Fonética -->
             <div class="mb-3">
               <h2
-                class="text-3xl font-black text-[#5C2B16] tracking-tight uppercase"
+                class="text-3xl font-black text-chocolate tracking-tight uppercase"
               >
                 {{ featuredWord.lemma }}
               </h2>
-              <span class="text-xs font-bold text-[#9D5438] block mt-0.5">
+              <span class="text-xs font-bold text-brand block mt-0.5">
                 {{ featuredWord.origin }} • {{ featuredWord.phonetic }}
               </span>
             </div>
 
             <!-- Definición corta destacada -->
-            <p class="text-sm font-bold text-[#5C2B16] mb-3 leading-snug">
+            <p class="text-sm font-bold text-chocolate mb-3 leading-snug">
               "{{ featuredWord.short_def }}"
             </p>
 
             <!-- Blurb ameno -->
             <p
-              class="text-xs text-[#7A3F29] leading-relaxed mb-6 bg-[#FAF0E8] p-3.5 rounded-2xl border border-[#F0D5C5]"
+              class="text-xs text-chocolate/70 leading-relaxed mb-6 bg-surface p-3.5 rounded-2xl border border-border"
             >
               {{ featuredWord.blurb }}
             </p>
 
-            <!-- Botón Circular Grande 'EXPLORAR' (Inspirado en el botón 'BOOK NOW' marrón de la imagen) -->
+            <!-- Botón Circular Grande 'EXPLORAR' -->
             <div class="flex items-center justify-between pt-2">
               <span
-                class="text-xs font-black uppercase text-[#8D3B2B] tracking-wide"
+                class="text-xs font-black uppercase text-brand tracking-wide"
                 >¿Cómo se dice en tu país?</span
               >
               <button
-                class="w-14 h-14 rounded-full bg-[#8D3B2B] hover:bg-[#722A1E] text-white flex items-center justify-center font-black text-xs uppercase shadow-md transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+                class="w-14 h-14 rounded-full bg-brand hover:bg-brand-dark text-white flex items-center justify-center font-black text-xs uppercase shadow-md transition-transform hover:scale-105 active:scale-95 cursor-pointer"
               >
                 Ver
               </button>
@@ -244,17 +251,18 @@ const cards = [
         </div>
       </div>
 
-      <!-- Fila Inferior: Cuadrícula de 4 Tarjetas Ilustrativas Color Pastel (Inspirado en las 4 cajas con rostros) -->
+      <!-- Fila Inferior: Cuadrícula de 4 Tarjetas Ilustrativas Color Pastel -->
       <div>
         <div class="mb-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
             <h3
-              class="text-xl font-black uppercase tracking-tight text-[#5C2B16]"
+              class="text-xl font-black uppercase tracking-tight text-chocolate"
             >
               Explorar Vocabulario Destacado
             </h3>
             <span
-              class="text-xs font-bold text-[#8D3B2B] cursor-pointer hover:underline uppercase"
+              @click="router.push('/dictionary')"
+              class="text-xs font-bold text-brand cursor-pointer hover:underline uppercase"
             >
               Ver diccionario completo →
             </span>
@@ -269,8 +277,8 @@ const cards = [
               class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer shrink-0"
               :class="[
                 activeDialect === dialect
-                  ? 'bg-[#8D3B2B] text-white shadow-xs'
-                  : 'bg-white/80 text-[#5C2B16] hover:bg-white border border-[#EFC1AC]',
+                  ? 'bg-brand text-white shadow-xs'
+                  : 'bg-white/80 text-chocolate hover:bg-white border border-border',
               ]"
             >
               {{ dialect }}
@@ -295,9 +303,9 @@ const cards = [
 
     <!-- Footer minimalista y acogedor -->
     <footer
-      class="max-w-6xl w-full mx-auto px-6 py-6 text-center text-xs font-bold text-[#8D3B2B]/80 uppercase tracking-widest"
+      class="max-w-6xl w-full mx-auto px-6 py-6 text-center text-xs font-bold text-brand/80 uppercase tracking-widest"
     >
       Palabrario • Celebrando la diversidad del idioma español
     </footer>
-   </div>
+  </div>
 </template>

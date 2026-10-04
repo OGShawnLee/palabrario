@@ -1,0 +1,416 @@
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import { useRouter } from "vue-router";
+import { useSearchModal } from "@/composables/useSearchModal";
+import { MOCK_WORDS, type WordMock } from "@/mocks/words.mock";
+import diaDeMuertosBanner from "@/assets/images/dia_de_muertos_banner.jpg";
+
+import GUIDictionarySearch from "@/component/GUIDictionarySearch.vue";
+import GUIFestivalBanner from "@/component/GUIFestivalBanner.vue";
+import GUILiteraryCard from "@/component/GUILiteraryCard.vue";
+import GUIDeckCard from "@/component/GUIDeckCard.vue";
+
+const router = useRouter();
+const { openSearch } = useSearchModal();
+
+// Estado de navegación activa en el header
+const activeNav = ref("Diccionario");
+const navItems = [
+  { label: "Inicio", path: "/" },
+  { label: "Diccionario", path: "/dictionary" },
+  { label: "Colecciones", path: "/dictionary" },
+  { label: "Studio", path: "/dictionary" },
+];
+
+function navigateTo(path: string, itemLabel: string) {
+  activeNav.value = itemLabel;
+  if (path !== "/dictionary") {
+    router.push(path);
+  }
+}
+
+// Búsqueda integrada y filtro de dialectos
+const searchQuery = ref("");
+const selectedDialect = ref("Todos");
+
+const dialects = [
+  { label: "Todos", flag: "🌐" },
+  { label: "México", flag: "🇲🇽" },
+  { label: "Río de la Plata", flag: "🇦🇷" },
+  { label: "Caribe", flag: "🇨🇺" },
+  { label: "Andino", flag: "🇨🇱" },
+  { label: "España", flag: "🇪🇸" },
+];
+
+// Colecciones temáticas del Evento Festivo de Día de Muertos
+const seasonalCollections = [
+  {
+    id: "altar-ofrenda",
+    title: "El Altar y la Ofrenda",
+    emoji: "🌼",
+    tag: "RITUAL ANCESTRAL",
+    bgClass: "bg-pastel-peach",
+    textColor: "text-chocolate",
+    decksCount: 4,
+    wordsCount: 38,
+    desc: "Cempasúchil, copal, alfeñique, papel picado y elementos consagrados para honrar a los difuntos.",
+    sampleWords: ["Cempasúchil", "Copal", "Alfeñique", "Petate"],
+  },
+  {
+    id: "dichos-muerte",
+    title: "Dichos y Calaveras de Muerte",
+    emoji: "🎭",
+    tag: "JERGA POPULAR",
+    bgClass: "bg-pastel-clay",
+    textColor: "text-chocolate",
+    decksCount: 3,
+    wordsCount: 25,
+    desc: "El humor negro y el ingenio del mexicano para hablar de la muerte sin solemnidad ni miedo.",
+    sampleWords: ["Petatear", "Colgar los tenis", "Chupar faros", "La Catrina"],
+  },
+  {
+    id: "calaveritas-literarias",
+    title: "Calaveritas y Rima Popular",
+    emoji: "📜",
+    tag: "LITERATURA FESTIVA",
+    bgClass: "bg-pastel-mint",
+    textColor: "text-forest",
+    decksCount: 2,
+    wordsCount: 18,
+    desc: "Composiciones satíricas en verso donde 'La Flaca' visita a vivos y personajes célebres.",
+    sampleWords: ["Panteón", "Calaca", "Huesuda", "Epitafio"],
+  },
+  {
+    id: "gastronomia-ritual",
+    title: "Gastronomía de Difuntos",
+    emoji: "🍞",
+    tag: "SABORES RITUALES",
+    bgClass: "bg-pastel-wheat",
+    textColor: "text-bronze",
+    decksCount: 3,
+    wordsCount: 24,
+    desc: "El aroma a azahar del pan de muerto, el champurrado espeso y los guisados ofrendados en la vigilia.",
+    sampleWords: ["Pan de muerto", "Champurrado", "Atole", "Mole negro"],
+  },
+];
+
+// Colecciones Literarias ("El Lenguaje de los Grandes Libros")
+const literaryCollections = [
+  {
+    id: "macondo",
+    bookTitle: "Cien años de soledad",
+    author: "Gabriel García Márquez 🇨🇴",
+    quote: "Muchos años después, frente al pelotón de fusilamiento...",
+    theme: "Realismo Mágico & Léxico Caribeño",
+    deckCount: 4,
+    wordsCount: 42,
+    colorClass: "bg-pastel-peach",
+    textColor: "text-chocolate",
+    emoji: "🦋",
+  },
+  {
+    id: "pedro-paramo",
+    bookTitle: "Pedro Páramo",
+    author: "Juan Rulfo 🇲🇽",
+    quote: "Vine a Comala porque me dijeron que acá vivía mi padre...",
+    theme: "Habla Rural Mexicana & Murmullos",
+    deckCount: 3,
+    wordsCount: 35,
+    colorClass: "bg-pastel-clay",
+    textColor: "text-chocolate",
+    emoji: "🌵",
+  },
+  {
+    id: "ficciones",
+    bookTitle: "Ficciones",
+    author: "Jorge Luis Borges 🇦🇷",
+    quote: "El universo (que otros llaman la Biblioteca) se compone...",
+    theme: "Filosofía, Laberintos & Río de la Plata",
+    deckCount: 3,
+    wordsCount: 30,
+    colorClass: "bg-pastel-mint",
+    textColor: "text-forest",
+    emoji: "⏳",
+  },
+];
+
+// Mazos Oficiales de Estudio
+const officialDecks = [
+  {
+    id: "deck-taco",
+    title: "Ruta del Taco y Antojitos",
+    flag: "🇲🇽",
+    level: "A2 • Cotidiano",
+    cardCount: 25,
+    tag: "OFICIAL",
+    desc: "Desde la taquería hasta el puesto de esquina: carnitas, suadero, pastor y salsas.",
+  },
+  {
+    id: "deck-falsos-amigos",
+    title: "Falsos Amigos & Términos Tabú",
+    flag: "🌐",
+    level: "B2 • Precaución",
+    cardCount: 16,
+    tag: "CUIDADO CULTURAL",
+    desc: "Palabras inocentes en un país que resultan altamente ofensivas o sexuales en otro.",
+  },
+  {
+    id: "deck-lunfardo",
+    title: "Lunfardo Porteño Callejero",
+    flag: "🇦🇷",
+    level: "B1 • Callejero",
+    cardCount: 30,
+    tag: "OFICIAL",
+    desc: "El dialecto urbano de Buenos Aires: chamuyo, quilombo, laburo, mina y morfi.",
+  },
+  {
+    id: "deck-chilenismos",
+    title: "Chilenismos de Alto Vuelo",
+    flag: "🇨🇱",
+    level: "B2 • Intensivo",
+    cardCount: 22,
+    tag: "OFICIAL",
+    desc: "Desentraña la velocidad del español chileno: cachar, pololo, al tiro y fome.",
+  },
+];
+
+// Filtrado del catálogo léxico principal
+const filteredWords = computed(() => {
+  return MOCK_WORDS.filter((w) => {
+    const q = searchQuery.value.trim().toLowerCase();
+    const matchesQuery =
+      !q ||
+      w.normalized_lemma.includes(q) ||
+      w.friendly_blurb.toLowerCase().includes(q) ||
+      w.senses.some((s) => s.short_definition.toLowerCase().includes(q));
+
+    const matchesDialect =
+      selectedDialect.value === "Todos" ||
+      w.origin_flag?.includes(selectedDialect.value) ||
+      w.senses.some((s) => s.region_name.includes(selectedDialect.value));
+
+    return matchesQuery && matchesDialect;
+  });
+});
+
+// Palabras coincidentes para el panel de búsqueda estilo Vocabulary.com
+const matchingWords = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase();
+  const dialect = selectedDialect.value;
+
+  return MOCK_WORDS.filter((w) => {
+    const matchesQuery =
+      !q ||
+      w.normalized_lemma.includes(q) ||
+      w.friendly_blurb.toLowerCase().includes(q) ||
+      w.senses.some((s) => s.short_definition.toLowerCase().includes(q)) ||
+      (w.origin_flag && w.origin_flag.includes(q));
+
+    const matchesDialect =
+      dialect === "Todos" ||
+      w.origin_flag?.includes(dialect) ||
+      w.senses.some((s) => s.region_name.includes(dialect));
+
+    return matchesQuery && matchesDialect;
+  }).slice(0, 8);
+});
+
+// Colecciones coincidentes para el buscador
+const matchingCollections = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase();
+  if (!q) {
+    return [
+      ...seasonalCollections.slice(0, 2).map((c) => ({ ...c, type: "Estacional" })),
+      ...literaryCollections.slice(0, 2).map((c) => ({ ...c, title: c.bookTitle, type: "Literaria" })),
+    ];
+  }
+  const seasonal = seasonalCollections
+    .filter(
+      (c) =>
+        c.title.toLowerCase().includes(q) ||
+        c.desc.toLowerCase().includes(q) ||
+        c.sampleWords.some((w) => w.toLowerCase().includes(q))
+    )
+    .map((c) => ({ ...c, type: "Estacional" }));
+
+  const literary = literaryCollections
+    .filter(
+      (c) =>
+        c.bookTitle.toLowerCase().includes(q) ||
+        c.author.toLowerCase().includes(q) ||
+        c.theme.toLowerCase().includes(q)
+    )
+    .map((c) => ({ ...c, title: c.bookTitle, type: "Literaria" }));
+
+  return [...seasonal, ...literary].slice(0, 4);
+});
+</script>
+
+<template>
+  <div
+    class="min-h-screen bg-canvas text-chocolate font-['Satoshi',sans-serif] selection:bg-brand selection:text-white flex flex-col justify-between animate-fade-in"
+  >
+    <!-- ===================================================================== -->
+    <!-- 1. HEADER & TOP BAR CANÓNICO DE PALABRARIO                            -->
+    <!-- ===================================================================== -->
+    <header
+      class="max-w-6xl w-full mx-auto px-6 py-6 flex items-center justify-between"
+    >
+      <router-link to="/" class="flex items-center gap-3 cursor-pointer group">
+        <div
+          class="w-11 h-11 rounded-2xl bg-brand text-white flex items-center justify-center font-black text-xl tracking-tighter shadow-sm group-hover:scale-105 transition-transform"
+        >
+          P
+        </div>
+        <div>
+          <span
+            class="text-xl font-black tracking-tight text-chocolate uppercase block leading-none"
+          >
+            Palabrario
+          </span>
+          <span
+            class="text-[10px] font-bold tracking-widest text-brand uppercase"
+          >
+            Diccionario & Descubrimiento
+          </span>
+        </div>
+      </router-link>
+
+      <!-- Píldoras de Navegación Principal -->
+      <nav
+        class="hidden md:flex items-center gap-2 bg-canvas/80 p-1.5 rounded-full border border-border"
+      >
+        <button
+          v-for="item in navItems"
+          :key="item.label"
+          @click="navigateTo(item.path, item.label)"
+          :class="[
+            'px-4 py-1.5 rounded-full text-xs font-black tracking-wide transition-all cursor-pointer uppercase',
+            activeNav === item.label
+              ? 'bg-brand text-white shadow-sm'
+              : 'text-chocolate bg-white hover:bg-canvas',
+          ]"
+        >
+          {{ item.label }}
+        </button>
+      </nav>
+
+      <!-- Acciones de Cabecera: Solo Trivia en Diccionario -->
+      <div class="flex items-center gap-2.5">
+        <button
+          class="px-5 py-2.5 rounded-full bg-brand hover:bg-brand-hover text-white font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer"
+        >
+          Jugar Trivia
+        </button>
+      </div>
+    </header>
+
+    <!-- ===================================================================== -->
+    <!-- 2. CONTENIDO PRINCIPAL: DESCUBRIMIENTO & FESTIVAL                     -->
+    <!-- ===================================================================== -->
+    <main class="max-w-6xl w-full mx-auto px-6 py-6 flex-1 space-y-12">
+      <!-- ----------------------------------------------------------------- -->
+      <!-- COMPONENTE DE BÚSQUEDA INTERACTIVA ESTILO VOCABULARY.COM          -->
+      <!-- ----------------------------------------------------------------- -->
+      <GUIDictionarySearch
+        v-model="searchQuery"
+        v-model:selected-dialect="selectedDialect"
+        :dialects="dialects"
+        :matching-words="matchingWords"
+        :matching-collections="matchingCollections"
+        :total-words="filteredWords.length"
+        @open-full-search="openSearch"
+      />
+
+      <!-- ----------------------------------------------------------------- -->
+      <!-- COMPONENTE DE BANNER DEL FESTIVAL Y SLIDER (DÍA DE MUERTOS)       -->
+      <!-- ----------------------------------------------------------------- -->
+      <GUIFestivalBanner
+        :banner-image="diaDeMuertosBanner"
+        :collections="seasonalCollections"
+      />
+
+      <!-- ----------------------------------------------------------------- -->
+      <!-- LITERATURA & GRANDES LIBROS ("EL ESPAÑOL EN LOS LIBROS")          -->
+      <!-- ----------------------------------------------------------------- -->
+      <section class="space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3
+              class="text-2xl font-black uppercase tracking-tight text-chocolate"
+            >
+              El Español en los Libros 📖
+            </h3>
+            <p class="text-xs font-bold uppercase tracking-wider text-brand mt-0.5">
+              Rutas literarias inspiradas en las obras maestras y autores de nuestra lengua
+            </p>
+          </div>
+          <span
+            class="text-xs font-bold text-brand uppercase hover:underline cursor-pointer"
+          >
+            Ver catálogo literario →
+          </span>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-6">
+          <GUILiteraryCard
+            v-for="lit in literaryCollections"
+            :key="lit.id"
+            :book-title="lit.bookTitle"
+            :author="lit.author"
+            :quote="lit.quote"
+            :theme="lit.theme"
+            :deck-count="lit.deckCount"
+            :words-count="lit.wordsCount"
+            :color-class="lit.colorClass"
+            :text-color="lit.textColor"
+            :emoji="lit.emoji"
+          />
+        </div>
+      </section>
+
+      <!-- ----------------------------------------------------------------- -->
+      <!-- MAZOS OFICIALES DE ESTUDIO ("OFICIAL PALABRARIO")                 -->
+      <!-- ----------------------------------------------------------------- -->
+      <section class="space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3
+              class="text-2xl font-black uppercase tracking-tight text-chocolate"
+            >
+              Mazos Destacados Oficiales
+            </h3>
+            <p class="text-xs font-bold uppercase tracking-wider text-brand mt-0.5">
+              Listas curadas listas para estudiar en tu Studio personal
+            </p>
+          </div>
+          <span
+            class="text-xs font-bold text-brand uppercase hover:underline cursor-pointer"
+          >
+            Explorar todos los mazos →
+          </span>
+        </div>
+
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <GUIDeckCard
+            v-for="deck in officialDecks"
+            :key="deck.id"
+            :title="deck.title"
+            :flag="deck.flag"
+            :tag="deck.tag"
+            :level="deck.level"
+            :card-count="deck.cardCount"
+            :desc="deck.desc"
+          />
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer de Palabrario -->
+    <footer
+      class="max-w-6xl w-full mx-auto px-6 py-6 text-center text-xs font-bold text-brand/80 uppercase tracking-widest border-t border-border/60 mt-12"
+    >
+      Palabrario • Celebrando la diversidad del idioma español
+    </footer>
+  </div>
+</template>

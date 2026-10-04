@@ -103,21 +103,21 @@ function onKeydown(e: KeyboardEvent) {
     <DialogPortal>
       <!-- Overlay difuminado cálido chocolate -->
       <DialogOverlay
-        class="gui-search-overlay fixed inset-0 z-50 bg-[#5C2B16]/50 backdrop-blur-xs"
+        class="gui-search-overlay fixed inset-0 z-50 bg-chocolate/50 backdrop-blur-xs"
       />
 
       <!-- Ventana de búsqueda con el Design Language Retro-Cálido -->
       <DialogContent
-        class="gui-search-content fixed left-1/2 top-20 z-50 -translate-x-1/2 w-full max-w-xl bg-[#FAF0E8] rounded-[32px] shadow-2xl border-3 border-[#EFC1AC] overflow-hidden focus:outline-none font-['Satoshi',sans-serif] text-[#5C2B16]"
+        class="gui-search-content fixed left-1/2 top-20 z-50 -translate-x-1/2 w-full max-w-xl bg-surface rounded-[32px] shadow-2xl border-3 border-border overflow-hidden focus:outline-none font-['Satoshi',sans-serif] text-chocolate"
         @keydown="onKeydown"
       >
         <!-- Título accesible accesible para lectores de pantalla -->
         <DialogTitle class="sr-only">Buscador global de vocabulario de Palabrario</DialogTitle>
 
         <!-- Barra de Búsqueda Superior -->
-        <div class="flex items-center px-5 py-4 border-b-2 border-[#EFC1AC] bg-white/95">
+        <div class="flex items-center px-5 py-4 border-b-2 border-border bg-white/95">
           <div
-            class="w-9 h-9 rounded-2xl bg-[#F8D9C8] border border-[#DEAC96] flex items-center justify-center text-[#8D3B2B] mr-3 shrink-0"
+            class="w-9 h-9 rounded-2xl bg-canvas border border-border flex items-center justify-center text-brand mr-3 shrink-0"
           >
             <Search class="w-4 h-4" />
           </div>
@@ -127,7 +127,7 @@ function onKeydown(e: KeyboardEvent) {
             v-model="query"
             type="text"
             placeholder="Buscar palabra, giro dialectal o raíz..."
-            class="w-full text-base font-bold bg-transparent text-[#5C2B16] placeholder-[#9D5438]/60 focus:outline-none tracking-tight"
+            class="w-full text-base font-bold bg-transparent text-chocolate placeholder-chocolate/40 focus:outline-none tracking-tight"
           />
 
           <!-- Botón de Limpiar / ESC -->
@@ -135,13 +135,13 @@ function onKeydown(e: KeyboardEvent) {
             <button
               v-if="query"
               @click="query = ''"
-              class="w-7 h-7 rounded-full bg-[#FAF0E8] hover:bg-[#EFC1AC] text-[#8D3B2B] flex items-center justify-center transition cursor-pointer"
+              class="w-7 h-7 rounded-full bg-surface hover:bg-border text-brand flex items-center justify-center transition cursor-pointer"
               title="Borrar texto"
             >
               <X class="w-3.5 h-3.5" />
             </button>
             <span
-              class="text-[10px] font-mono font-black px-2.5 py-1 rounded-full bg-[#FAF0E8] border border-[#DEAC96] text-[#8D3B2B] select-none"
+              class="text-[10px] font-supreme font-black px-2.5 py-1 rounded-full bg-surface border border-border text-brand select-none"
             >
               ESC
             </span>
@@ -153,17 +153,17 @@ function onKeydown(e: KeyboardEvent) {
           <!-- Encabezado de Sección -->
           <div
             v-if="!query"
-            class="px-3 py-1.5 text-[10px] font-black text-[#8D3B2B] uppercase tracking-widest flex items-center gap-1.5"
+            class="px-3 py-1.5 text-[10px] font-black text-brand uppercase tracking-widest flex items-center gap-1.5"
           >
-            <Sparkles class="w-3.5 h-3.5 text-[#8D3B2B]" />
+            <Sparkles class="w-3.5 h-3.5 text-brand" />
             Vocabulario Destacado de Hoy
           </div>
           <div
             v-else
-            class="px-3 py-1.5 text-[10px] font-black text-[#8D3B2B] uppercase tracking-widest flex items-center justify-between"
+            class="px-3 py-1.5 text-[10px] font-black text-brand uppercase tracking-widest flex items-center justify-between"
           >
             <span>Resultados encontrados ({{ results.length }})</span>
-            <span class="text-[#7A3F29]/70 font-mono">FTS Instantáneo</span>
+            <span class="text-chocolate/60 font-supreme">FTS Instantáneo</span>
           </div>
 
           <!-- Items de Resultado -->
@@ -175,14 +175,14 @@ function onKeydown(e: KeyboardEvent) {
             :class="[
               'group px-4 py-3 rounded-[22px] transition-all cursor-pointer flex items-center justify-between border-2',
               index === selectedIndex
-                ? 'bg-white border-[#8D3B2B] shadow-sm translate-x-1'
-                : 'bg-white/70 border-transparent hover:bg-white hover:border-[#EFC1AC]'
+                ? 'bg-white border-brand shadow-sm translate-x-1'
+                : 'bg-white/70 border-transparent hover:bg-white hover:border-border'
             ]"
           >
             <div class="flex items-center gap-3.5 min-w-0 pr-3">
               <!-- Bandera o Icono en caja redondeada -->
               <span
-                class="w-10 h-10 rounded-2xl bg-[#F8D9C8] border border-[#DEAC96] flex items-center justify-center text-xl shrink-0 shadow-2xs select-none"
+                class="w-10 h-10 rounded-2xl bg-canvas border border-border flex items-center justify-center text-xl shrink-0 shadow-2xs select-none"
               >
                 {{ word.origin_flag || '🌐' }}
               </span>
@@ -192,20 +192,20 @@ function onKeydown(e: KeyboardEvent) {
                   <h4
                     :class="[
                       'font-black text-base uppercase tracking-tight truncate',
-                      index === selectedIndex ? 'text-[#8D3B2B]' : 'text-[#5C2B16]'
+                      index === selectedIndex ? 'text-brand' : 'text-chocolate'
                     ]"
                   >
                     {{ word.lemma }}
                   </h4>
                   <span
-                    class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#FAF0E8] border border-[#DEAC96] text-[#7A3F29] shrink-0"
+                    class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface border border-border text-chocolate/70 shrink-0"
                   >
                     {{ word.part_of_speech.split(' ')[0] }}
                   </span>
                 </div>
 
                 <!-- Glosa / Definición corta estilo Vocabulary.com -->
-                <p class="text-xs text-[#6E3620] font-medium truncate mt-0.5 max-w-sm">
+                <p class="text-xs text-chocolate/80 font-medium truncate mt-0.5 max-w-sm">
                   {{ word.senses[0]?.short_definition }}
                 </p>
               </div>
@@ -216,7 +216,7 @@ function onKeydown(e: KeyboardEvent) {
               :class="[
                 'shrink-0 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full transition-all flex items-center gap-1 shadow-xs',
                 index === selectedIndex
-                  ? 'opacity-100 bg-[#8D3B2B] text-white scale-100'
+                  ? 'opacity-100 bg-brand text-white scale-100'
                   : 'opacity-0 scale-95 pointer-events-none'
               ]"
             >
@@ -231,15 +231,15 @@ function onKeydown(e: KeyboardEvent) {
             class="py-10 text-center px-4 space-y-3"
           >
             <div
-              class="w-12 h-12 rounded-full bg-white border border-[#EFC1AC] flex items-center justify-center mx-auto text-[#8D3B2B] shadow-xs"
+              class="w-12 h-12 rounded-full bg-white border border-border flex items-center justify-center mx-auto text-brand shadow-xs"
             >
               <BookOpen class="w-5 h-5 stroke-2" />
             </div>
             <div>
-              <p class="text-sm font-black uppercase text-[#5C2B16]">
+              <p class="text-sm font-black uppercase text-chocolate">
                 Sin coincidencias para "{{ query }}"
               </p>
-              <p class="text-xs text-[#7A3F29] mt-0.5">
+              <p class="text-xs text-chocolate/70 mt-0.5">
                 Prueba buscando modismos como "popote", "guagua", "coger" o "tianguis".
               </p>
             </div>
@@ -249,7 +249,7 @@ function onKeydown(e: KeyboardEvent) {
                 v-for="sug in ['popote', 'guagua', 'apapachar', 'tianguis', 'chamba']"
                 :key="sug"
                 @click="query = sug"
-                class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-white border border-[#DEAC96] text-[#8D3B2B] hover:bg-[#8D3B2B] hover:text-white transition-all cursor-pointer shadow-2xs"
+                class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-white border border-border text-brand hover:bg-brand hover:text-white transition-all cursor-pointer shadow-2xs"
               >
                 {{ sug }}
               </button>
@@ -259,24 +259,24 @@ function onKeydown(e: KeyboardEvent) {
 
         <!-- Footer del Modal con Atajos -->
         <div
-          class="px-5 py-3 bg-[#FAF0E8] border-t-2 border-[#EFC1AC] flex items-center justify-between text-xs text-[#7A3F29] select-none"
+          class="px-5 py-3 bg-surface border-t-2 border-border flex items-center justify-between text-xs text-chocolate/70 select-none"
         >
           <div class="flex items-center gap-3">
             <span class="flex items-center gap-1">
-              <kbd class="font-mono font-black px-1.5 py-0.5 rounded-md bg-white border border-[#DEAC96] text-[#5C2B16] text-[10px]">↑↓</kbd>
+              <kbd class="font-supreme font-black px-1.5 py-0.5 rounded-md bg-white border border-border text-chocolate text-[10px]">↑↓</kbd>
               <span>navegar</span>
             </span>
             <span class="flex items-center gap-1">
-              <kbd class="font-mono font-black px-1.5 py-0.5 rounded-md bg-white border border-[#DEAC96] text-[#5C2B16] text-[10px]">↵</kbd>
+              <kbd class="font-supreme font-black px-1.5 py-0.5 rounded-md bg-white border border-border text-chocolate text-[10px]">↵</kbd>
               <span>seleccionar</span>
             </span>
             <span class="flex items-center gap-1">
-              <kbd class="font-mono font-black px-1.5 py-0.5 rounded-md bg-white border border-[#DEAC96] text-[#5C2B16] text-[10px]">ESC</kbd>
+              <kbd class="font-supreme font-black px-1.5 py-0.5 rounded-md bg-white border border-border text-chocolate text-[10px]">ESC</kbd>
               <span>cerrar</span>
             </span>
           </div>
 
-          <span class="text-[10px] font-black uppercase tracking-widest text-[#8D3B2B]">
+          <span class="text-[10px] font-black uppercase tracking-widest text-brand">
             Palabrario Search Engine
           </span>
         </div>
