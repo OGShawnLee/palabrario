@@ -5,33 +5,24 @@ import { useSearchModal } from "@/composables/useSearchModal";
 import { MOCK_WORDS, type WordMock } from "@/mocks/words.mock";
 import diaDeMuertosBanner from "@/assets/images/dia_de_muertos_banner.jpg";
 
+import GUINavHeader from "@/component/GUINavHeader.vue";
 import GUIDictionarySearch from "@/component/GUIDictionarySearch.vue";
+import GUIWordDetail from "@/component/GUIWordDetail.vue";
 import GUIFestivalBanner from "@/component/GUIFestivalBanner.vue";
 import GUILiteraryCard from "@/component/GUILiteraryCard.vue";
 import GUIDeckCard from "@/component/GUIDeckCard.vue";
+import { X } from "lucide-vue-next";
 
 const router = useRouter();
 const { openSearch } = useSearchModal();
 
-// Estado de navegación activa en el header
-const activeNav = ref("Diccionario");
-const navItems = [
-  { label: "Inicio", path: "/" },
-  { label: "Diccionario", path: "/dictionary" },
-  { label: "Colecciones", path: "/dictionary" },
-  { label: "Studio", path: "/dictionary" },
-];
-
-function navigateTo(path: string, itemLabel: string) {
-  activeNav.value = itemLabel;
-  if (path !== "/dictionary") {
-    router.push(path);
-  }
-}
-
 // Búsqueda integrada y filtro de dialectos
 const searchQuery = ref("");
 const selectedDialect = ref("Todos");
+
+// Modal de Ficha Detallada cuando se selecciona un término
+const selectedWordForModal = ref<WordMock | null>(null);
+const isWordModalOpen = ref(false);
 
 const dialects = [
   { label: "Todos", flag: "🌐" },
@@ -193,7 +184,7 @@ const filteredWords = computed(() => {
   });
 });
 
-// Palabras coincidentes para el panel de búsqueda estilo Vocabulary.com
+// Palabras coincidentes para el buscador interactivo
 const matchingWords = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();
   const dialect = selectedDialect.value;
@@ -215,7 +206,7 @@ const matchingWords = computed(() => {
   }).slice(0, 8);
 });
 
-// Colecciones coincidentes para el buscador
+// Colecciones coincidentes
 const matchingCollections = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();
   if (!q) {
@@ -244,74 +235,23 @@ const matchingCollections = computed(() => {
 
   return [...seasonal, ...literary].slice(0, 4);
 });
+
+function handleWordSelected(word: WordMock) {
+  selectedWordForModal.value = word;
+  isWordModalOpen.value = true;
+}
 </script>
 
 <template>
   <div
-    class="min-h-screen bg-canvas text-chocolate font-['Satoshi',sans-serif] selection:bg-brand selection:text-white flex flex-col justify-between animate-fade-in"
+    class="min-h-screen bg-canvas text-chocolate font-satoshi selection:bg-brand selection:text-white flex flex-col justify-between animate-fade-in"
   >
-    <!-- ===================================================================== -->
-    <!-- 1. HEADER & TOP BAR CANÓNICO DE PALABRARIO                            -->
-    <!-- ===================================================================== -->
-    <header
-      class="max-w-6xl w-full mx-auto px-6 py-6 flex items-center justify-between"
-    >
-      <router-link to="/" class="flex items-center gap-3 cursor-pointer group">
-        <div
-          class="w-11 h-11 rounded-2xl bg-brand text-white flex items-center justify-center font-black text-xl tracking-tighter shadow-sm group-hover:scale-105 transition-transform"
-        >
-          P
-        </div>
-        <div>
-          <span
-            class="text-xl font-black tracking-tight text-chocolate uppercase block leading-none"
-          >
-            Palabrario
-          </span>
-          <span
-            class="text-[10px] font-bold tracking-widest text-brand uppercase"
-          >
-            Diccionario & Descubrimiento
-          </span>
-        </div>
-      </router-link>
+    <!-- Header Canónico Único -->
+    <GUINavHeader />
 
-      <!-- Píldoras de Navegación Principal -->
-      <nav
-        class="hidden md:flex items-center gap-2 bg-canvas/80 p-1.5 rounded-full border border-border"
-      >
-        <button
-          v-for="item in navItems"
-          :key="item.label"
-          @click="navigateTo(item.path, item.label)"
-          :class="[
-            'px-4 py-1.5 rounded-full text-xs font-black tracking-wide transition-all cursor-pointer uppercase',
-            activeNav === item.label
-              ? 'bg-brand text-white shadow-sm'
-              : 'text-chocolate bg-white hover:bg-canvas',
-          ]"
-        >
-          {{ item.label }}
-        </button>
-      </nav>
-
-      <!-- Acciones de Cabecera: Solo Trivia en Diccionario -->
-      <div class="flex items-center gap-2.5">
-        <button
-          class="px-5 py-2.5 rounded-full bg-brand hover:bg-brand-hover text-white font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer"
-        >
-          Jugar Trivia
-        </button>
-      </div>
-    </header>
-
-    <!-- ===================================================================== -->
-    <!-- 2. CONTENIDO PRINCIPAL: DESCUBRIMIENTO & FESTIVAL                     -->
-    <!-- ===================================================================== -->
-    <main class="max-w-6xl w-full mx-auto px-6 py-6 flex-1 space-y-12">
-      <!-- ----------------------------------------------------------------- -->
-      <!-- COMPONENTE DE BÚSQUEDA INTERACTIVA ESTILO VOCABULARY.COM          -->
-      <!-- ----------------------------------------------------------------- -->
+    <!-- CONTENIDO PRINCIPAL: BUSCADOR ARRIBA + FESTIVAL + LITERATURA -->
+    <main class="max-w-6xl w-full mx-auto px-6 py-8 flex-1 space-y-12">
+      <!-- 1. COMPONENTE DE BÚSQUEDA INTERACTIVA ESTILO VOCABULARY.COM -->
       <GUIDictionarySearch
         v-model="searchQuery"
         v-model:selected-dialect="selectedDialect"
@@ -319,40 +259,33 @@ const matchingCollections = computed(() => {
         :matching-words="matchingWords"
         :matching-collections="matchingCollections"
         :total-words="filteredWords.length"
+        @select-word="handleWordSelected"
         @open-full-search="openSearch"
       />
 
-      <!-- ----------------------------------------------------------------- -->
-      <!-- COMPONENTE DE BANNER DEL FESTIVAL Y SLIDER (DÍA DE MUERTOS)       -->
-      <!-- ----------------------------------------------------------------- -->
+      <!-- 2. COMPONENTE DE BANNER DEL FESTIVAL Y SLIDER (DÍA DE MUERTOS) -->
       <GUIFestivalBanner
         :banner-image="diaDeMuertosBanner"
         :collections="seasonalCollections"
       />
 
-      <!-- ----------------------------------------------------------------- -->
-      <!-- LITERATURA & GRANDES LIBROS ("EL ESPAÑOL EN LOS LIBROS")          -->
-      <!-- ----------------------------------------------------------------- -->
+      <!-- 3. LITERATURA & GRANDES LIBROS ("EL ESPAÑOL EN LOS LIBROS") -->
       <section class="space-y-4">
         <div class="flex items-center justify-between">
           <div>
-            <h3
-              class="text-2xl font-black uppercase tracking-tight text-chocolate"
-            >
+            <h3 class="text-2xl font-black uppercase tracking-tight text-chocolate font-satoshi">
               El Español en los Libros 📖
             </h3>
             <p class="text-xs font-bold uppercase tracking-wider text-brand mt-0.5">
               Rutas literarias inspiradas en las obras maestras y autores de nuestra lengua
             </p>
           </div>
-          <span
-            class="text-xs font-bold text-brand uppercase hover:underline cursor-pointer"
-          >
-            Ver catálogo literario →
+          <span class="text-xs font-bold text-brand uppercase hover:underline cursor-pointer">
+            Ver las 12 Obras ➔
           </span>
         </div>
 
-        <div class="grid md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <GUILiteraryCard
             v-for="lit in literaryCollections"
             :key="lit.id"
@@ -369,48 +302,81 @@ const matchingCollections = computed(() => {
         </div>
       </section>
 
-      <!-- ----------------------------------------------------------------- -->
-      <!-- MAZOS OFICIALES DE ESTUDIO ("OFICIAL PALABRARIO")                 -->
-      <!-- ----------------------------------------------------------------- -->
+      <!-- 4. MAZOS OFICIALES RECOMENDADOS -->
       <section class="space-y-4">
         <div class="flex items-center justify-between">
           <div>
-            <h3
-              class="text-2xl font-black uppercase tracking-tight text-chocolate"
-            >
-              Mazos Destacados Oficiales
+            <h3 class="text-2xl font-black uppercase tracking-tight text-chocolate font-satoshi">
+              Barajas de Estudio Oficiales 🗂️
             </h3>
             <p class="text-xs font-bold uppercase tracking-wider text-brand mt-0.5">
-              Listas curadas listas para estudiar en tu Studio personal
+              Curadas por docentes y listas para añadir a tu Studio personal
             </p>
           </div>
-          <span
+          <button
+            type="button"
+            @click="router.push('/studio')"
             class="text-xs font-bold text-brand uppercase hover:underline cursor-pointer"
           >
-            Explorar todos los mazos →
-          </span>
+            Ir a mi Studio ➔
+          </button>
         </div>
 
-        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <GUIDeckCard
             v-for="deck in officialDecks"
             :key="deck.id"
             :title="deck.title"
             :flag="deck.flag"
-            :tag="deck.tag"
             :level="deck.level"
             :card-count="deck.cardCount"
+            :tag="deck.tag"
             :desc="deck.desc"
           />
         </div>
       </section>
     </main>
 
-    <!-- Footer de Palabrario -->
-    <footer
-      class="max-w-6xl w-full mx-auto px-6 py-6 text-center text-xs font-bold text-brand/80 uppercase tracking-widest border-t border-border/60 mt-12"
+    <!-- Modal Emergente de Ficha Léxica Detallada (Limpio y sin quebrar el layout del diccionario) -->
+    <Transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="opacity-0 scale-95"
+      enter-to-class="opacity-100 scale-100"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100 scale-100"
+      leave-to-class="opacity-0 scale-95"
     >
-      Palabrario • Celebrando la diversidad del idioma español
+      <div
+        v-if="isWordModalOpen && selectedWordForModal"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-chocolate/65 backdrop-blur-sm"
+        @click.self="isWordModalOpen = false"
+      >
+        <div class="w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
+          <button
+            type="button"
+            @click="isWordModalOpen = false"
+            class="absolute top-4 right-4 z-10 p-2 rounded-full bg-surface text-chocolate/60 hover:text-chocolate hover:bg-white shadow-sm border border-border cursor-pointer transition-colors"
+            title="Cerrar ficha"
+          >
+            <X class="w-5 h-5" />
+          </button>
+          <GUIWordDetail :word="selectedWordForModal" />
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Footer Cálido Consolidado -->
+    <footer class="w-full bg-surface/80 border-t border-border mt-16 py-8 px-6 text-center text-xs text-chocolate/70 font-satoshi">
+      <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-2">
+          <span class="text-base">📖</span>
+          <span class="font-black uppercase tracking-wider text-chocolate font-satoshi">Palabrario</span>
+          <span class="text-chocolate/50">• Diccionario Dialectal Vivo</span>
+        </div>
+        <p class="text-[11px] text-chocolate/60">
+          Curado por lingüistas y enriquecido por la comunidad panhispánica con rigor y calidez.
+        </p>
+      </div>
     </footer>
   </div>
 </template>

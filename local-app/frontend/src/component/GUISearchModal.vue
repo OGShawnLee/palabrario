@@ -163,7 +163,7 @@ function onKeydown(e: KeyboardEvent) {
             class="px-3 py-1.5 text-[10px] font-black text-brand uppercase tracking-widest flex items-center justify-between"
           >
             <span>Resultados encontrados ({{ results.length }})</span>
-            <span class="text-chocolate/60 font-supreme">FTS Instantáneo</span>
+            <span class="text-chocolate/60 font-supreme">Búsqueda rápida</span>
           </div>
 
           <!-- Items de Resultado -->
