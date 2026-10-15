@@ -14,8 +14,13 @@ services:
 
   core-service:
     build:
-      context: ./core-service
-      dockerfile: Dockerfile
+      # IMPORTANTE (Monorrepositorio en Go):
+      # El 'context' apunta a la raíz ('.') y NO a './core-service' porque Docker prohíbe
+      # hacer 'COPY ../' fuera del contexto de construcción. Al situar el contexto en la raíz,
+      # el Dockerfile puede acceder tanto al código del servicio ('./core-service') como al
+      # paquete compartido de modelos de dominio ('./pkg') y al manifiesto raíz 'go.mod'.
+      context: .
+      dockerfile: ./core-service/Dockerfile
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -23,12 +28,6 @@ services:
       - postgres
     env_file:
       - ./core-service/.env
-    volumes:
-      # Sincronización en vivo del código
-      - ./core-service:/app
-      # Aislamiento para evitar sobreescribir dependencias de Linux con Windows
-      - /app/node_modules
-    command: bun --watch run index.ts
 
   realtime-service:
     build:
