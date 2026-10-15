@@ -455,9 +455,9 @@ ON CONFLICT (code) DO NOTHING;
 
 -- 2. Cuentas y Usuarios demo (Contraseña: 'password123')
 INSERT INTO accounts (id_account, email, password_hash, role) VALUES
-('b1111111-0000-0000-0000-000000000001', 'admin@palabrario.org', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj4L7kexZ8wO', 'ADMIN'),
-('b1111111-0000-0000-0000-000000000002', 'silas@palabrario.org', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj4L7kexZ8wO', 'EDITOR'),
-('b1111111-0000-0000-0000-000000000003', 'gael@palabrario.org', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj4L7kexZ8wO', 'LEARNER')
+('b1111111-0000-0000-0000-000000000001', 'admin@palabrario.org', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8.3dtOfsvAPGNGDGqOSwhNGEiccrdUHFKnByP0S9PsEfs6c0i', 'ADMIN'),
+('b1111111-0000-0000-0000-000000000002', 'silas@palabrario.org', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8.3dtOfsvAPGNGDGqOSwhNGEiccrdUHFKnByP0S9PsEfs6c0i', 'EDITOR'),
+('b1111111-0000-0000-0000-000000000003', 'gael@palabrario.org', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8.3dtOfsvAPGNGDGqOSwhNGEiccrdUHFKnByP0S9PsEfs6c0i', 'LEARNER')
 ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO users (id_user, name, user_name, anchor_dialect, total_xp, current_level) VALUES
