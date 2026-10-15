@@ -1,20 +1,34 @@
-FROM python:3.11-slim
+# ------------------------------------------------------------------------------
+# STAGE 1: Compilación de binario estático en Go
+# ------------------------------------------------------------------------------
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
-# Instalar dependencias del sistema necesarias
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache ca-certificates git
 
-# Copiar requirements primero para aprovechar el cache de Docker
-COPY requirements.txt .
+COPY go.mod go.sum ./
+RUN go mod download
 
-RUN pip install --no-cache-dir -r requirements.txt
+COPY pkg/ ./pkg/
+COPY image-service/ ./image-service/
 
-# Copiar el código fuente
-COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/image-service ./image-service
+
+# ------------------------------------------------------------------------------
+# STAGE 2: Imagen mínima de ejecución
+# ------------------------------------------------------------------------------
+FROM alpine:3.21
+
+WORKDIR /app
+
+RUN apk --no-cache add ca-certificates tzdata
+
+RUN adduser -D -g '' appuser
+USER appuser
+
+COPY --from=builder /bin/image-service /app/image-service
 
 EXPOSE 8002
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8002", "--reload"]
+ENTRYPOINT ["/app/image-service"]
