@@ -1,0 +1,393 @@
+# ==============================================================================
+# PALABRARIO - ESQUEMA DE BASE DE DATOS (ESPECIFICACIÓN COMPLETA)
+# Enfoque: Dialectología hispanoamericana con anclaje cultural en México (MX)
+# Gobernanza: Curaduría por Editores/Admins + Aprobaciones colaborativas
+# Gamificación: Rachas, XP, Niveles, Repetición Espaciada y Salas Multijugador
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. AUTENTICACIÓN, CUENTAS Y USUARIOS
+# ------------------------------------------------------------------------------
+
+# Credenciales y rol de seguridad del sistema.
+type Account {
+  id_account gen_uuid() identity
+
+  email string unique
+  password_hash string
+  role enum("LEARNER", "EDITOR", "ADMIN")
+
+  created_at datetime default now()
+  updated_at datetime
+}
+
+# Perfil del usuario, métricas globales de gamificación y preferencias de dialecto.
+type User {
+  # Relación 1:1 con Account
+  id_user uuid ref Account::id_account identity
+
+  name string
+  user_name string unique
+  avatar_url string
+
+  # Dialecto preferido o punto de anclaje (por defecto México "MX")
+  # Permite al motor personalizar los 'friendly_blurbs' y contrastes culturales.
+  anchor_dialect string default "MX"
+
+  # --- Gamificación Principal ---
+  total_xp int default 0
+  current_level int default 1
+  current_streak int default 0
+  longest_streak int default 0
+  last_activity_at datetime default now()
+
+  # Relación con medallas y logros desbloqueados
+  multiple achievement_list UserAchievement
+
+  created_at datetime default now()
+  updated_at datetime
+}
+
+# ------------------------------------------------------------------------------
+# 2. DIALECTOS Y GEOGRAFÍA LINGÜÍSTICA
+# ------------------------------------------------------------------------------
+
+# Representa países o macro-zonas dialectales hispanohablantes.
+type Region {
+  id_region gen_uuid() identity
+
+  code string unique          # "MX", "ES", "AR", "CO", "CL", "CAM" (Centroamérica), "PAN" (Panhispánico)
+  name string                 # "México", "España", "Río de la Plata", "Colombia", etc.
+  parent_zone string          # "Norteamérica", "Rioplatense", "Andina", "Caribe", "Peninsular"
+  country_code string         # ISO "MX", "ES", "AR"
+  flag_emoji string           # "🇲🇽", "🇪🇸", "🇦🇷"
+}
+
+# ------------------------------------------------------------------------------
+# 3. NÚCLEO LÉXICO: WORD (Lema) vs SENSE (Acepciones/Sentidos)
+# ------------------------------------------------------------------------------
+
+# La entrada léxica canónica (el lema en infinitivo, singular, o modismo).
+# Responde a: "¿Qué palabra estamos buscando?" (ej. "guagua", "coger", "popote", "apapachar").
+type Word {
+  id_word int auto_increment identity
+
+  lemma string                # "apapachar", "guagua", "coger", "chamba"
+  normalized_lemma string     # En minúsculas y sin acentos para búsquedas instantáneas ("apapachar")
+  part_of_speech string       # "sustantivo", "verbo", "adjetivo", "locución/modismo"
+  gender enum("MALE", "FEMALE", "NEUTRAL", "AMBIGUOUS")
+  etymology string            # Ej: "Del náhuatl papatzoa (ablandar con cariño)"
+
+  # LA HISTORIA PRINCIPAL ESTILO VOCABULARY.COM:
+  # Una sola explicación narrativa, amena y con humor por palabra, contrastando
+  # el significado y el choque cultural (especialmente respecto a México).
+  friendly_blurb string
+
+  # Si la palabra es un modismo o vocablo endémico de un país concreto, se anota aquí.
+  # Si es null, indica que es una palabra del español general compartida por todos.
+  id_origin_region? uuid ref Region::id_region
+
+  # Múltiples acepciones o sentidos semánticos de esta palabra
+  multiple senses Sense
+
+  readonly created_at datetime default now()
+  updated_at datetime
+}
+
+# Cada acepción puntual de una palabra según su contexto geográfico.
+# La inmensa mayoría de palabras (80%+) solo tienen 1 Sense primario.
+# Solo se añaden más sentidos cuando hay contrastes geográficos reales (ej. "guagua" o "coger").
+type Sense {
+  id_sense int auto_increment identity
+  id_word int ref Word::id_word
+  id_region uuid ref Region::id_region       # Región donde aplica este sentido concreto (ej. MX, AR, ES)
+  id_editor uuid ref User::id_user          # Editor que redactó o propuso este sentido
+
+  short_definition string                   # Glosa concisa para tarjetas y opciones del quiz ("Bebé de pecho" o "Camión de pasajeros")
+  definition string                         # Definición lexicográfica formal
+
+  # Si es true, el motor de juegos y quizzes selecciona ESTE sentido prioritariamente.
+  # Evita abrumar al jugador con 5 acepciones oscuras de una misma palabra.
+  is_primary bool default true
+
+  # Advertencia de seguridad lingüística:
+  # Vital para palabras como "coger" (inocente en España, sexualmente explícita en México y Argentina).
+  is_taboo_or_vulgar bool default false
+  cultural_note string                      # Ej: "Cuidado: En México jamás uses este verbo en público; usa 'agarrar' o 'tomar'."
+
+  cefr_level enum("A1", "A2", "B1", "B2", "C1", "C2", "NATIVO")
+  usage_frequency enum("EVERYDAY", "COMMON", "RARE", "SLANG", "ARCHAIC")
+
+  # Flujo editorial colaborativo (requiere aprobaciones para ser público)
+  state enum("DRAFT", "APPROVED", "HIDDEN") default "DRAFT"
+
+  # Múltiples oraciones y citas de ejemplo
+  multiple examples Example
+
+  readonly created_at datetime default now()
+  updated_at datetime
+}
+
+# Oraciones de contexto reales (literatura, prensa, modismos cotidianos).
+type Example {
+  id_example int auto_increment identity
+  id_sense int ref Sense::id_sense
+  id_editor uuid ref User::id_user
+
+  sentence string             # "En cuanto llegues a La Habana te tomas una guagua."
+  source string               # "Conversación cotidiana / Prensa cubana"
+
+  readonly created_at datetime default now()
+  updated_at datetime
+}
+
+# ------------------------------------------------------------------------------
+# 4. EQUIVALENCIAS TRANSDIALECTALES (Heteronimia / ¿Cómo se dice allá?)
+# ------------------------------------------------------------------------------
+
+# Agrupa conceptos semánticos idénticos que tienen diferentes nombres según el país.
+# Permite generar trivias como: "¿Cómo se dice en Argentina lo que en México llamamos 'popote'?"
+type SemanticConcept {
+  id_concept int auto_increment identity
+
+  concept_key string unique   # "drinking_straw", "popcorn", "avocado", "bus", "cool/great"
+  description string          # "Tubo delgado de plástico para sorber líquidos"
+}
+
+# Mapea un Sense específico a un concepto universal
+type ConceptMapping {
+  id_concept int ref SemanticConcept::id_concept
+  id_sense int ref Sense::id_sense
+
+  identity (id_concept, id_sense)
+}
+
+# ------------------------------------------------------------------------------
+# 5. GOBERNANZA COLABORATIVA DE EDITORES (Sistema de Aprobaciones)
+# ------------------------------------------------------------------------------
+
+# Los editores revisan sentidos en estado "DRAFT". Al juntar más de 2 votos de editores distintos,
+# el trigger aprueba automáticamente el contenido para producción.
+type SenseApproval {
+  id_sense int ref Sense::id_sense
+  id_editor uuid ref User::id_user
+
+  approved_at datetime default now()
+
+  trigger on insert for each {
+    if select count(SenseApproval)
+      filter :id == self:id_sense > 2 {
+      update Sense filter :id = self:id_sense
+      set { state = "APPROVED" }
+    }
+  }
+
+  identity (id_sense, id_editor)
+}
+
+# ------------------------------------------------------------------------------
+# 6. DECKS Y COLECCIONES (Listas de Estudio Temáticas)
+# ------------------------------------------------------------------------------
+
+type Deck {
+  id_deck int auto_increment identity
+  id_user uuid ref User::id_user            # Creador (Admin si es oficial, o usuario de la comunidad)
+
+  title string                              # Ej: "Mexicanismos Indispensables para Extranjeros"
+  description string
+  is_public bool default true
+  is_official bool default false            # Curado por el equipo editorial de Palabrario
+
+  # Relación con los sentidos/palabras incluidos en esta lista
+  multiple items DeckItem
+
+  readonly created_at datetime default now()
+  updated_at datetime
+}
+
+type DeckItem {
+  id_deck int ref Deck::id_deck
+  id_sense int ref Sense::id_sense
+  sort_order int default 0
+
+  identity (id_deck, id_sense)
+}
+
+type Collection {
+  id_collection int auto_increment identity
+  id_user uuid ref User::id_user
+
+  title string                              # Ej: "Ruta del Viajero por América Latina"
+  description string
+  multiple deck_list CollectionDeck
+  is_public bool default true
+  is_featured bool default false
+  is_official bool default false
+
+  readonly created_at datetime default now()
+  updated_at datetime
+}
+
+type CollectionDeck {
+  id_collection int ref Collection::id_collection
+  id_deck int ref Deck::id_deck
+  sort_order int default 0
+
+  identity (id_collection, id_deck)
+}
+
+# ------------------------------------------------------------------------------
+# 7. MOTOR DE APRENDIZAJE: REPETICIÓN ESPACIADA (Mastery)
+# ------------------------------------------------------------------------------
+
+# Registra la curva de retención de cada usuario sobre cada acepción que estudia.
+type Mastery {
+  id_user uuid ref User::id_user
+  id_sense int ref Sense::id_sense
+
+  progress_stage enum("NEW", "LEARNING", "REVIEWING", "MASTERED") default "NEW"
+  mastery_percentage float default 0.0      # De 0.0 a 1.0
+  consecutive_correct int default 0
+  times_reviewed int default 0
+
+  # Algoritmo de repetición espaciada (SM-2 / SuperMemo)
+  next_review_at datetime default now()
+  last_reviewed_at datetime default now()
+
+  identity (id_user, id_sense)
+}
+
+# ------------------------------------------------------------------------------
+# 8. GAMIFICACIÓN: EXPERIENCIA, RACHAS Y MEDALLAS
+# ------------------------------------------------------------------------------
+
+# Auditoría y ledger de puntos para evitar trampas en el cliente.
+type XPTransaction {
+  id_transaction gen_uuid() identity
+  id_user uuid ref User::id_user
+
+  amount_xp int                             # Ej: +10 por quiz rápido, +150 por ganar sala
+  reason enum(
+    "QUIZ_CORRECT",
+    "MATCH_WIN",
+    "DAILY_STREAK",
+    "DECK_COMPLETED",
+    "ACHIEVEMENT_UNLOCKED"
+  )
+  metadata_id string                        # ID de referencia de la partida o palabra
+
+  created_at datetime default now()
+}
+
+# Catálogo oficial de logros mantenido por administradores.
+type Achievement {
+  id_achievement int auto_increment identity
+
+  slug string unique                        # "chilango_master", "streak_30", "cuidado_con_las_palabras"
+  title string                              # Ej: "Chilango Honorario"
+  description string                        # Ej: "Domina 20 palabras de la jerga de la Ciudad de México"
+  badge_icon_url string
+  xp_reward int default 150
+  tier enum("BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND")
+  category enum(
+    "STREAK",
+    "COMPETITION",
+    "MASTERY",
+    "DIALECT_EXPLORER"
+  )
+
+  created_at datetime default now()
+}
+
+# Medallas que ha desbloqueado cada usuario
+type UserAchievement {
+  id_user uuid ref User::id_user
+  id_achievement int ref Achievement::id_achievement
+
+  unlocked_at datetime default now()
+
+  identity (id_user, id_achievement)
+}
+
+# ------------------------------------------------------------------------------
+# 9. MULTIJUGADOR EN TIEMPO REAL: SALAS DE COMPETENCIA (Matches)
+# ------------------------------------------------------------------------------
+
+# Sala de juego en vivo (Vocabulary Jam) ejecutada sobre WebSockets.
+# Durante la partida, TODAS las respuestas y puntuaciones se resuelven en la MEMORIA RAM
+# de realtime-service. Al terminar el juego, se hace un único guardado masivo (Batch Flush).
+type Match {
+  id_match gen_uuid() identity
+  id_deck int ref Deck::id_deck             # Deck de palabras usado en la partida
+
+  room_code string unique                   # Código PIN de la sala (ej. "MX-892")
+  status enum("WAITING", "IN_PROGRESS", "FINISHED") default "WAITING"
+  winner_user_id? uuid ref User::id_user
+  is_public bool default true
+  total_rounds int default 10
+
+  created_at datetime default now()
+  finished_at datetime
+}
+
+# Desempeño consolidado final de cada jugador en la partida (1 fila por jugador al terminar)
+type MatchParticipant {
+  id_match uuid ref Match::id_match
+  id_user uuid ref User::id_user
+
+  score int default 0
+  final_rank int default 0                  # 1° lugar, 2° lugar, etc.
+  correct_answers int default 0
+  total_time_spent_ms int default 0
+  xp_earned int default 0                   # Puntos de experiencia calculados al final
+
+  identity (id_match, id_user)
+}
+
+# ------------------------------------------------------------------------------
+# 10. PREGUNTAS Y GENERADOR DE QUIZZES (Híbrido: Dinámico + Curado)
+# ------------------------------------------------------------------------------
+
+# Banco de preguntas curadas/artesanales redactadas por Editores.
+# Al iniciar la sala, el backend descarga el Deck y sus Questions asociadas en 1 solo request.
+# En memoria, el servidor decide aleatoriamente (50/50) si usa una Question artesanal
+# o genera una dinámica tomando la definición y 3 distractores aleatorios del mismo Deck.
+type Question {
+  id_question int auto_increment identity
+  id_sense int ref Sense::id_sense          # Sentido evaluado (Respuesta correcta)
+  id_editor uuid ref User::id_user          # Editor que creó la pregunta
+
+  type enum(
+    "DEFINITION_TO_WORD",    # Te doy la definición, escoge el lema
+    "WORD_TO_DEFINITION",    # Te doy el lema, escoge la definición
+    "SENTENCE_COMPLETION",   # Oración con hueco (Fill-in-the-blank con Example)
+    "REGIONAL_EQUIVALENT",   # "¿Cómo se le llama en España a...?"
+    "TONE_OR_REGISTER"       # "¿Cuál de estas opciones es jerga/slang callejero?"
+  )
+
+  # Texto del enunciado de la pregunta
+  prompt string              # Ej: "¿Cómo se le llama en Colombia a lo que en México decimos 'popote'?"
+
+  # Distractores curados específicos (Array JSON de strings: ["pitillo", "bombilla", "pajita"])
+  custom_distractors json
+
+  # Explicación post-respuesta (retroalimentación educativa inmediata al responder)
+  explanation string         # Ej: "Popote proviene del náhuatl 'popotl'. En Colombia usan 'pitillo' y en España 'pajita'."
+
+  created_at datetime default now()
+}
+
+# Historial de intentos individuales (Se usa para práctica individual y reporte de errores,
+# NO se satura la base de datos registrando cada clic de las salas multijugador masivas).
+type QuizAttempt {
+  id_attempt gen_uuid() identity
+  id_user uuid ref User::id_user
+  id_sense int ref Sense::id_sense
+  id_question? int ref Question::id_question
+
+  selected_option string
+  is_correct bool
+  time_spent_ms int
+
+  answered_at datetime default now()
+}
