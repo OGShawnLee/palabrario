@@ -92,7 +92,7 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	profile, err := h.userRepo.GetProfileByID(r.Context(), repository.UUIDToString(account.IDAccount))
+	profile, err := h.userRepo.GetProfileByID(r.Context(), account.IDAccount.String())
 	if err != nil {
 		http.Error(w, `{"error":"Error recuperando perfil de usuario"}`, http.StatusInternalServerError)
 		return

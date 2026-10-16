@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
@@ -23,21 +24,6 @@ func NewUserRepository(databaseInstance *database.DB) *UserRepository {
 		db:      databaseInstance,
 		queries: db.New(databaseInstance.Pool),
 	}
-}
-
-func UUIDToString(u pgtype.UUID) string {
-	if !u.Valid {
-		return ""
-	}
-	src := u.Bytes
-	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
-		src[0:4], src[4:6], src[6:8], src[8:10], src[10:16])
-}
-
-func parseUUID(s string) (pgtype.UUID, error) {
-	var u pgtype.UUID
-	err := u.Scan(s)
-	return u, err
 }
 
 func textToPtr(t pgtype.Text) *string {
@@ -70,7 +56,7 @@ func (r *UserRepository) CreateUser(ctx context.Context, email, passwordHash, na
 		return nil, fmt.Errorf("error al crear cuenta: %w", err)
 	}
 
-	// 2. Crear perfil tipado con sqlc
+	// 2. Crear perfil tipado con sqlc usando el UUID nativo
 	userProfile, err := qtx.CreateUserProfile(ctx, db.CreateUserProfileParams{
 		IDUser:        account.IDAccount,
 		Name:          name,
@@ -86,7 +72,7 @@ func (r *UserRepository) CreateUser(ctx context.Context, email, passwordHash, na
 	}
 
 	return &models.UserProfile{
-		IDUser:        UUIDToString(account.IDAccount),
+		IDUser:        account.IDAccount.String(),
 		Email:         account.Email,
 		Name:          userProfile.Name,
 		UserName:      userProfile.UserName,
@@ -114,12 +100,12 @@ func (r *UserRepository) GetAccountByEmail(ctx context.Context, email string) (*
 }
 
 func (r *UserRepository) GetProfileByID(ctx context.Context, userID string) (*models.UserProfile, error) {
-	uuidVal, err := parseUUID(userID)
+	parsedUUID, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, fmt.Errorf("id de usuario inválido: %w", err)
 	}
 
-	row, err := r.queries.GetUserProfileByID(ctx, uuidVal)
+	row, err := r.queries.GetUserProfileByID(ctx, parsedUUID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errors.New("usuario no encontrado")
@@ -128,7 +114,7 @@ func (r *UserRepository) GetProfileByID(ctx context.Context, userID string) (*mo
 	}
 
 	return &models.UserProfile{
-		IDUser:        UUIDToString(row.IDUser),
+		IDUser:        row.IDUser.String(),
 		Email:         row.Email,
 		Name:          row.Name,
 		UserName:      row.UserName,

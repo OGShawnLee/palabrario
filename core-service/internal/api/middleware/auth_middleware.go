@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"net/http"
+	"slices"
 	"strings"
 
 	"palabrario/core-service/internal/auth"
@@ -51,15 +52,7 @@ func (m *AuthMiddleware) RequireRole(roles ...models.AccountRole) func(http.Hand
 				return
 			}
 
-			allowed := false
-			for _, role := range roles {
-				if claims.Role == role {
-					allowed = true
-					break
-				}
-			}
-
-			if !allowed {
+			if !slices.Contains(roles, claims.Role) {
 				http.Error(w, `{"error":"Permisos insuficientes para acceder a este recurso"}`, http.StatusForbidden)
 				return
 			}

@@ -44,7 +44,7 @@ func (rt *Router) Setup() http.Handler {
 	}))
 
 	// Servicios y repositorios
-	tokenService := auth.NewTokenService(rt.cfg.JWTSecret)
+	tokenService := auth.NewTokenService(rt.cfg.JWTSecret, rt.cfg.JWTExpirationHours)
 	userRepo := repository.NewUserRepository(rt.db)
 
 	// Handlers y middlewares de autenticación

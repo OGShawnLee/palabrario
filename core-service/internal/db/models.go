@@ -8,6 +8,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -500,7 +501,7 @@ func (ns NullXpReason) Value() (driver.Value, error) {
 }
 
 type Account struct {
-	IDAccount    pgtype.UUID        `json:"id_account"`
+	IDAccount    uuid.UUID          `json:"id_account"`
 	Email        string             `json:"email"`
 	PasswordHash string             `json:"password_hash"`
 	Role         AccountRole        `json:"role"`
@@ -522,7 +523,7 @@ type Achievement struct {
 
 type Collection struct {
 	IDCollection int32              `json:"id_collection"`
-	IDUser       pgtype.UUID        `json:"id_user"`
+	IDUser       uuid.UUID          `json:"id_user"`
 	Title        string             `json:"title"`
 	Description  pgtype.Text        `json:"description"`
 	IsPublic     bool               `json:"is_public"`
@@ -545,7 +546,7 @@ type ConceptMapping struct {
 
 type Deck struct {
 	IDDeck      int32              `json:"id_deck"`
-	IDUser      pgtype.UUID        `json:"id_user"`
+	IDUser      uuid.UUID          `json:"id_user"`
 	Title       string             `json:"title"`
 	Description pgtype.Text        `json:"description"`
 	IsPublic    bool               `json:"is_public"`
@@ -563,7 +564,7 @@ type DeckItem struct {
 type Example struct {
 	IDExample int32              `json:"id_example"`
 	IDSense   int32              `json:"id_sense"`
-	IDEditor  pgtype.UUID        `json:"id_editor"`
+	IDEditor  uuid.UUID          `json:"id_editor"`
 	Sentence  string             `json:"sentence"`
 	Source    pgtype.Text        `json:"source"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
@@ -571,7 +572,7 @@ type Example struct {
 }
 
 type Match struct {
-	IDMatch      pgtype.UUID        `json:"id_match"`
+	IDMatch      uuid.UUID          `json:"id_match"`
 	IDDeck       int32              `json:"id_deck"`
 	RoomCode     string             `json:"room_code"`
 	Status       MatchStatus        `json:"status"`
@@ -583,19 +584,19 @@ type Match struct {
 }
 
 type MatchParticipant struct {
-	IDMatch          pgtype.UUID `json:"id_match"`
-	IDUser           pgtype.UUID `json:"id_user"`
-	Score            int32       `json:"score"`
-	FinalRank        int32       `json:"final_rank"`
-	CorrectAnswers   int32       `json:"correct_answers"`
-	TotalTimeSpentMs int32       `json:"total_time_spent_ms"`
-	XpEarned         int32       `json:"xp_earned"`
+	IDMatch          uuid.UUID `json:"id_match"`
+	IDUser           uuid.UUID `json:"id_user"`
+	Score            int32     `json:"score"`
+	FinalRank        int32     `json:"final_rank"`
+	CorrectAnswers   int32     `json:"correct_answers"`
+	TotalTimeSpentMs int32     `json:"total_time_spent_ms"`
+	XpEarned         int32     `json:"xp_earned"`
 }
 
 type Question struct {
 	IDQuestion        int32              `json:"id_question"`
 	IDSense           int32              `json:"id_sense"`
-	IDEditor          pgtype.UUID        `json:"id_editor"`
+	IDEditor          uuid.UUID          `json:"id_editor"`
 	Type              QuestionType       `json:"type"`
 	Prompt            string             `json:"prompt"`
 	CustomDistractors []byte             `json:"custom_distractors"`
@@ -604,8 +605,8 @@ type Question struct {
 }
 
 type QuizAttempt struct {
-	IDAttempt      pgtype.UUID        `json:"id_attempt"`
-	IDUser         pgtype.UUID        `json:"id_user"`
+	IDAttempt      uuid.UUID          `json:"id_attempt"`
+	IDUser         uuid.UUID          `json:"id_user"`
 	IDSense        int32              `json:"id_sense"`
 	IDQuestion     pgtype.Int4        `json:"id_question"`
 	SelectedOption string             `json:"selected_option"`
@@ -615,7 +616,7 @@ type QuizAttempt struct {
 }
 
 type Region struct {
-	IDRegion    pgtype.UUID `json:"id_region"`
+	IDRegion    uuid.UUID   `json:"id_region"`
 	Code        string      `json:"code"`
 	Name        string      `json:"name"`
 	ParentZone  string      `json:"parent_zone"`
@@ -632,8 +633,8 @@ type SemanticConcept struct {
 type Sense struct {
 	IDSense           int32              `json:"id_sense"`
 	IDWord            int32              `json:"id_word"`
-	IDRegion          pgtype.UUID        `json:"id_region"`
-	IDEditor          pgtype.UUID        `json:"id_editor"`
+	IDRegion          uuid.UUID          `json:"id_region"`
+	IDEditor          uuid.UUID          `json:"id_editor"`
 	ShortDefinition   string             `json:"short_definition"`
 	Definition        string             `json:"definition"`
 	IsPrimary         bool               `json:"is_primary"`
@@ -649,12 +650,12 @@ type Sense struct {
 
 type SenseApproval struct {
 	IDSense    int32              `json:"id_sense"`
-	IDEditor   pgtype.UUID        `json:"id_editor"`
+	IDEditor   uuid.UUID          `json:"id_editor"`
 	ApprovedAt pgtype.Timestamptz `json:"approved_at"`
 }
 
 type User struct {
-	IDUser         pgtype.UUID        `json:"id_user"`
+	IDUser         uuid.UUID          `json:"id_user"`
 	Name           string             `json:"name"`
 	UserName       string             `json:"user_name"`
 	AvatarUrl      pgtype.Text        `json:"avatar_url"`
@@ -669,13 +670,13 @@ type User struct {
 }
 
 type UserAchievement struct {
-	IDUser        pgtype.UUID        `json:"id_user"`
+	IDUser        uuid.UUID          `json:"id_user"`
 	IDAchievement int32              `json:"id_achievement"`
 	UnlockedAt    pgtype.Timestamptz `json:"unlocked_at"`
 }
 
 type UserMastery struct {
-	IDUser              pgtype.UUID        `json:"id_user"`
+	IDUser              uuid.UUID          `json:"id_user"`
 	IDSense             int32              `json:"id_sense"`
 	ProgressStage       MasteryStage       `json:"progress_stage"`
 	MasteryPercentage   float32            `json:"mastery_percentage"`
@@ -702,8 +703,8 @@ type Word struct {
 }
 
 type XpTransaction struct {
-	IDTransaction pgtype.UUID        `json:"id_transaction"`
-	IDUser        pgtype.UUID        `json:"id_user"`
+	IDTransaction uuid.UUID          `json:"id_transaction"`
+	IDUser        uuid.UUID          `json:"id_user"`
 	AmountXp      int32              `json:"amount_xp"`
 	Reason        XpReason           `json:"reason"`
 	MetadataID    pgtype.Text        `json:"metadata_id"`

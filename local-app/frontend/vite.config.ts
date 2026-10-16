@@ -3,7 +3,6 @@ import UnoCSS from "unocss/vite";
 import path from "path";
 import { defineConfig } from "vite";
 
-
 export default defineConfig({
   plugins: [UnoCSS(), Vue()],
   server: {

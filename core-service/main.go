@@ -17,7 +17,11 @@ import (
 )
 
 func main() {
-	cfg := config.Load()
+	// 1. Carga y validación estricta de variables de entorno (Fail-Fast)
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("🚨 ERROR FATAL DE INICIALIZACIÓN: %v", err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -46,7 +50,7 @@ func main() {
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("🚀 [core-service] corriendo en http://localhost:%s", cfg.Port)
+		log.Printf("🚀 [core-service] [%s] corriendo en http://localhost:%s", cfg.Environment, cfg.Port)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("❌ Error en servidor HTTP: %v", err)
 		}

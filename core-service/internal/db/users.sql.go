@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -43,10 +44,10 @@ RETURNING id_user, name, user_name, avatar_url, anchor_dialect, total_xp, curren
 `
 
 type CreateUserProfileParams struct {
-	IDUser        pgtype.UUID `json:"id_user"`
-	Name          string      `json:"name"`
-	UserName      string      `json:"user_name"`
-	AnchorDialect string      `json:"anchor_dialect"`
+	IDUser        uuid.UUID `json:"id_user"`
+	Name          string    `json:"name"`
+	UserName      string    `json:"user_name"`
+	AnchorDialect string    `json:"anchor_dialect"`
 }
 
 func (q *Queries) CreateUserProfile(ctx context.Context, arg CreateUserProfileParams) (User, error) {
@@ -115,7 +116,7 @@ WHERE u.id_user = $1
 `
 
 type GetUserProfileByIDRow struct {
-	IDUser        pgtype.UUID        `json:"id_user"`
+	IDUser        uuid.UUID          `json:"id_user"`
 	Email         string             `json:"email"`
 	Name          string             `json:"name"`
 	UserName      string             `json:"user_name"`
@@ -130,7 +131,7 @@ type GetUserProfileByIDRow struct {
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
-func (q *Queries) GetUserProfileByID(ctx context.Context, idUser pgtype.UUID) (GetUserProfileByIDRow, error) {
+func (q *Queries) GetUserProfileByID(ctx context.Context, idUser uuid.UUID) (GetUserProfileByIDRow, error) {
 	row := q.db.QueryRow(ctx, getUserProfileByID, idUser)
 	var i GetUserProfileByIDRow
 	err := row.Scan(

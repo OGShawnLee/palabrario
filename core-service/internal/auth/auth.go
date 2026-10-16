@@ -28,10 +28,13 @@ type TokenService struct {
 	duration  time.Duration
 }
 
-func NewTokenService(secretKey string) *TokenService {
+func NewTokenService(secretKey string, duration time.Duration) *TokenService {
+	if duration <= 0 {
+		duration = 72 * time.Hour
+	}
 	return &TokenService{
 		secretKey: []byte(secretKey),
-		duration:  72 * time.Hour, // 3 días de vigencia
+		duration:  duration,
 	}
 }
 
