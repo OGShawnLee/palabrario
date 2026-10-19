@@ -1,4 +1,4 @@
-# 🤖 Guía Maestra de Ingeniería Orientada por Agentes (`AGENT_WORKFLOW.md`)
+﻿# 🤖 Guía Maestra de Ingeniería Orientada por Agentes (`AGENT_WORKFLOW.md`)
 
 > **Manual Operativo de Orquestación de Modelos de IA para el Desarrollo de Palabrario**  
 > **Enfoque:** Patrón *Arquitecto-Constructor* (*Architect-Builder*), *Backend-First* y *Contract-First*  
@@ -95,7 +95,7 @@ Hola hermano, vamos a implementar la FASE 3.3 de Palabrario (Módulo de Dicciona
 3. Ejecuta exactamente las siguientes tareas:
    - Amplía `pkg/models/dictionary.go` y crea `pkg/models/curation.go` con los DTOs exactos especificados en las secciones 2.3.1 y 2.4.1 de `.context/INTERFACES.md`.
    - Amplía `sql/queries/dictionary.sql` y crea `sql/queries/curation.sql` con las consultas tipadas de las secciones 2.3.2 y 2.4 de `.context/INTERFACES.md`. Ejecuta `sqlc generate`.
-   - Crea `core-service/internal/service/errors.go`, `dictionary_service.go` y `curation_service.go` respetando las reglas RN06 (quórum de 3 votos), RN07 (prohibición de auto-aprobación devolviendo 403 Forbidden) y RN08 (aprobación/ocultación directa por ADMIN).
+   - Amplía `core-service/internal/service/dictionary_service.go` (siguiendo el molde SOA ya creado junto a `errors.go` e `identity_service.go`) y crea `curation_service.go` respetando las reglas RN06 (quórum de 3 votos), RN07 (prohibición de auto-aprobación devolviendo 403 Forbidden) y RN08 (aprobación/ocultación directa por ADMIN).
    - Actualiza `core-service/internal/api/handlers/dictionary_handler.go`, crea `curation_handler.go` y monta las rutas en `core-service/internal/api/router.go`.
 4. Reglas estrictas:
    - Prohibido inventar campos JSON fuera de `.context/INTERFACES.md`.

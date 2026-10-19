@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
 	"palabrario/core-service/internal/database"
+	"palabrario/pkg/response"
 )
 
 type HealthResponse struct {
@@ -25,23 +25,16 @@ func NewHealthHandler(db *database.DB) *HealthHandler {
 
 func (h *HealthHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	dbStatus := "connected"
+	statusCode := http.StatusOK
 	if err := h.db.Pool.Ping(r.Context()); err != nil {
 		dbStatus = "disconnected"
+		statusCode = http.StatusServiceUnavailable
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if dbStatus != "connected" {
-		w.WriteHeader(http.StatusServiceUnavailable)
-	} else {
-		w.WriteHeader(http.StatusOK)
-	}
-
-	resp := HealthResponse{
+	response.JSON(w, statusCode, HealthResponse{
 		Status:    "ok",
 		Service:   "core-service",
 		Database:  dbStatus,
 		Timestamp: time.Now().UTC(),
-	}
-
-	_ = json.NewEncoder(w).Encode(resp)
+	})
 }

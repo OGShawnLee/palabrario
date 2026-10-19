@@ -1,43 +1,48 @@
-package repository
+package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 
 	"palabrario/core-service/internal/database"
 	"palabrario/core-service/internal/db"
 	"palabrario/pkg/models"
 )
 
-var ErrWordNotFound = errors.New("palabra no encontrada")
+// DictionaryService define el contrato SOA del Módulo 3 (Léxico y Búsqueda Dialectal — CU05, CU06)
+// según la sección 2.3 de .context/INTERFACES.md.
+// Los métodos adicionales de exploración y autoría (ListRegions, GetWordOfTheDay, ExploreWords,
+// CreateWordProposal, CreateSenseProposal, etc.) se añadirán en la Fase 3.3 siguiendo este molde.
+type DictionaryService interface {
+	SearchDropdown(ctx context.Context, query string, userDialect string, limit int) ([]models.WordSearchResult, error)
+	GetWordDetail(ctx context.Context, wordID int) (*models.WordDetail, error)
+}
 
-type DictionaryRepository struct {
+type dictionaryService struct {
 	db      *database.DB
 	queries *db.Queries
 }
 
-func NewDictionaryRepository(databaseInstance *database.DB) *DictionaryRepository {
-	return &DictionaryRepository{
+func NewDictionaryService(databaseInstance *database.DB) DictionaryService {
+	return &dictionaryService{
 		db:      databaseInstance,
 		queries: db.New(databaseInstance.Pool),
 	}
 }
 
-func (r *DictionaryRepository) SearchWords(ctx context.Context, query, dialect string, limit int) ([]models.WordSearchResult, error) {
-	if dialect == "" {
-		dialect = "MX"
+func (s *dictionaryService) SearchDropdown(ctx context.Context, query string, userDialect string, limit int) ([]models.WordSearchResult, error) {
+	if userDialect == "" {
+		userDialect = "MX"
 	}
 	if limit <= 0 || limit > 50 {
 		limit = 10
 	}
 
-	rows, err := r.queries.SearchVocabularyDropdown(ctx, db.SearchVocabularyDropdownParams{
+	rows, err := s.queries.SearchVocabularyDropdown(ctx, db.SearchVocabularyDropdownParams{
 		SearchQuery: query,
-		UserDialect: dialect,
+		UserDialect: userDialect,
 		MaxResults:  int32(limit),
 	})
 	if err != nil {
@@ -59,24 +64,25 @@ func (r *DictionaryRepository) SearchWords(ctx context.Context, query, dialect s
 	return results, nil
 }
 
-func (r *DictionaryRepository) GetWordDetail(ctx context.Context, wordID int) (*models.WordDetail, error) {
+func (s *dictionaryService) GetWordDetail(ctx context.Context, wordID int) (*models.WordDetail, error) {
+	if wordID <= 0 {
+		return nil, NewDomainError(ErrInvalidInput, "El identificador de palabra debe ser un número entero positivo")
+	}
+
 	// 1. Obtener la palabra canónica
-	wordRow, err := r.queries.GetWordDetailByID(ctx, int32(wordID))
+	wordRow, err := s.queries.GetWordDetailByID(ctx, int32(wordID))
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrWordNotFound
-		}
-		return nil, fmt.Errorf("error consultando detalle de la palabra: %w", err)
+		return nil, MapDBError(err, "Palabra no encontrada en el diccionario")
 	}
 
 	// 2. Obtener acepciones aprobadas
-	sensesRows, err := r.queries.GetApprovedSensesByWordID(ctx, int32(wordID))
+	sensesRows, err := s.queries.GetApprovedSensesByWordID(ctx, int32(wordID))
 	if err != nil {
 		return nil, fmt.Errorf("error consultando acepciones: %w", err)
 	}
 
 	// 3. Obtener ejemplos de uso
-	examplesRows, err := r.queries.GetExamplesByWordID(ctx, int32(wordID))
+	examplesRows, err := s.queries.GetExamplesByWordID(ctx, int32(wordID))
 	if err != nil {
 		return nil, fmt.Errorf("error consultando ejemplos: %w", err)
 	}
@@ -88,44 +94,44 @@ func (r *DictionaryRepository) GetWordDetail(ctx context.Context, wordID int) (*
 			IDExample: int(ex.IDExample),
 			IDSense:   int(ex.IDSense),
 			Sentence:  ex.Sentence,
-			Source:    textToPtr(ex.Source),
+			Source:    TextToPtr(ex.Source),
 		})
 	}
 
 	// Construir acepciones con sus respectivos ejemplos
 	senses := make([]models.SenseDetail, len(sensesRows))
-	for i, s := range sensesRows {
+	for i, sr := range sensesRows {
 		countryCode := ""
-		if s.CountryCode.Valid {
-			countryCode = s.CountryCode.String
+		if sr.CountryCode.Valid {
+			countryCode = sr.CountryCode.String
 		}
 
 		cefrStr := ""
-		if s.CefrLevel.Valid {
-			cefrStr = string(s.CefrLevel.CefrLevel)
+		if sr.CefrLevel.Valid {
+			cefrStr = string(sr.CefrLevel.CefrLevel)
 		}
 
 		freqStr := ""
-		if s.UsageFrequency.Valid {
-			freqStr = string(s.UsageFrequency.UsageFrequency)
+		if sr.UsageFrequency.Valid {
+			freqStr = string(sr.UsageFrequency.UsageFrequency)
 		}
 
 		senses[i] = models.SenseDetail{
-			IDSense:         int(s.IDSense),
-			IDWord:          int(s.IDWord),
-			RegionCode:      s.RegionCode,
-			RegionName:      s.RegionName,
+			IDSense:         int(sr.IDSense),
+			IDWord:          int(sr.IDWord),
+			RegionCode:      sr.RegionCode,
+			RegionName:      sr.RegionName,
 			CountryCode:     countryCode,
-			FlagEmoji:       s.FlagEmoji,
-			ShortDefinition: s.ShortDefinition,
-			Definition:      s.Definition,
-			IsPrimary:       s.IsPrimary,
-			IsTabooOrVulgar: s.IsTabooOrVulgar,
-			CulturalNote:    textToPtr(s.CulturalNote),
+			FlagEmoji:       sr.FlagEmoji,
+			ShortDefinition: sr.ShortDefinition,
+			Definition:      sr.Definition,
+			IsPrimary:       sr.IsPrimary,
+			IsTabooOrVulgar: sr.IsTabooOrVulgar,
+			CulturalNote:    TextToPtr(sr.CulturalNote),
 			CEFRLevel:       cefrStr,
 			UsageFrequency:  freqStr,
-			State:           string(s.State),
-			Examples:        examplesMap[s.IDSense],
+			State:           string(sr.State),
+			Examples:        examplesMap[sr.IDSense],
 		}
 		if senses[i].Examples == nil {
 			senses[i].Examples = []models.Example{}
@@ -133,7 +139,7 @@ func (r *DictionaryRepository) GetWordDetail(ctx context.Context, wordID int) (*
 	}
 
 	// 4. Obtener heterónimos (¿Cómo se dice en otros países?)
-	heteronymsRows, err := r.queries.GetHeteronymsByWordID(ctx, int32(wordID))
+	heteronymsRows, err := s.queries.GetHeteronymsByWordID(ctx, int32(wordID))
 	if err != nil {
 		return nil, fmt.Errorf("error consultando heterónimos: %w", err)
 	}
@@ -163,6 +169,7 @@ func (r *DictionaryRepository) GetWordDetail(ctx context.Context, wordID int) (*
 			IDRegion:    originUUID.String(),
 			Code:        wordRow.OriginRegionCode.String,
 			Name:        wordRow.OriginRegionName.String,
+			ParentZone:  wordRow.OriginRegionParentZone.String,
 			CountryCode: countryPtr,
 			FlagEmoji:   wordRow.OriginRegionFlagEmoji.String,
 		}
@@ -179,8 +186,8 @@ func (r *DictionaryRepository) GetWordDetail(ctx context.Context, wordID int) (*
 		NormalizedLemma: wordRow.NormalizedLemma,
 		PartOfSpeech:    wordRow.PartOfSpeech,
 		Gender:          genderStr,
-		Etymology:       textToPtr(wordRow.Etymology),
-		FriendlyBlurb:   textToPtr(wordRow.FriendlyBlurb),
+		Etymology:       TextToPtr(wordRow.Etymology),
+		FriendlyBlurb:   TextToPtr(wordRow.FriendlyBlurb),
 		OriginRegion:    originRegion,
 		Senses:          senses,
 		Heteronyms:      heteronyms,

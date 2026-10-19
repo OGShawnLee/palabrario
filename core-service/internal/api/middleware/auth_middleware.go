@@ -6,8 +6,9 @@ import (
 	"slices"
 	"strings"
 
-	"palabrario/core-service/internal/auth"
+	"palabrario/pkg/auth"
 	"palabrario/pkg/models"
+	"palabrario/pkg/response"
 )
 
 type AuthMiddleware struct {
@@ -22,19 +23,19 @@ func (m *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
-			http.Error(w, `{"error":"Encabezado de autorización ausente"}`, http.StatusUnauthorized)
+			response.Error(w, http.StatusUnauthorized, "Encabezado de autorización ausente")
 			return
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-			http.Error(w, `{"error":"Formato de token inválido. Use Bearer <token>"}`, http.StatusUnauthorized)
+			response.Error(w, http.StatusUnauthorized, "Formato de token inválido. Use Bearer <token>")
 			return
 		}
 
 		claims, err := m.tokenService.VerifyToken(parts[1])
 		if err != nil {
-			http.Error(w, `{"error":"Token inválido o expirado"}`, http.StatusUnauthorized)
+			response.Error(w, http.StatusUnauthorized, "Token inválido o expirado")
 			return
 		}
 
@@ -43,17 +44,35 @@ func (m *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
 	})
 }
 
+// OptionalAuth inyecta los Claims en el contexto si el cliente envía un token Bearer válido,
+// pero permite continuar la petición como usuario anónimo si no hay token.
+func (m *AuthMiddleware) OptionalAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
+		if authHeader != "" {
+			parts := strings.SplitN(authHeader, " ", 2)
+			if len(parts) == 2 && strings.EqualFold(parts[0], "Bearer") {
+				if claims, err := m.tokenService.VerifyToken(parts[1]); err == nil {
+					ctx := context.WithValue(r.Context(), auth.UserContextKey, claims)
+					r = r.WithContext(ctx)
+				}
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (m *AuthMiddleware) RequireRole(roles ...models.AccountRole) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			claims, ok := r.Context().Value(auth.UserContextKey).(*auth.Claims)
 			if !ok || claims == nil {
-				http.Error(w, `{"error":"No autenticado"}`, http.StatusUnauthorized)
+				response.Error(w, http.StatusUnauthorized, "No autenticado")
 				return
 			}
 
 			if !slices.Contains(roles, claims.Role) {
-				http.Error(w, `{"error":"Permisos insuficientes para acceder a este recurso"}`, http.StatusForbidden)
+				response.Error(w, http.StatusForbidden, "Permisos insuficientes para acceder a este recurso")
 				return
 			}
 

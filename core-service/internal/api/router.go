@@ -9,10 +9,11 @@ import (
 
 	"palabrario/core-service/internal/api/handlers"
 	"palabrario/core-service/internal/api/middleware"
-	"palabrario/core-service/internal/auth"
 	"palabrario/core-service/internal/config"
 	"palabrario/core-service/internal/database"
-	"palabrario/core-service/internal/repository"
+	"palabrario/core-service/internal/service"
+	"palabrario/pkg/auth"
+	"palabrario/pkg/response"
 )
 
 type Router struct {
@@ -43,27 +44,28 @@ func (rt *Router) Setup() http.Handler {
 		MaxAge:           300,
 	}))
 
-	// Servicios y repositorios
+	// 1. Capa de Servicios SOA (Contratos de .context/INTERFACES.md)
 	tokenService := auth.NewTokenService(rt.cfg.JWTSecret, rt.cfg.JWTExpirationHours)
-	userRepo := repository.NewUserRepository(rt.db)
-	dictionaryRepo := repository.NewDictionaryRepository(rt.db)
+	identityService := service.NewIdentityService(rt.db, tokenService)
+	dictionaryService := service.NewDictionaryService(rt.db)
 
-	// Handlers y middlewares
+	// 2. Capa de Middlewares y Handlers HTTP
 	authMiddleware := middleware.NewAuthMiddleware(tokenService)
-	authHandler := handlers.NewAuthHandler(userRepo, tokenService)
-	dictionaryHandler := handlers.NewDictionaryHandler(dictionaryRepo)
+	authHandler := handlers.NewAuthHandler(identityService)
+	dictionaryHandler := handlers.NewDictionaryHandler(dictionaryService)
 	healthHandler := handlers.NewHealthHandler(rt.db)
 
 	// Health check raíz
 	r.Get("/health", healthHandler.HealthCheck)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"message":"Bienvenido a Palabrario Core API (Golang + PostgreSQL 17)"}`))
+		response.JSON(w, http.StatusOK, map[string]string{
+			"message": "Bienvenido a Palabrario Core API (Golang + PostgreSQL 17)",
+		})
 	})
 
 	// Rutas API v1
 	r.Route("/api/v1", func(r chi.Router) {
-		// Autenticación
+		// Módulo 1: Autenticación e Identidad (CU01)
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/sign-up", authHandler.SignUp)
 			r.Post("/sign-in", authHandler.SignIn)
@@ -75,9 +77,9 @@ func (rt *Router) Setup() http.Handler {
 			})
 		})
 
-		// Diccionario y Búsqueda Dialectal
+		// Módulo 3: Diccionario y Búsqueda Dialectal (CU05)
 		r.Route("/words", func(r chi.Router) {
-			r.Get("/search", dictionaryHandler.Search)
+			r.With(authMiddleware.OptionalAuth).Get("/search", dictionaryHandler.Search)
 			r.Get("/{id}", dictionaryHandler.GetByID)
 		})
 	})

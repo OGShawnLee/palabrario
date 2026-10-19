@@ -1,40 +1,39 @@
 package handlers
 
 import (
-	"encoding/json"
-	"errors"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 
-	"palabrario/core-service/internal/auth"
-	"palabrario/core-service/internal/repository"
+	"palabrario/core-service/internal/service"
+	"palabrario/pkg/auth"
+	"palabrario/pkg/models"
+	"palabrario/pkg/response"
 )
 
 type DictionaryHandler struct {
-	repo *repository.DictionaryRepository
+	dictService service.DictionaryService
 }
 
-func NewDictionaryHandler(repo *repository.DictionaryRepository) *DictionaryHandler {
-	return &DictionaryHandler{repo: repo}
+func NewDictionaryHandler(dictService service.DictionaryService) *DictionaryHandler {
+	return &DictionaryHandler{dictService: dictService}
 }
 
 // Search maneja GET /api/v1/words/search?q={query}&dialect={MX}&limit={10}
 func (h *DictionaryHandler) Search(w http.ResponseWriter, r *http.Request) {
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
 	if query == "" {
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode([]interface{}{})
+		response.JSON(w, http.StatusOK, []models.WordSearchResult{})
 		return
 	}
 
-	// Si el usuario está autenticado, intentar usar su dialecto ancla por defecto
-	dialect := strings.TrimSpace(r.URL.Query().Get("dialect"))
+	// Si no se especifica dialecto en query string, priorizar el dialecto ancla del JWT (vía OptionalAuth)
+	dialect := strings.TrimSpace(strings.ToUpper(r.URL.Query().Get("dialect")))
 	if dialect == "" {
-		if claims, ok := r.Context().Value(auth.UserContextKey).(*auth.Claims); ok && claims != nil {
-			// Si hay contexto de auth, se puede enriquecer aquí
+		if claims, ok := r.Context().Value(auth.UserContextKey).(*auth.Claims); ok && claims != nil && claims.AnchorDialect != "" {
+			dialect = claims.AnchorDialect
 		}
 		if dialect == "" {
 			dialect = "MX"
@@ -48,14 +47,14 @@ func (h *DictionaryHandler) Search(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	results, err := h.repo.SearchWords(r.Context(), query, dialect, limit)
+	results, err := h.dictService.SearchDropdown(r.Context(), query, dialect, limit)
 	if err != nil {
-		http.Error(w, `{"error":"Error al procesar la búsqueda de vocabulario"}`, http.StatusInternalServerError)
+		status, msg := service.HTTPStatusAndMessage(err, "Error al procesar la búsqueda de vocabulario")
+		response.Error(w, status, msg)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(results)
+	response.JSON(w, http.StatusOK, results)
 }
 
 // GetByID maneja GET /api/v1/words/{id}
@@ -63,20 +62,16 @@ func (h *DictionaryHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	wordID, err := strconv.Atoi(idStr)
 	if err != nil || wordID <= 0 {
-		http.Error(w, `{"error":"El identificador de palabra debe ser un número entero positivo"}`, http.StatusBadRequest)
+		response.Error(w, http.StatusBadRequest, "El identificador de palabra debe ser un número entero positivo")
 		return
 	}
 
-	detail, err := h.repo.GetWordDetail(r.Context(), wordID)
+	detail, err := h.dictService.GetWordDetail(r.Context(), wordID)
 	if err != nil {
-		if errors.Is(err, repository.ErrWordNotFound) {
-			http.Error(w, `{"error":"Palabra no encontrada en el diccionario"}`, http.StatusNotFound)
-			return
-		}
-		http.Error(w, `{"error":"Error al obtener el detalle de la palabra"}`, http.StatusInternalServerError)
+		status, msg := service.HTTPStatusAndMessage(err, "Error al obtener el detalle de la palabra")
+		response.Error(w, status, msg)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(detail)
+	response.JSON(w, http.StatusOK, detail)
 }

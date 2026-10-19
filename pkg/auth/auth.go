@@ -16,10 +16,11 @@ type contextKey string
 const UserContextKey contextKey = "user_claims"
 
 type Claims struct {
-	UserID   string             `json:"user_id"`
-	Email    string             `json:"email"`
-	UserName string             `json:"user_name"`
-	Role     models.AccountRole `json:"role"`
+	UserID        string             `json:"user_id"`
+	Email         string             `json:"email"`
+	UserName      string             `json:"user_name"`
+	AnchorDialect string             `json:"anchor_dialect"`
+	Role          models.AccountRole `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -40,11 +41,17 @@ func NewTokenService(secretKey string, duration time.Duration) *TokenService {
 
 func (s *TokenService) GenerateToken(user *models.UserProfile) (string, error) {
 	now := time.Now().UTC()
+	dialect := user.AnchorDialect
+	if dialect == "" {
+		dialect = "MX"
+	}
+
 	claims := Claims{
-		UserID:   user.IDUser,
-		Email:    user.Email,
-		UserName: user.UserName,
-		Role:     user.Role,
+		UserID:        user.IDUser,
+		Email:         user.Email,
+		UserName:      user.UserName,
+		AnchorDialect: dialect,
+		Role:          user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.duration)),
 			IssuedAt:  jwt.NewNumericDate(now),

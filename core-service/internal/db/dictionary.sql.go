@@ -196,6 +196,7 @@ SELECT
     r.id_region AS origin_region_id,
     r.code AS origin_region_code,
     r.name AS origin_region_name,
+    r.parent_zone AS origin_region_parent_zone,
     r.country_code AS origin_region_country_code,
     r.flag_emoji AS origin_region_flag_emoji
 FROM words w
@@ -216,6 +217,7 @@ type GetWordDetailByIDRow struct {
 	OriginRegionID          pgtype.UUID        `json:"origin_region_id"`
 	OriginRegionCode        pgtype.Text        `json:"origin_region_code"`
 	OriginRegionName        pgtype.Text        `json:"origin_region_name"`
+	OriginRegionParentZone  pgtype.Text        `json:"origin_region_parent_zone"`
 	OriginRegionCountryCode pgtype.Text        `json:"origin_region_country_code"`
 	OriginRegionFlagEmoji   pgtype.Text        `json:"origin_region_flag_emoji"`
 }
@@ -237,6 +239,7 @@ func (q *Queries) GetWordDetailByID(ctx context.Context, idWord int32) (GetWordD
 		&i.OriginRegionID,
 		&i.OriginRegionCode,
 		&i.OriginRegionName,
+		&i.OriginRegionParentZone,
 		&i.OriginRegionCountryCode,
 		&i.OriginRegionFlagEmoji,
 	)

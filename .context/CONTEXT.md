@@ -37,7 +37,7 @@ $$\text{Descubrir con humor} \longrightarrow \text{Validar con rigor (Quórum 3)
 
 ## 2. Arquitectura de Red y Stack Tecnológico (Backend 100% Go 1.24)
 
-Todo el backend está unificado bajo un **Monorepo en Go 1.24** ([`go.mod`](../go.mod) raíz `module palabrario`), logrando un consumo total combinado de RAM menor a **15 MiB** para los 3 servicios en Docker y compartiendo directamente [`pkg/models`](../pkg/models) y [`core-service/internal/auth`](../core-service/internal/auth):
+Todo el backend está unificado bajo un **Monorepo en Go 1.24** ([`go.mod`](../go.mod) raíz `module palabrario`), logrando un consumo total combinado de RAM menor a **15 MiB** para los 3 servicios en Docker y compartiendo directamente [`pkg/models`](../pkg/models) y [`pkg/auth`](../pkg/auth) y [`pkg/response`](../pkg/response):
 
 ```mermaid
 flowchart TD

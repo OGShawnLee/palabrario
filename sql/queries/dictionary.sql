@@ -71,6 +71,7 @@ SELECT
     r.id_region AS origin_region_id,
     r.code AS origin_region_code,
     r.name AS origin_region_name,
+    r.parent_zone AS origin_region_parent_zone,
     r.country_code AS origin_region_country_code,
     r.flag_emoji AS origin_region_flag_emoji
 FROM words w
