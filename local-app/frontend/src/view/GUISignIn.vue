@@ -2,20 +2,28 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuth } from "@/composables/useAuth";
-import { LogIn, BookOpen, Trophy, Layers, User, Lock, Sparkles } from "lucide-vue-next";
+import { LogIn, BookOpen, Trophy, Layers, Mail, Lock, Sparkles, AlertCircle } from "lucide-vue-next";
 
 const router = useRouter();
-const { signIn } = useAuth();
+const { signIn, isLoading, authError } = useAuth();
 
-const identifier = ref("shawn_mx");
-const password = ref("••••••••");
+const email = ref("silas@palabrario.org");
+const password = ref("password123");
+const localError = ref<string | null>(null);
 
-function handleSignIn() {
-  signIn({
-    username: identifier.value.trim() || "shawn_mx",
-    name: "Shawn Lee",
-  });
-  router.push("/studio");
+async function handleSignIn() {
+  localError.value = null;
+  if (!email.value.trim() || !password.value.trim()) {
+    localError.value = "Ingresa tu correo y contraseña.";
+    return;
+  }
+
+  try {
+    await signIn(email.value.trim(), password.value.trim());
+    router.push("/studio");
+  } catch (err: any) {
+    localError.value = err?.message || "Credenciales incorrectas";
+  }
 }
 </script>
 
@@ -117,22 +125,32 @@ function handleSignIn() {
                 Iniciar Sesión
               </h1>
               <p class="text-xs text-chocolate/65 mt-1.5">
-                Ingresa tus datos para acceder a tu cuenta y a tus barajas de estudio.
+                Ingresa con tu correo y contraseña registrados para acceder a tu estudio.
               </p>
             </div>
 
+            <!-- Banner de Error si falla la autenticación -->
+            <div
+              v-if="localError || authError"
+              class="mb-5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200/80 flex items-center gap-2.5 text-rose-800 text-xs font-medium animate-shake"
+            >
+              <AlertCircle class="w-4 h-4 shrink-0 text-rose-600" />
+              <span>{{ localError || authError }}</span>
+            </div>
+
             <form @submit.prevent="handleSignIn" class="space-y-4">
-              <!-- Usuario o Correo -->
+              <!-- Correo Electrónico -->
               <div>
                 <label class="text-[11px] font-bold text-chocolate/80 uppercase tracking-wider block mb-1.5">
-                  Usuario o Correo Electrónico
+                  Correo Electrónico
                 </label>
                 <div class="relative">
-                  <User class="w-4 h-4 text-chocolate/35 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Mail class="w-4 h-4 text-chocolate/35 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
-                    v-model="identifier"
-                    type="text"
-                    placeholder="ej. shawn_mx o tu_correo@ejemplo.com"
+                    v-model="email"
+                    type="email"
+                    required
+                    placeholder="silas@palabrario.org"
                     class="w-full bg-[#FAF8F5] hover:bg-white border border-[#E8DEC8] focus:border-brand rounded-2xl pl-10 pr-4 py-2.5 text-xs text-chocolate placeholder:text-chocolate/35 focus:outline-none focus:ring-4 focus:ring-brand/10 transition-all font-medium"
                   />
                 </div>
@@ -148,6 +166,7 @@ function handleSignIn() {
                   <input
                     v-model="password"
                     type="password"
+                    required
                     placeholder="••••••••"
                     class="w-full bg-[#FAF8F5] hover:bg-white border border-[#E8DEC8] focus:border-brand rounded-2xl pl-10 pr-4 py-2.5 text-xs text-chocolate placeholder:text-chocolate/35 focus:outline-none focus:ring-4 focus:ring-brand/10 transition-all font-medium"
                   />
@@ -158,10 +177,11 @@ function handleSignIn() {
               <div class="pt-3">
                 <button
                   type="submit"
-                  class="w-full py-3.5 rounded-full bg-brand hover:bg-brand-dark text-white font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-brand/20 hover:shadow-lg hover:shadow-brand/30 active:scale-95 cursor-pointer flex items-center justify-center gap-2 group"
+                  :disabled="isLoading"
+                  class="w-full py-3.5 rounded-full bg-brand hover:bg-brand-dark disabled:opacity-60 disabled:cursor-not-allowed text-white font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-brand/20 hover:shadow-lg hover:shadow-brand/30 active:scale-95 cursor-pointer flex items-center justify-center gap-2 group"
                 >
                   <LogIn class="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  <span>Iniciar Sesión</span>
+                  <span>{{ isLoading ? "Verificando..." : "Iniciar Sesión" }}</span>
                 </button>
               </div>
             </form>

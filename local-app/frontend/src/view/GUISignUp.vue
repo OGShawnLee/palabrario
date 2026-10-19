@@ -2,23 +2,38 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuth } from "@/composables/useAuth";
-import { UserPlus, Globe, Heart, Shield, User, AtSign, Mail, Lock, Sparkles } from "lucide-vue-next";
+import { UserPlus, Globe, Heart, Shield, User, AtSign, Mail, Lock, Sparkles, AlertCircle } from "lucide-vue-next";
 
 const router = useRouter();
-const { signIn } = useAuth();
+const { signUp, isLoading, authError } = useAuth();
 
 // Los 4 campos solicitados
 const name = ref("");
 const username = ref("");
 const email = ref("");
 const password = ref("");
+const anchorDialect = ref("MX");
+const localError = ref<string | null>(null);
 
-function handleSignUp() {
-  signIn({
-    name: name.value.trim() || "Nuevo Aprendiz",
-    username: username.value.trim() || "aprendiz_nuevo",
-  });
-  router.push("/studio");
+async function handleSignUp() {
+  localError.value = null;
+  if (!name.value.trim() || !username.value.trim() || !email.value.trim() || !password.value.trim()) {
+    localError.value = "Todos los campos son obligatorios.";
+    return;
+  }
+
+  try {
+    await signUp(
+      name.value.trim(),
+      username.value.trim(),
+      email.value.trim(),
+      password.value.trim(),
+      anchorDialect.value
+    );
+    router.push("/studio");
+  } catch (err: any) {
+    localError.value = err?.message || "No se pudo registrar la cuenta";
+  }
 }
 </script>
 
@@ -124,6 +139,15 @@ function handleSignUp() {
               </p>
             </div>
 
+            <!-- Banner de Error si falla el registro -->
+            <div
+              v-if="localError || authError"
+              class="mb-5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200/80 flex items-center gap-2.5 text-rose-800 text-xs font-medium animate-shake"
+            >
+              <AlertCircle class="w-4 h-4 shrink-0 text-rose-600" />
+              <span>{{ localError || authError }}</span>
+            </div>
+
             <form @submit.prevent="handleSignUp" class="space-y-4">
               <!-- Campo 1: Nombre -->
               <div>
@@ -135,6 +159,7 @@ function handleSignUp() {
                   <input
                     v-model="name"
                     type="text"
+                    required
                     placeholder="ej. Mariana Santos"
                     class="w-full bg-[#FAF8F5] hover:bg-white border border-[#E8DEC8] focus:border-brand rounded-2xl pl-10 pr-4 py-2.5 text-xs text-chocolate placeholder:text-chocolate/35 focus:outline-none focus:ring-4 focus:ring-brand/10 transition-all font-medium"
                   />
@@ -151,6 +176,7 @@ function handleSignUp() {
                   <input
                     v-model="username"
                     type="text"
+                    required
                     placeholder="mariana_caribe"
                     class="w-full bg-[#FAF8F5] hover:bg-white border border-[#E8DEC8] focus:border-brand rounded-2xl pl-10 pr-4 py-2.5 text-xs text-chocolate placeholder:text-chocolate/35 focus:outline-none focus:ring-4 focus:ring-brand/10 transition-all font-medium"
                   />
@@ -167,6 +193,7 @@ function handleSignUp() {
                   <input
                     v-model="email"
                     type="email"
+                    required
                     placeholder="mariana@ejemplo.com"
                     class="w-full bg-[#FAF8F5] hover:bg-white border border-[#E8DEC8] focus:border-brand rounded-2xl pl-10 pr-4 py-2.5 text-xs text-chocolate placeholder:text-chocolate/35 focus:outline-none focus:ring-4 focus:ring-brand/10 transition-all font-medium"
                   />
@@ -183,6 +210,7 @@ function handleSignUp() {
                   <input
                     v-model="password"
                     type="password"
+                    required
                     placeholder="Crea una contraseña segura"
                     class="w-full bg-[#FAF8F5] hover:bg-white border border-[#E8DEC8] focus:border-brand rounded-2xl pl-10 pr-4 py-2.5 text-xs text-chocolate placeholder:text-chocolate/35 focus:outline-none focus:ring-4 focus:ring-brand/10 transition-all font-medium"
                   />
@@ -193,10 +221,11 @@ function handleSignUp() {
               <div class="pt-3">
                 <button
                   type="submit"
-                  class="w-full py-3.5 rounded-full bg-brand hover:bg-brand-dark text-white font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-brand/20 hover:shadow-lg hover:shadow-brand/30 active:scale-95 cursor-pointer flex items-center justify-center gap-2 group"
+                  :disabled="isLoading"
+                  class="w-full py-3.5 rounded-full bg-brand hover:bg-brand-dark disabled:opacity-60 disabled:cursor-not-allowed text-white font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-brand/20 hover:shadow-lg hover:shadow-brand/30 active:scale-95 cursor-pointer flex items-center justify-center gap-2 group"
                 >
                   <UserPlus class="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  <span>Crear Cuenta</span>
+                  <span>{{ isLoading ? "Registrando..." : "Crear Cuenta" }}</span>
                 </button>
               </div>
             </form>
