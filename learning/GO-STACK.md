@@ -1,4 +1,4 @@
-# 🐹 Guía Práctica del Stack de Go en Palabrario (`learning/GO-STACK.md`)
+﻿# 🐹 Guía Práctica del Stack de Go en Palabrario (`learning/GO-STACK.md`)
 
 > **Manual de Aprendizaje e Inmersión Técnica para el Desarrollador**  
 > **Proyecto:** Palabrario — Backend 100% en Go 1.24 + PostgreSQL 17  
@@ -203,6 +203,23 @@ En [`core-service/internal/service/errors.go`](../core-service/internal/service/
 
 ---
 
+### 3.6. Cómo se Comunica el Frontend con el Backend: El Puente Nativo Go de Wails (`local-app/app.go`)
+
+En una aplicación web tradicional, el frontend en Vue haría `fetch("http://localhost:8000/api/v1/...")` y guardaría el token JWT en `localStorage` (donde cualquier vulnerabilidad XSS en JavaScript podría robarlo).
+
+En **Palabrario**, gracias a **Wails v2** y a nuestro workspace unificado ([`go.work`](../go.work)), la comunicación es mucho más segura y 100% tipada:
+
+1. **Bóveda de Sesión en RAM (`local-app/app.go`):**
+   Cuando el usuario inicia sesión (`a.SignIn(email, password)`), es el proceso Go de escritorio (`local-app/app.go`) quien hace la petición HTTP a `core-service`. Al recibir el `AuthResponse`, **Go guarda el `sessionToken` JWT en una variable privada en memoria RAM (`a.sessionToken` protegida con `sync.RWMutex`)** y le devuelve a Vue únicamente el `UserProfile`. El navegador/WebView jamás ve el token JWT.
+2. **Compartición Directa de `pkg/models`:**
+   Como [`go.work`](../go.work) une la raíz (`.`) y `./local-app`, el archivo [`local-app/app.go`](../local-app/app.go) importa directamente `"palabrario/pkg/models"`.
+3. **Generación Automática de TypeScript (`wails generate module`):**
+   Cada método público que agregas a `func (a *App) MiMetodo(...) (*models.MiStruct, error)` en `local-app/app.go` es leído por Wails y transpilado automáticamente a:
+   - `local-app/frontend/wailsjs/go/main/App.js` y `App.d.ts` (funciones listas para importar en Vue con `async/await`).
+   - `local-app/frontend/wailsjs/go/models.ts` (clases e interfaces TypeScript generadas directamente desde `pkg/models/*.go`).
+
+---
+
 ## 4. Ciclo de Trabajo Diario: ¿Cómo Agrego un Nuevo Endpoint?
 
 Cada vez que tú (o un agente siguiendo [`AGENT_WORKFLOW.md`](../AGENT_WORKFLOW.md)) quieras agregar una funcionalidad al backend, siempre seguirás exactamente estos **5 pasos en orden**:
@@ -224,3 +241,10 @@ Cada vez que tú (o un agente siguiendo [`AGENT_WORKFLOW.md`](../AGENT_WORKFLOW.
    ```powershell
    go build ./core-service/... ./image-service/... ./pkg/...
    ```
+
+6. **Paso 6 (En Fase 5) — Expón el método en [`local-app/app.go`](../local-app/app.go) y genera TypeScript con Wails:**
+   Agrega el método en `struct App` retornando el struct de `pkg/models` y ejecuta en `local-app/`:
+   ```powershell
+   wails generate module
+   ```
+   Con eso tendrás la función y los tipos TypeScript autogenerados en `wailsjs/go/` listos para usarse en Vue 3 con cero posibilidad de desfase entre backend y frontend.

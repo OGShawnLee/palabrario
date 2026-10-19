@@ -2,7 +2,7 @@
 
 > **Propósito de este documento (Progressive Disclosure Entrypoint):**  
 > Este archivo es el **Punto de Entrada Único y Enrutador Maestro** para cualquier agente de IA o ingeniero que trabaje en **Palabrario**.  
-> En lugar de duplicar miles de líneas de SQL o contratos HTTP que causarían desfase documental (*Context Drift*), este archivo define las **Reglas Globales Inquebrantables**, el **Stack 100% Go**, los **Tokens de Diseño** y te indica **exactamente qué documento especializado abrir** según la tarea solicitada.
+> En lugar de duplicar miles de líneas de SQL o contratos HTTP que causarían desfase documental (*Context Drift*), este archivo define las **Reglas Globales Inquebrantables**, el **Stack 100% Go**, el **Puente IPC Nativo de Wails**, los **Tokens de Diseño** y te indica **exactamente qué documento especializado abrir** según la tarea solicitada.
 
 ---
 
@@ -11,12 +11,15 @@
 > [!CAUTION]
 > **LEE ESTO ANTES DE ESCRIBIR UNA SOLA LÍNEA DE CÓDIGO:**
 > 1. **Enfoque Backend-First & Contract-First:** El proyecto se encuentra estabilizando el backend completo en Go (Fases 3.3 a 4). **No modifiques ni leas vistas del frontend (`local-app` / `local-app-prototype` / `UI_SPECIFICATION.md`)** a menos que el usuario lo pida explícitamente. Cuando se conecte el frontend en la Fase 5, la UI se adaptará estrictamente a los DTOs que retorna el backend, y **nunca al revés**.
-> 2. **Prohibido Inventar Contratos o Campos JSON:** Todo endpoint HTTP, trama WebSocket, struct Go y consulta `sqlc` debe apegarse 100% a lo especificado en [`INTERFACES.md`](./INTERFACES.md) y [`SCHEMA_FINAL.sql`](../SCHEMA_FINAL.sql).
-> 3. **Fuente Única de Verdad (SSOT) por Responsabilidad:**
+> 2. **Comunicación Cliente $\to$ Backend exclusivamente vía Puente IPC Go de Wails (`local-app/app.go`):**
+>    - **JavaScript/Vue en el WebView NUNCA realiza `fetch()`/`axios` directos a `core-service` ni almacena el token JWT en `localStorage`/`sessionStorage`.**
+>    - El proceso nativo Go de Wails ([`local-app/app.go`](../local-app/app.go)) actúa como un **BFF (*Backend-For-Frontend*) local y bóveda de sesión en RAM**: importa directamente los structs de [`pkg/models`](../pkg/models) (gracias a [`go.work`](../go.work)), custodia el `sessionToken` JWT en memoria privada de Go (`sync.RWMutex`), ejecuta las llamadas `net/http` o WebSockets hacia los servicios backend (`:8000`, `:8001`, `:8002`) y expone métodos Go públicos que el compilador de Wails (`wails generate module` / `wails dev`) transpila automáticamente a funciones y clases TypeScript en `local-app/frontend/wailsjs/go/main/App.js` (`.d.ts`) y `wailsjs/go/models.ts`.
+> 3. **Prohibido Inventar Contratos o Campos JSON:** Todo endpoint HTTP, trama WebSocket, struct Go y consulta `sqlc` debe apegarse 100% a lo especificado en [`INTERFACES.md`](./INTERFACES.md) y [`SCHEMA_FINAL.sql`](../SCHEMA_FINAL.sql).
+> 4. **Fuente Única de Verdad (SSOT) por Responsabilidad:**
 >    - **¿Qué construir ahora y en qué orden?** $\to$ Lee [`.context/PLAN.md`](./PLAN.md).
 >    - **¿Qué significa cada entidad, regla de negocio (`RN01–RN11`), estado editorial o fórmula SM-2?** $\to$ Lee [`DOMAIN.md`](./DOMAIN.md).
 >    - **¿Qué tablas, columnas, índices o triggers existen en PostgreSQL 17?** $\to$ Lee [`SCHEMA_FINAL.sql`](../SCHEMA_FINAL.sql).
->    - **¿Qué firma Go tiene cada servicio SOA, qué DTO recibe/devuelve cada endpoint HTTP/WS y qué consultas `sqlc` lleva?** $\to$ Lee [`INTERFACES.md`](./INTERFACES.md).
+>    - **¿Qué firma Go tiene cada servicio SOA, qué DTO recibe/devuelve cada endpoint HTTP/WS, qué consultas `sqlc` lleva y cómo se expone en Wails IPC?** $\to$ Lee [`INTERFACES.md`](./INTERFACES.md).
 >    - **¿Cómo compilar, correr tests o levantar Docker/Vagrant?** $\to$ Lee [`INFRASTRUCTURE.md`](./INFRASTRUCTURE.md).
 >    - **¿Qué contiene `.context/academic/`?** $\to$ Contiene los entregables académicos formales ([`1-PROJECT-SPECIFICATION.md`](./academic/1-PROJECT-SPECIFICATION.md)). Son documentos formales autocontenidos; **nunca recortes ni elimines secciones de ellos**.
 
@@ -35,14 +38,16 @@ $$\text{Descubrir con humor} \longrightarrow \text{Validar con rigor (Quórum 3)
 
 ---
 
-## 2. Arquitectura de Red y Stack Tecnológico (Backend 100% Go 1.24)
+## 2. Arquitectura de Red, Puente Wails IPC y Stack Tecnológico (100% Go 1.24)
 
-Todo el backend está unificado bajo un **Monorepo en Go 1.24** ([`go.mod`](../go.mod) raíz `module palabrario`), logrando un consumo total combinado de RAM menor a **15 MiB** para los 3 servicios en Docker y compartiendo directamente [`pkg/models`](../pkg/models) y [`pkg/auth`](../pkg/auth) y [`pkg/response`](../pkg/response):
+Todo el ecosistema comparte los tipos de [`pkg/models`](../pkg/models) a través del workspace de Go ([`go.work`](../go.work): `.` + `./local-app`). Esto produce **Tipado End-to-End 100% Automático desde PostgreSQL hasta Vue 3** (`SCHEMA_FINAL.sql` $\to$ `sqlc` $\to$ `pkg/models` $\to$ `local-app/app.go` $\to$ `wailsjs/go/models.ts` $\to$ Componentes Vue):
 
 ```mermaid
 flowchart TD
-    subgraph Clientes["Capa de Clientes"]
-        Desktop["Cliente Nativo Desktop\n(Wails v2 + Go + Vue 3 + UnoCSS)"]
+    subgraph Desktop["Cliente Nativo Desktop (Wails v2 — Proceso Único)"]
+        VueUI["WebView Frontend (Vue 3 + TypeScript + UnoCSS)\n• Invoca bindings autogenerados en wailsjs/go/main/App\n• Recibe eventos en vivo vía runtime.EventsOn"]
+        WailsGo["Puente Nativo Go BFF (local-app/app.go)\n• Custodia el JWT en RAM privada (Inmune a XSS)\n• Importa pkg/models directamente vía go.work\n• Cliente HTTP/WS/Multipart en Go puro"]
+        VueUI <-->|"Wails IPC Bindings & Events\n(wails generate module)"| WailsGo
     end
 
     subgraph BackendGo["Servicios de Backend (Monorepo 100% Go 1.24)"]
@@ -55,12 +60,12 @@ flowchart TD
         Postgres[("PostgreSQL 17 Alpine (:5432)\n• 23 Tablas (SCHEMA_FINAL.sql)\n• unaccent + pg_trgm + tsvector GIN\n• Triggers RN06 (Quórum 3) y RN07 (Anti-autoaprobación)\n• Ledger inmutable xp_transactions")]
     end
 
-    Desktop -->|HTTP REST / JSON| Core
-    Desktop <-->|WebSockets| Realtime
-    Desktop -->|HTTP Multipart| ImageSvc
+    WailsGo -->|"net/http JSON + Bearer JWT (:8000)"| Core
+    WailsGo <-->|"WebSockets Go (:8001)"| Realtime
+    WailsGo -->|"net/http Multipart (:8002)"| ImageSvc
 
-    Core -->|pgxpool + sqlc (ACID)| Postgres
-    Realtime -->|Prepare & Batch Flush| Core
+    Core -->|"pgxpool + sqlc (ACID)"| Postgres
+    Realtime -->|"Prepare & Batch Flush"| Core
 ```
 
 ---
@@ -96,7 +101,7 @@ Copia y pega este bloque al iniciar una nueva conversación para enrutar al mode
 ```text
 Hola hermano, continuemos con Palabrario bajo enfoque Backend-First.
 1. Lee primero @.context/CONTEXT.md y @.context/PLAN.md.
-2. Todo nuestro backend (core-service :8000, realtime-service :8001 e image-service :8002) es 100% Go 1.24 + Chi v5 + sqlc + pgxpool sobre PostgreSQL 17 (@SCHEMA_FINAL.sql).
+2. Todo nuestro backend (core-service :8000, realtime-service :8001 e image-service :8002) es 100% Go 1.24 + Chi v5 + sqlc + pgxpool sobre PostgreSQL 17 (@SCHEMA_FINAL.sql), y el cliente escritorio se comunica a través del puente Go nativo de Wails (local-app/app.go -> wailsjs).
 3. Antes de escribir código, consulta los contratos exactos en @.context/INTERFACES.md y las reglas de dominio en @.context/DOMAIN.md. No toques el frontend (local-app) ni inventes campos fuera de INTERFACES.md.
 Hoy vamos a implementar: [Indicar Fase o Tarea de .context/PLAN.md].
 ```

@@ -62,7 +62,7 @@ flowchart TD
 | **Definir la arquitectura de Testing (`setupTestServer`, helpers, mocks)** | 🧠 **Argón** | Diseñar un arnés de pruebas limpio y aislado requiere juicio arquitectónico. |
 | **Escribir baterías de tests repetitivos siguiendo el molde de Argón** | ⚡ **Flash 3.8 High** | Replicar casos de prueba sobre un molde ya creado es mecánico y económico. |
 | **Concurrencia en Go (`sync.RWMutex`, canales, goroutines en `realtime-service`)** | 🧠 **Argón** (o Flash auditado por Argón) | Las condiciones de carrera (*data races*) y cierres de sockets en tiempo real son sutiles; requieren razonamiento profundo. |
-| **Reemplazar datos mock en Vue 3 por llamadas reales (Fase 5)** | ⚡ **Flash 3.8 High** | Con el backend 100% terminado y probado, conectar un componente Vue tras otro es directo y rápido. |
+| **Exponer métodos en `local-app/app.go`, correr `wails generate module` y conectar Vue 3 (Fase 5)** | ⚡ **Flash 3.8 High** | Como `local-app/app.go` importa `pkg/models` y Wails autogenera `wailsjs/go/models.ts` y `App.d.ts`, conectar Vue 3 es 100% tipado y sin posibilidad de inventar campos. |
 | **Revisar `git status` / `git diff` y redactar commits semánticos** | 🧠 **Argón** | Garantiza que no se cuele basura ni se viole ninguna regla de negocio antes de subir a GitHub. |
 
 ---

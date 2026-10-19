@@ -15,31 +15,39 @@
 > 1. **Prohibido inventar campos JSON:** Ningún endpoint HTTP, evento WebSocket ni componente de interfaz (`local-app`) puede emitir o consumir propiedades que no estén explícitamente declaradas en los structs Go y contratos JSON de este documento.
 > 2. **Convención estricta `snake_case`:** Todos los payloads JSON (entrada y salida) utilizan `snake_case` idéntico a las etiquetas `json:"..."` de [`pkg/models/`](../pkg/models).
 > 3. **SQL Tipado Obligatorio (`sqlc`):** En `core-service`, está prohibido concatenar SQL crudo en handlers. Toda consulta nueva se define en `sql/queries/*.sql`, se compila con `sqlc generate` a `core-service/internal/db/`, es consumida por una implementación en `core-service/internal/service/` y expuesta por un handler en `core-service/internal/api/handlers/`.
-> 4. **Formato Único de Error HTTP:** Toda respuesta de error (`4xx` / `5xx`) utiliza exclusivamente [`response.Error(w, status, message)`](../core-service/internal/api/handlers/auth_handler.go):
+> 4. **Formato Único de Error HTTP:** Toda respuesta de error (`4xx` / `5xx`) utiliza exclusivamente [`response.Error(w, status, message)`](../pkg/response/json.go):
 >    ```json
 >    { "error": "Descripción clara y humana del error en español" }
 >    ```
 
 ---
 
-## 1. Arquitectura Orientada a Servicios (SOA) en Monorepo 100% Go
+## 1. Arquitectura Orientada a Servicios (SOA) y Puente IPC Nativo de Wails en Monorepo 100% Go
 
-Todo el backend comparte el módulo raíz [`palabrario` (`go.mod`)](../go.mod), permitiendo que `core-service`, `realtime-service` e `image-service` importen directamente los paquetes compartidos [`pkg/models`](../pkg/models), [`pkg/auth`](../core-service/internal/auth) y [`pkg/response`](../core-service/internal/api/handlers) sin duplicar tipos ni lógica de validación JWT.
+Todo el ecosistema Go está conectado mediante [`go.work`](../go.work) (`.` + `./local-app`) y el módulo raíz [`palabrario` (`go.mod`)](../go.mod):
+1. **Servicios de Backend (`core-service`, `realtime-service`, `image-service`):** Importan directamente los paquetes compartidos [`pkg/models`](../pkg/models), [`pkg/auth`](../pkg/auth) y [`pkg/response`](../pkg/response).
+2. **Puente IPC Nativo en el Cliente de Escritorio ([`local-app/app.go`](../local-app/app.go)):**
+   - **El WebView (Vue 3 / TypeScript) jamás ejecuta llamadas HTTP/WS directas ni toca el token JWT.**
+   - El proceso Go de Wails (`struct App` en `local-app/app.go`) actúa como **BFF (*Backend-For-Frontend*) local y bóveda de sesión en RAM** (`sessionToken` protegido por `sync.RWMutex`, inmune a XSS).
+   - `local-app/app.go` importa los mismos structs de [`pkg/models`](../pkg/models), realiza las peticiones `net/http` o WebSockets hacia `:8000`, `:8001` y `:8002` adjuntando `Authorization: Bearer <sessionToken>`, y expone métodos Go públicos.
+   - Al ejecutar `wails generate module` (o `wails dev` / `wails build`), **Wails genera automáticamente los bindings y tipos TypeScript** en `local-app/frontend/wailsjs/go/main/App.js` (`.d.ts`) y `local-app/frontend/wailsjs/go/models.ts`. Así, un cambio en `pkg/models` propaga su tipado estático desde PostgreSQL (`sqlc`) hasta Vue 3 sin intervención humana ni riesgo de alucinación.
 
 ```mermaid
 flowchart TB
-    subgraph Client["Cliente Nativo Desktop (Wails v2 + Vue 3)"]
-        UI["Vistas & Stores Reactivos (Consume Contratos Estrictos)"]
+    subgraph Client["Cliente Nativo Desktop (Wails v2 — Proceso Único)"]
+        UI["Frontend Vue 3 + TypeScript\n(Importa wailsjs/go/main/App & wailsjs/go/models)"]
+        WailsBFF["Puente Go Nativo BFF (local-app/app.go)\n• Custodia sessionToken JWT en RAM privada (sync.RWMutex)\n• Importa pkg/models vía go.work\n• Cliente net/http & WebSockets en Go"]
+        UI <-->|"Wails IPC Bindings & Events\n(wails generate module)"| WailsBFF
     end
 
     subgraph SharedPkg["Paquetes Go Compartidos (Raíz Monorepo: palabrario/pkg)"]
-        PkgModels["pkg/models (DTOs Canónicos)"]
+        PkgModels["pkg/models (DTOs Canónicos Compartidos)"]
         PkgAuth["pkg/auth (JWT HMAC-SHA256 & Bcrypt)"]
         PkgResp["pkg/response (Serializador JSON)"]
     end
 
     subgraph CoreService["core-service (:8000) — Monolito Modular en Go 1.24 + Chi v5 + sqlc"]
-        Router["Router Chi v5 + Middlewares (RequireAuth, RequireRole)"]
+        Router["Router Chi v5 + Middlewares (RequireAuth, OptionalAuth, RequireRole)"]
         subgraph SOALayer["Capa SOA (core-service/internal/service)"]
             S1["IdentityService (CU01)"]
             S2["GovernanceService (CU02, CU03, CU04)"]
@@ -67,9 +75,11 @@ flowchart TB
         PG[("PostgreSQL 17 Alpine (:5432)\n23 Tablas · FTS · pg_trgm · Triggers RN06/RN07")]
     end
 
-    UI -->|"REST JSON /api/v1/*"| Router
-    UI <-->|"WS /ws/arena/{roomCode}?token={jwt}"| WSHub
-    UI -->|"Multipart /api/v1/images/upload"| ImgProc
+    WailsBFF -.->|"Importa Structs"| PkgModels
+    CoreService -.->|"Importa"| SharedPkg
+    WailsBFF -->|"net/http JSON + Bearer JWT (/api/v1/*)"| Router
+    WailsBFF <-->|"WS /ws/arena/{roomCode}?token={jwt}"| WSHub
+    WailsBFF -->|"Multipart /api/v1/images/upload"| ImgProc
 
     DBLayer -->|"TCP Pool ACID"| PG
     WSHub -->|"HTTP Interno: Prepare & Consolidate (Batch Flush)"| Router
