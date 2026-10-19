@@ -78,8 +78,3 @@ Desktop.ini
 *.sublime-project
 
 /local-app-prototype
-
-# ==========================================
-# Project Context & Design Assets (Ignored)
-# ==========================================
-.context/

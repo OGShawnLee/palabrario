@@ -1,4 +1,4 @@
-# Sistema de Navegación, Enrutamiento y UI Specification - Palabrario
+﻿# Sistema de Navegación, Enrutamiento y UI Specification - Palabrario
 
 Este documento define la arquitectura de navegación, el mapa canónico de rutas (`Vue Router`), los contratos de acceso, la distinción entre espacios comunitarios vs personales (**Studio**), el modelo de **Profile público/privado** y el catálogo de componentes globales para el cliente de escritorio (**Wails + Vue 3 + UnoCSS**).
 
