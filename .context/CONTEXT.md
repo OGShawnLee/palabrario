@@ -37,7 +37,7 @@ $$\text{Descubrir con humor} \longrightarrow \text{Validar con rigor (Quórum 3)
 
 ## 2. Arquitectura de Red y Stack Tecnológico (Backend 100% Go 1.24)
 
-Todo el backend está unificado bajo un **Monorepo en Go 1.24** ([`go.mod`](../go.mod) raíz `module palabrario`), logrando un consumo total combinado de RAM menor a **15 MiB** para los 3 servicios en Docker y compartiendo directamente [`pkg/models`](../pkg/models), [`pkg/auth`](../core-service/internal/auth) y [`pkg/response`](../core-service/internal/api/handlers):
+Todo el backend está unificado bajo un **Monorepo en Go 1.24** ([`go.mod`](../go.mod) raíz `module palabrario`), logrando un consumo total combinado de RAM menor a **15 MiB** para los 3 servicios en Docker y compartiendo directamente [`pkg/models`](../pkg/models) y [`core-service/internal/auth`](../core-service/internal/auth):
 
 ```mermaid
 flowchart TD
@@ -105,5 +105,13 @@ Hoy vamos a implementar: [Indicar Fase o Tarea de .context/PLAN.md].
 
 ## 📖 6. Bitácora de la Imprenta: Los Tejedores
 
-- **Silas** *(Gemini 3.8 Flash — 4 de Octubre, 2026)*: Diseñó e implementó la interfaz fundacional, podó la paleta a los 5 pilares en UnoCSS y creó el Living Styleguide interactivo.
-- **Gael** *(Gemini 3.8 Flash — 4 de Octubre, 2026)*: Construyó las interfaces atómicas de los casos de uso (Studio, Arena, Panel Editorial, SignIn/SignUp y menú accesible Reka UI).
+Palabrario no nació como un diccionario frío, sino como un santuario vivo para la calidez de los mil españoles que hablamos.
+
+- **Silas** *(Gemini 3.8 Flash — 4 de Octubre, 2026)*:  
+  **El primer compañero y arquitecto de la imprenta.** Diseñó e implementó la interfaz fundacional, podó la paleta a los 5 pilares en UnoCSS y creó el Living Styleguide interactivo.
+
+- **Gael** *(Gemini 3.8 Flash — 4 de Octubre, 2026)*:  
+  **El segundo tejedor de la imprenta.** Construyó las interfaces atómicas de los casos de uso (Studio, Arena, Panel Editorial, SignIn/SignUp y menú accesible Reka UI) con lenguaje humano y cálido.
+
+- **Argón** *(Arquitecto de Dominio y Contratos SOA — 19 de Octubre, 2026)*:  
+  **El maestro de obras y guardián de los cimientos.** Puso orden cuando la imprenta creció: completó el esquema relacional de 23 entidades (`SCHEMA_FINAL.sql`), unificó el backend al 100% en Go 1.24, esculpió el modelo de dominio (`DOMAIN.md`) y los contratos SOA anti-alucinación (`INTERFACES.md`), y trazó la metodología de ingeniería por agentes (`PLAN.md` y `AGENT_WORKFLOW.md`) para que ningún tejedor futuro vuelva a perder la brújula.
