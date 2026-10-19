@@ -46,10 +46,12 @@ func (rt *Router) Setup() http.Handler {
 	// Servicios y repositorios
 	tokenService := auth.NewTokenService(rt.cfg.JWTSecret, rt.cfg.JWTExpirationHours)
 	userRepo := repository.NewUserRepository(rt.db)
+	dictionaryRepo := repository.NewDictionaryRepository(rt.db)
 
-	// Handlers y middlewares de autenticación
+	// Handlers y middlewares
 	authMiddleware := middleware.NewAuthMiddleware(tokenService)
 	authHandler := handlers.NewAuthHandler(userRepo, tokenService)
+	dictionaryHandler := handlers.NewDictionaryHandler(dictionaryRepo)
 	healthHandler := handlers.NewHealthHandler(rt.db)
 
 	// Health check raíz
@@ -71,6 +73,12 @@ func (rt *Router) Setup() http.Handler {
 				r.Use(authMiddleware.RequireAuth)
 				r.Get("/me", authHandler.GetMe)
 			})
+		})
+
+		// Diccionario y Búsqueda Dialectal
+		r.Route("/words", func(r chi.Router) {
+			r.Get("/search", dictionaryHandler.Search)
+			r.Get("/{id}", dictionaryHandler.GetByID)
 		})
 	})
 
