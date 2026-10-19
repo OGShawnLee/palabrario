@@ -15,7 +15,7 @@ import (
 const createAccount = `-- name: CreateAccount :one
 INSERT INTO accounts (email, password_hash, role)
 VALUES ($1, $2, 'LEARNER')
-RETURNING id_account, email, password_hash, role, created_at, updated_at
+RETURNING id_account, email, password_hash, role, is_active, created_at, updated_at
 `
 
 type CreateAccountParams struct {
@@ -31,6 +31,7 @@ func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (A
 		&i.Email,
 		&i.PasswordHash,
 		&i.Role,
+		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -76,7 +77,7 @@ func (q *Queries) CreateUserProfile(ctx context.Context, arg CreateUserProfilePa
 }
 
 const getAccountByEmail = `-- name: GetAccountByEmail :one
-SELECT id_account, email, password_hash, role, created_at, updated_at
+SELECT id_account, email, password_hash, role, is_active, created_at, updated_at
 FROM accounts
 WHERE email = $1
 `
@@ -89,6 +90,7 @@ func (q *Queries) GetAccountByEmail(ctx context.Context, email string) (Account,
 		&i.Email,
 		&i.PasswordHash,
 		&i.Role,
+		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

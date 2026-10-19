@@ -30,10 +30,15 @@ END $$;
 -- 2. TIPOS ENUMERADOS
 -- ------------------------------------------------------------------------------
 CREATE TYPE account_role AS ENUM ('LEARNER', 'EDITOR', 'ADMIN');
+CREATE TYPE request_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 CREATE TYPE word_gender AS ENUM ('MALE', 'FEMALE', 'NEUTRAL', 'AMBIGUOUS');
 CREATE TYPE cefr_level AS ENUM ('A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'NATIVO');
 CREATE TYPE usage_frequency AS ENUM ('EVERYDAY', 'COMMON', 'RARE', 'SLANG', 'ARCHAIC');
 CREATE TYPE review_state AS ENUM ('DRAFT', 'APPROVED', 'HIDDEN');
+CREATE TYPE review_decision AS ENUM ('APPROVE', 'REQUEST_CHANGES', 'REJECT');
+CREATE TYPE report_target_type AS ENUM ('WORD', 'SENSE', 'EXAMPLE');
+CREATE TYPE report_reason AS ENUM ('INACCURATE', 'OFFENSIVE_UNMARKED', 'SPAM_OR_VANDALISM', 'DUPLICATE', 'OTHER');
+CREATE TYPE report_status AS ENUM ('PENDING', 'RESOLVED_HIDDEN', 'RESOLVED_AMENDED', 'DISMISSED');
 CREATE TYPE mastery_stage AS ENUM ('NEW', 'LEARNING', 'REVIEWING', 'MASTERED');
 CREATE TYPE xp_reason AS ENUM ('QUIZ_CORRECT', 'MATCH_WIN', 'DAILY_STREAK', 'DECK_COMPLETED', 'ACHIEVEMENT_UNLOCKED');
 CREATE TYPE achievement_tier AS ENUM ('BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND');
@@ -48,13 +53,14 @@ CREATE TYPE question_type AS ENUM (
 );
 
 -- ------------------------------------------------------------------------------
--- 3. CUENTAS Y USUARIOS
+-- 3. CUENTAS, USUARIOS Y GOBERNANZA DE ACCESO (CU01, CU02, CU03, CU04)
 -- ------------------------------------------------------------------------------
 CREATE TABLE accounts (
   id_account UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email VARCHAR(255) NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   role account_role NOT NULL DEFAULT 'LEARNER',
+  is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -77,6 +83,46 @@ CREATE TABLE users (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- CU02 & CU03: Solicitudes de acreditación para ascenso a Editor
+CREATE TABLE editor_requests (
+  id_request UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id_user UUID NOT NULL REFERENCES users(id_user) ON DELETE CASCADE,
+  institution_name VARCHAR(150) NOT NULL,
+  justification TEXT NOT NULL,
+  credentials_url TEXT NOT NULL,
+  status request_status NOT NULL DEFAULT 'PENDING',
+  reviewed_by UUID REFERENCES users(id_user) ON DELETE SET NULL,
+  review_notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  resolved_at TIMESTAMPTZ
+);
+
+-- RN02: Un Aprendiz solo puede mantener una solicitud en estado PENDING a la vez
+CREATE UNIQUE INDEX idx_unique_pending_editor_request
+ON editor_requests(id_user)
+WHERE status = 'PENDING';
+
+-- CU04: Boletos de invitación institucionales o personales
+CREATE TABLE invitation_tickets (
+  id_ticket UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code VARCHAR(50) NOT NULL UNIQUE,
+  created_by UUID NOT NULL REFERENCES users(id_user) ON DELETE RESTRICT,
+  granted_role account_role NOT NULL DEFAULT 'LEARNER',
+  institution_name VARCHAR(150),
+  max_uses INTEGER NOT NULL DEFAULT 1 CHECK (max_uses >= 1),
+  current_uses INTEGER NOT NULL DEFAULT 0 CHECK (current_uses >= 0 AND current_uses <= max_uses),
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE ticket_redemptions (
+  id_ticket UUID NOT NULL REFERENCES invitation_tickets(id_ticket) ON DELETE CASCADE,
+  id_user UUID NOT NULL REFERENCES users(id_user) ON DELETE CASCADE,
+  redeemed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (id_ticket, id_user)
+);
+
 -- ------------------------------------------------------------------------------
 -- 4. REGIONES Y DIALECTOS
 -- ------------------------------------------------------------------------------
@@ -90,7 +136,7 @@ CREATE TABLE regions (
 );
 
 -- ------------------------------------------------------------------------------
--- 5. NÚCLEO LÉXICO: WORDS & SENSES
+-- 5. NÚCLEO LÉXICO: WORDS, SENSES & EXAMPLES (CU05, CU06)
 -- ------------------------------------------------------------------------------
 CREATE TABLE words (
   id_word SERIAL PRIMARY KEY,
@@ -178,11 +224,13 @@ CREATE TABLE concept_mappings (
 );
 
 -- ------------------------------------------------------------------------------
--- 7. GOBERNANZA COLABORATIVA (Aprobación de Editores con Trigger)
+-- 7. GOBERNANZA COLABORATIVA Y MODERACIÓN (CU07, CU08, CU09)
 -- ------------------------------------------------------------------------------
 CREATE TABLE sense_approvals (
   id_sense INTEGER NOT NULL REFERENCES senses(id_sense) ON DELETE CASCADE,
   id_editor UUID NOT NULL REFERENCES users(id_user) ON DELETE RESTRICT,
+  decision review_decision NOT NULL DEFAULT 'APPROVE',
+  feedback_notes TEXT,
   approved_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (id_sense, id_editor)
 );
@@ -202,7 +250,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_prevent_self_approval
-BEFORE INSERT ON sense_approvals
+BEFORE INSERT OR UPDATE ON sense_approvals
 FOR EACH ROW EXECUTE FUNCTION fn_prevent_self_approval();
 
 -- RN06: Tras 3 aprobaciones de editores distintos, se publica automáticamente
@@ -213,7 +261,7 @@ DECLARE
 BEGIN
   SELECT count(*) INTO approval_count
   FROM sense_approvals
-  WHERE id_sense = NEW.id_sense;
+  WHERE id_sense = NEW.id_sense AND decision = 'APPROVE';
 
   IF approval_count >= 3 THEN
     UPDATE senses
@@ -226,11 +274,30 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_auto_approve_sense
-AFTER INSERT ON sense_approvals
+AFTER INSERT OR UPDATE ON sense_approvals
 FOR EACH ROW EXECUTE FUNCTION fn_check_sense_approvals();
 
+-- CU09: Reportes de contenido léxico emitidos por la comunidad
+CREATE TABLE content_reports (
+  id_report UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id_reporter UUID NOT NULL REFERENCES users(id_user) ON DELETE CASCADE,
+  target_type report_target_type NOT NULL DEFAULT 'SENSE',
+  id_word INTEGER REFERENCES words(id_word) ON DELETE CASCADE,
+  id_sense INTEGER REFERENCES senses(id_sense) ON DELETE CASCADE,
+  id_example INTEGER REFERENCES examples(id_example) ON DELETE CASCADE,
+  reason report_reason NOT NULL,
+  details TEXT NOT NULL,
+  status report_status NOT NULL DEFAULT 'PENDING',
+  resolved_by UUID REFERENCES users(id_user) ON DELETE SET NULL,
+  resolution_notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  resolved_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_content_reports_status ON content_reports(status);
+
 -- ------------------------------------------------------------------------------
--- 8. DECKS Y COLECCIONES
+-- 8. STUDIO: DECKS, COLECCIONES Y ELEMENTOS GUARDADOS (CU10, CU11)
 -- ------------------------------------------------------------------------------
 CREATE TABLE decks (
   id_deck SERIAL PRIMARY KEY,
@@ -248,6 +315,14 @@ CREATE TABLE deck_items (
   id_sense INTEGER NOT NULL REFERENCES senses(id_sense) ON DELETE CASCADE,
   sort_order INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (id_deck, id_sense)
+);
+
+-- Suscripción/Guardado de Barajas Públicas en el Studio de otros miembros
+CREATE TABLE saved_decks (
+  id_user UUID NOT NULL REFERENCES users(id_user) ON DELETE CASCADE,
+  id_deck INTEGER NOT NULL REFERENCES decks(id_deck) ON DELETE CASCADE,
+  saved_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (id_user, id_deck)
 );
 
 CREATE TABLE collections (
@@ -269,8 +344,16 @@ CREATE TABLE collection_decks (
   PRIMARY KEY (id_collection, id_deck)
 );
 
+-- Suscripción/Guardado de Colecciones Públicas en el Studio de otros miembros (CU11 1a)
+CREATE TABLE saved_collections (
+  id_user UUID NOT NULL REFERENCES users(id_user) ON DELETE CASCADE,
+  id_collection INTEGER NOT NULL REFERENCES collections(id_collection) ON DELETE CASCADE,
+  saved_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (id_user, id_collection)
+);
+
 -- ------------------------------------------------------------------------------
--- 9. MOTOR DE APRENDIZAJE (Mastery / SM-2)
+-- 9. MOTOR DE APRENDIZAJE (Mastery / SM-2) (CU12, CU13)
 -- ------------------------------------------------------------------------------
 CREATE TABLE user_mastery (
   id_user UUID NOT NULL REFERENCES users(id_user) ON DELETE CASCADE,
@@ -289,8 +372,10 @@ CREATE TABLE user_mastery (
   PRIMARY KEY (id_user, id_sense)
 );
 
+CREATE INDEX idx_user_mastery_due_review ON user_mastery(id_user, next_review_at);
+
 -- ------------------------------------------------------------------------------
--- 10. GAMIFICACIÓN: LEDGER DE XP Y LOGROS
+-- 10. GAMIFICACIÓN: LEDGER DE XP Y LOGROS (CU12, CU13, CU16)
 -- ------------------------------------------------------------------------------
 CREATE TABLE xp_transactions (
   id_transaction UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -300,6 +385,8 @@ CREATE TABLE xp_transactions (
   metadata_id VARCHAR(100),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX idx_xp_transactions_user ON xp_transactions(id_user, created_at DESC);
 
 CREATE TABLE achievements (
   id_achievement SERIAL PRIMARY KEY,
@@ -321,16 +408,18 @@ CREATE TABLE user_achievements (
 );
 
 -- ------------------------------------------------------------------------------
--- 11. MULTIJUGADOR EN TIEMPO REAL: SALAS Y RESULTADOS EN LOTE
+-- 11. MULTIJUGADOR EN TIEMPO REAL: SALAS Y RESULTADOS EN LOTE (CU14, CU15, CU16)
 -- ------------------------------------------------------------------------------
 CREATE TABLE matches (
   id_match UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   id_deck INTEGER NOT NULL REFERENCES decks(id_deck) ON DELETE CASCADE,
+  host_user_id UUID REFERENCES users(id_user) ON DELETE SET NULL,
   room_code VARCHAR(10) NOT NULL UNIQUE,
   status match_status NOT NULL DEFAULT 'WAITING',
   winner_user_id UUID REFERENCES users(id_user) ON DELETE SET NULL,
   is_public BOOLEAN NOT NULL DEFAULT true,
   total_rounds INTEGER NOT NULL DEFAULT 10,
+  round_time_sec INTEGER NOT NULL DEFAULT 15,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   finished_at TIMESTAMPTZ
 );
@@ -367,6 +456,7 @@ CREATE TABLE quiz_attempts (
   id_question INTEGER REFERENCES questions(id_question) ON DELETE SET NULL,
   selected_option VARCHAR(255) NOT NULL,
   is_correct BOOLEAN NOT NULL,
+  quality_rating SMALLINT CHECK (quality_rating BETWEEN 0 AND 5),
   time_spent_ms INTEGER NOT NULL,
   answered_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

@@ -323,6 +323,224 @@ func (ns NullQuestionType) Value() (driver.Value, error) {
 	return string(ns.QuestionType), nil
 }
 
+type ReportReason string
+
+const (
+	ReportReasonINACCURATE        ReportReason = "INACCURATE"
+	ReportReasonOFFENSIVEUNMARKED ReportReason = "OFFENSIVE_UNMARKED"
+	ReportReasonSPAMORVANDALISM   ReportReason = "SPAM_OR_VANDALISM"
+	ReportReasonDUPLICATE         ReportReason = "DUPLICATE"
+	ReportReasonOTHER             ReportReason = "OTHER"
+)
+
+func (e *ReportReason) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ReportReason(s)
+	case string:
+		*e = ReportReason(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ReportReason: %T", src)
+	}
+	return nil
+}
+
+type NullReportReason struct {
+	ReportReason ReportReason `json:"report_reason"`
+	Valid        bool         `json:"valid"` // Valid is true if ReportReason is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullReportReason) Scan(value interface{}) error {
+	if value == nil {
+		ns.ReportReason, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ReportReason.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullReportReason) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ReportReason), nil
+}
+
+type ReportStatus string
+
+const (
+	ReportStatusPENDING         ReportStatus = "PENDING"
+	ReportStatusRESOLVEDHIDDEN  ReportStatus = "RESOLVED_HIDDEN"
+	ReportStatusRESOLVEDAMENDED ReportStatus = "RESOLVED_AMENDED"
+	ReportStatusDISMISSED       ReportStatus = "DISMISSED"
+)
+
+func (e *ReportStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ReportStatus(s)
+	case string:
+		*e = ReportStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ReportStatus: %T", src)
+	}
+	return nil
+}
+
+type NullReportStatus struct {
+	ReportStatus ReportStatus `json:"report_status"`
+	Valid        bool         `json:"valid"` // Valid is true if ReportStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullReportStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ReportStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ReportStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullReportStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ReportStatus), nil
+}
+
+type ReportTargetType string
+
+const (
+	ReportTargetTypeWORD    ReportTargetType = "WORD"
+	ReportTargetTypeSENSE   ReportTargetType = "SENSE"
+	ReportTargetTypeEXAMPLE ReportTargetType = "EXAMPLE"
+)
+
+func (e *ReportTargetType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ReportTargetType(s)
+	case string:
+		*e = ReportTargetType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ReportTargetType: %T", src)
+	}
+	return nil
+}
+
+type NullReportTargetType struct {
+	ReportTargetType ReportTargetType `json:"report_target_type"`
+	Valid            bool             `json:"valid"` // Valid is true if ReportTargetType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullReportTargetType) Scan(value interface{}) error {
+	if value == nil {
+		ns.ReportTargetType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ReportTargetType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullReportTargetType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ReportTargetType), nil
+}
+
+type RequestStatus string
+
+const (
+	RequestStatusPENDING  RequestStatus = "PENDING"
+	RequestStatusAPPROVED RequestStatus = "APPROVED"
+	RequestStatusREJECTED RequestStatus = "REJECTED"
+)
+
+func (e *RequestStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = RequestStatus(s)
+	case string:
+		*e = RequestStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for RequestStatus: %T", src)
+	}
+	return nil
+}
+
+type NullRequestStatus struct {
+	RequestStatus RequestStatus `json:"request_status"`
+	Valid         bool          `json:"valid"` // Valid is true if RequestStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullRequestStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.RequestStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.RequestStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullRequestStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.RequestStatus), nil
+}
+
+type ReviewDecision string
+
+const (
+	ReviewDecisionAPPROVE        ReviewDecision = "APPROVE"
+	ReviewDecisionREQUESTCHANGES ReviewDecision = "REQUEST_CHANGES"
+	ReviewDecisionREJECT         ReviewDecision = "REJECT"
+)
+
+func (e *ReviewDecision) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ReviewDecision(s)
+	case string:
+		*e = ReviewDecision(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ReviewDecision: %T", src)
+	}
+	return nil
+}
+
+type NullReviewDecision struct {
+	ReviewDecision ReviewDecision `json:"review_decision"`
+	Valid          bool           `json:"valid"` // Valid is true if ReviewDecision is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullReviewDecision) Scan(value interface{}) error {
+	if value == nil {
+		ns.ReviewDecision, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ReviewDecision.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullReviewDecision) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ReviewDecision), nil
+}
+
 type ReviewState string
 
 const (
@@ -505,6 +723,7 @@ type Account struct {
 	Email        string             `json:"email"`
 	PasswordHash string             `json:"password_hash"`
 	Role         AccountRole        `json:"role"`
+	IsActive     bool               `json:"is_active"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
@@ -544,6 +763,22 @@ type ConceptMapping struct {
 	IDSense   int32 `json:"id_sense"`
 }
 
+type ContentReport struct {
+	IDReport        uuid.UUID          `json:"id_report"`
+	IDReporter      uuid.UUID          `json:"id_reporter"`
+	TargetType      ReportTargetType   `json:"target_type"`
+	IDWord          pgtype.Int4        `json:"id_word"`
+	IDSense         pgtype.Int4        `json:"id_sense"`
+	IDExample       pgtype.Int4        `json:"id_example"`
+	Reason          ReportReason       `json:"reason"`
+	Details         string             `json:"details"`
+	Status          ReportStatus       `json:"status"`
+	ResolvedBy      pgtype.UUID        `json:"resolved_by"`
+	ResolutionNotes pgtype.Text        `json:"resolution_notes"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	ResolvedAt      pgtype.Timestamptz `json:"resolved_at"`
+}
+
 type Deck struct {
 	IDDeck      int32              `json:"id_deck"`
 	IDUser      uuid.UUID          `json:"id_user"`
@@ -561,6 +796,19 @@ type DeckItem struct {
 	SortOrder int32 `json:"sort_order"`
 }
 
+type EditorRequest struct {
+	IDRequest       uuid.UUID          `json:"id_request"`
+	IDUser          uuid.UUID          `json:"id_user"`
+	InstitutionName string             `json:"institution_name"`
+	Justification   string             `json:"justification"`
+	CredentialsUrl  string             `json:"credentials_url"`
+	Status          RequestStatus      `json:"status"`
+	ReviewedBy      pgtype.UUID        `json:"reviewed_by"`
+	ReviewNotes     pgtype.Text        `json:"review_notes"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	ResolvedAt      pgtype.Timestamptz `json:"resolved_at"`
+}
+
 type Example struct {
 	IDExample int32              `json:"id_example"`
 	IDSense   int32              `json:"id_sense"`
@@ -571,14 +819,29 @@ type Example struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+type InvitationTicket struct {
+	IDTicket        uuid.UUID          `json:"id_ticket"`
+	Code            string             `json:"code"`
+	CreatedBy       uuid.UUID          `json:"created_by"`
+	GrantedRole     AccountRole        `json:"granted_role"`
+	InstitutionName pgtype.Text        `json:"institution_name"`
+	MaxUses         int32              `json:"max_uses"`
+	CurrentUses     int32              `json:"current_uses"`
+	IsActive        bool               `json:"is_active"`
+	ExpiresAt       pgtype.Timestamptz `json:"expires_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
 type Match struct {
 	IDMatch      uuid.UUID          `json:"id_match"`
 	IDDeck       int32              `json:"id_deck"`
+	HostUserID   pgtype.UUID        `json:"host_user_id"`
 	RoomCode     string             `json:"room_code"`
 	Status       MatchStatus        `json:"status"`
 	WinnerUserID pgtype.UUID        `json:"winner_user_id"`
 	IsPublic     bool               `json:"is_public"`
 	TotalRounds  int32              `json:"total_rounds"`
+	RoundTimeSec int32              `json:"round_time_sec"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	FinishedAt   pgtype.Timestamptz `json:"finished_at"`
 }
@@ -611,6 +874,7 @@ type QuizAttempt struct {
 	IDQuestion     pgtype.Int4        `json:"id_question"`
 	SelectedOption string             `json:"selected_option"`
 	IsCorrect      bool               `json:"is_correct"`
+	QualityRating  pgtype.Int2        `json:"quality_rating"`
 	TimeSpentMs    int32              `json:"time_spent_ms"`
 	AnsweredAt     pgtype.Timestamptz `json:"answered_at"`
 }
@@ -622,6 +886,18 @@ type Region struct {
 	ParentZone  string      `json:"parent_zone"`
 	CountryCode pgtype.Text `json:"country_code"`
 	FlagEmoji   string      `json:"flag_emoji"`
+}
+
+type SavedCollection struct {
+	IDUser       uuid.UUID          `json:"id_user"`
+	IDCollection int32              `json:"id_collection"`
+	SavedAt      pgtype.Timestamptz `json:"saved_at"`
+}
+
+type SavedDeck struct {
+	IDUser  uuid.UUID          `json:"id_user"`
+	IDDeck  int32              `json:"id_deck"`
+	SavedAt pgtype.Timestamptz `json:"saved_at"`
 }
 
 type SemanticConcept struct {
@@ -649,9 +925,17 @@ type Sense struct {
 }
 
 type SenseApproval struct {
-	IDSense    int32              `json:"id_sense"`
-	IDEditor   uuid.UUID          `json:"id_editor"`
-	ApprovedAt pgtype.Timestamptz `json:"approved_at"`
+	IDSense       int32              `json:"id_sense"`
+	IDEditor      uuid.UUID          `json:"id_editor"`
+	Decision      ReviewDecision     `json:"decision"`
+	FeedbackNotes pgtype.Text        `json:"feedback_notes"`
+	ApprovedAt    pgtype.Timestamptz `json:"approved_at"`
+}
+
+type TicketRedemption struct {
+	IDTicket   uuid.UUID          `json:"id_ticket"`
+	IDUser     uuid.UUID          `json:"id_user"`
+	RedeemedAt pgtype.Timestamptz `json:"redeemed_at"`
 }
 
 type User struct {

@@ -1,7 +1,7 @@
 -- name: CreateAccount :one
 INSERT INTO accounts (email, password_hash, role)
 VALUES ($1, $2, 'LEARNER')
-RETURNING id_account, email, password_hash, role, created_at, updated_at;
+RETURNING id_account, email, password_hash, role, is_active, created_at, updated_at;
 
 -- name: CreateUserProfile :one
 INSERT INTO users (id_user, name, user_name, anchor_dialect)
@@ -9,7 +9,7 @@ VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: GetAccountByEmail :one
-SELECT id_account, email, password_hash, role, created_at, updated_at
+SELECT id_account, email, password_hash, role, is_active, created_at, updated_at
 FROM accounts
 WHERE email = $1;
 
