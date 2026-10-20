@@ -1,0 +1,125 @@
+# https://taskfile.dev
+version: '3'
+
+vars:
+  GO_TARGETS: './pkg/... ./core-service/...'
+  VM_DIR: '/home/vagrant/palabrio'
+
+tasks:
+  default:
+    desc: 'Muestra la lista de todas las tareas disponibles'
+    cmds:
+      - task --list
+
+  # ============================================================================
+  # 1. CICLO DE PRUEBAS AUTOMATIZADAS (80% DAO/Service + 20% HTTP Smoke Tests)
+  # ============================================================================
+  test:
+    desc: 'Ejecuta la suite de pruebas completa (Reutiliza :5433 en RAM o lo levanta automáticamente)'
+    cmds:
+      - powershell -ExecutionPolicy Bypass -File ./scripts/test.ps1
+
+  test:fast:
+    desc: 'Ejecuta pruebas directamente en Windows contra el contenedor :5433 activo (sin ciclo Docker)'
+    cmds:
+      - go test -v -count=1 {{.GO_TARGETS}}
+
+  test:service:
+    desc: 'Ejecuta exclusivamente la capa del 80% (DAO / Service tests directos sobre PostgreSQL)'
+    cmds:
+      - go test -v -count=1 ./core-service/internal/service/...
+
+  test:api:
+    desc: 'Ejecuta exclusivamente la capa del 20% (HTTP Smoke tests con router Chi y JWT)'
+    cmds:
+      - go test -v -count=1 ./core-service/internal/api/...
+
+  test:up:
+    desc: 'Enciende y mantiene activo postgres-test en RAM (:5433) para iterar rápido'
+    cmds:
+      - powershell -ExecutionPolicy Bypass -File ./scripts/test.ps1 -KeepAlive
+
+  test:down:
+    desc: 'Detiene y destruye el contenedor postgres-test de la memoria RAM'
+    cmds:
+      - powershell -ExecutionPolicy Bypass -File ./scripts/test.ps1 -Down
+
+  # ============================================================================
+  # 2. GESTIÓN DE ENTORNO VAGRANT & DOCKER COMPOSE
+  # ============================================================================
+  vm:up:
+    desc: 'Enciende la máquina virtual de desarrollo Debian 12 con Vagrant'
+    cmds:
+      - vagrant up
+
+  vm:sync:
+    desc: 'Sincroniza el código fuente local de Windows hacia la VM de Vagrant'
+    cmds:
+      - vagrant rsync
+
+  vm:status:
+    desc: 'Verifica el estado de la máquina virtual y contenedores Docker'
+    cmds:
+      - vagrant status
+      - vagrant ssh -c "docker ps"
+
+  vm:reload:
+    desc: 'Reinicia la máquina virtual Vagrant aplicando nuevas redirecciones de puertos'
+    cmds:
+      - vagrant reload
+
+  vm:down:
+    desc: 'Suspende o apaga la máquina virtual Vagrant'
+    cmds:
+      - vagrant halt
+
+  # ============================================================================
+  # 3. LEVANTAMIENTO SELECTIVO DE SERVICIOS
+  # ============================================================================
+  up:core:
+    desc: 'Sincroniza y levanta Postgres (:5432) + core-service (:8000) en segundo plano'
+    cmds:
+      - vagrant rsync
+      - vagrant ssh -c "cd {{.VM_DIR}} && docker compose up -d postgres core-service"
+
+  up:all:
+    desc: 'Sincroniza y levanta todos los servicios (Postgres + core-service + image-service + realtime-service)'
+    cmds:
+      - vagrant rsync
+      - vagrant ssh -c "cd {{.VM_DIR}} && docker compose up -d"
+
+  down:all:
+    desc: 'Detiene todos los servicios en la máquina virtual Vagrant'
+    cmds:
+      - vagrant ssh -c "cd {{.VM_DIR}} && docker compose down"
+
+  rebuild:core:
+    desc: 'Recompila y reinicia el contenedor de core-service con el código más reciente'
+    cmds:
+      - vagrant rsync
+      - vagrant ssh -c "cd {{.VM_DIR}} && docker compose up -d --build core-service"
+
+  rebuild:all:
+    desc: 'Recompila y reinicia todos los servicios con el código más reciente'
+    cmds:
+      - vagrant rsync
+      - vagrant ssh -c "cd {{.VM_DIR}} && docker compose up -d --build"
+
+  # ============================================================================
+  # 4. GENERACIÓN DE CÓDIGO Y COMPILACIÓN (Contract-First & SQL Schema-First)
+  # ============================================================================
+  sqlc:
+    desc: 'Compila consultas SQL (sql/queries/*.sql) a structs y métodos Go tipados con sqlc'
+    cmds:
+      - sqlc generate
+
+  build:
+    desc: 'Compila estáticamente todos los paquetes y servicios Go validando 0 errores'
+    cmds:
+      - go build ./core-service/... ./image-service/... ./pkg/...
+
+  wails:gen:
+    desc: 'Genera las definiciones de tipos TypeScript para Vue 3 desde models Go'
+    dir: local-app
+    cmds:
+      - wails generate module

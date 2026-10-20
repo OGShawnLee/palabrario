@@ -22,7 +22,7 @@ Hemos estructurado el repositorio bajo **Descubrimiento Progresivo (*Progressive
 | **[`.context/PLAN.md`](./.context/PLAN.md)** | Estado actual real del proyecto y checklist paso a paso por fases. | Arquitecto (Argón) |
 | **[`.context/DOMAIN.md`](./.context/DOMAIN.md)** | Las 23 entidades, los 5 contextos DDD, estados editoriales y fórmulas matemáticas (`SM-2`). | Arquitecto (Argón) |
 | **[`.context/INTERFACES.md`](./.context/INTERFACES.md)** | **El Contrato Sagrado:** Interfaces SOA en Go, structs JSON exactos (`pkg/models`), catálogo `sqlc` y endpoints HTTP/WS. | Arquitecto (Argón) |
-| **[`SCHEMA_FINAL.sql`](./SCHEMA_FINAL.sql)** | Esquema DDL único y ejecutable en PostgreSQL 17 con triggers `RN06` y `RN07`. | Arquitecto (Argón) |
+| **[`SCHEMA_FINAL.sql`](./SCHEMA_FINAL.sql)** | Esquema DDL único y ejecutable en PostgreSQL 17 con triggers `RN06` y `RN07` y sincronización automática de secuencias. | Arquitecto (Argón) |
 
 ---
 
@@ -49,7 +49,7 @@ flowchart TD
     Lead <-->|"1. Pide diseño, estrategia o auditoría"| Architect
     Architect -->|"2. Congela especificación en .context/INTERFACES.md"| Lead
     Lead -->|"3. Abre 1 chat limpio por fase con prompt quirúrgico"| Tier2
-    Tier2 -->|"4. Escribe código y valida con sqlc generate && go build"| Lead
+    Tier2 -->|"4. Escribe código y valida con sqlc generate && .\scripts\test.ps1"| Lead
     Lead -->|"5. Trae el resultado a revisión y commit"| Architect
 ```
 
@@ -59,8 +59,8 @@ flowchart TD
 | :--- | :---: | :--- |
 | **Diseñar o modificar contratos en `INTERFACES.md` o `SCHEMA_FINAL.sql`** | 🧠 **Argón** | Requiere visión holística de las 23 tablas y 11 reglas de negocio sin romper compatibilidad. |
 | **Programar consultas `sqlc`, servicios SOA y handlers HTTP de una Fase** | ⚡ **Flash 3.8 High** | Como los structs, firmas y endpoints ya están escritos letra por letra en `INTERFACES.md`, Flash traduce especificación a código rápidamente y gastando mínimos tokens. |
-| **Definir la arquitectura de Testing (`setupTestServer`, helpers, mocks)** | 🧠 **Argón** | Diseñar un arnés de pruebas limpio y aislado requiere juicio arquitectónico. |
-| **Escribir baterías de tests repetitivos siguiendo el molde de Argón** | ⚡ **Flash 3.8 High** | Replicar casos de prueba sobre un molde ya creado es mecánico y económico. |
+| **Definir la arquitectura de Testing (`testutil.SetupTestDB`, `TEMPLATE` en RAM)** | 🧠 **Argón** | Diseñar un arnés de pruebas aislado y 100% agnóstico al esquema requiere juicio arquitectónico. |
+| **Escribir baterías de tests 80/20 siguiendo el molde de Argón** | ⚡ **Flash 3.8 High** | Replicar casos de prueba en `internal/service/*_test.go` usando `testutil.SetupTestDB(t)` es mecánico y económico. |
 | **Concurrencia en Go (`sync.RWMutex`, canales, goroutines en `realtime-service`)** | 🧠 **Argón** (o Flash auditado por Argón) | Las condiciones de carrera (*data races*) y cierres de sockets en tiempo real son sutiles; requieren razonamiento profundo. |
 | **Exponer métodos en `local-app/app.go`, correr `wails generate module` y conectar Vue 3 (Fase 5)** | ⚡ **Flash 3.8 High** | Como `local-app/app.go` importa `pkg/models` y Wails autogenera `wailsjs/go/models.ts` y `App.d.ts`, conectar Vue 3 es 100% tipado y sin posibilidad de inventar campos. |
 | **Revisar `git status` / `git diff` y redactar commits semánticos** | 🧠 **Argón** | Garantiza que no se cuele basura ni se viole ninguna regla de negocio antes de subir a GitHub. |
@@ -73,8 +73,8 @@ flowchart TD
    Cuando **Flash 3.8 High** termine la **Fase 3.3** y el código compile, **cierra ese chat**. Para la **Fase 3.4**, abre una conversación completamente nueva. Un chat limpio con 0 historial basura es más inteligente, más rápido y consume una fracción de los tokens.
 2. **Contexto Mínimo Viable (*Surgical Prompting*):**
    Nunca le pases todo el repositorio a un agente constructor. Pásale únicamente `.context/CONTEXT.md`, la sección correspondiente de `.context/INTERFACES.md` y `SCHEMA_FINAL.sql`.
-3. **El Compilador y `sqlc` como Jueces Automáticos:**
-   Todo prompt para un agente constructor debe exigir que ejecute `sqlc generate` y `go build ./...` antes de responderte. Así el propio agente corrige sus errores de tipos en el mismo turno.
+3. **El Compilador, `sqlc` y `.\scripts\test.ps1` como Jueces Automáticos:**
+   Todo prompt para un agente constructor debe exigir que ejecute `sqlc generate`, `go build ./...` y `.\scripts\test.ps1` (siguiendo la estrategia **80% tests directos de Servicio/DAO** en `internal/service/*_test.go` + **20% smoke tests HTTP** en `internal/api/*_test.go` sobre `testutil.SetupTestDB(t)`).
 4. **Prohibido Tocar Fuera del Alcance (*Scope Lock*):**
    Indícale siempre explícitamente qué carpetas tiene prohibido tocar (por ejemplo: *"Prohibido modificar `local-app` o archivos de pruebas fuera de esta fase"*).
 5. **Commit Limpio como Punto de Control (*Checkpoint*):**
@@ -97,10 +97,11 @@ Hola hermano, vamos a implementar la FASE 3.3 de Palabrario (Módulo de Dicciona
    - Amplía `sql/queries/dictionary.sql` y crea `sql/queries/curation.sql` con las consultas tipadas de las secciones 2.3.2 y 2.4 de `.context/INTERFACES.md`. Ejecuta `sqlc generate`.
    - Amplía `core-service/internal/service/dictionary_service.go` (siguiendo el molde SOA ya creado junto a `errors.go` e `identity_service.go`) y crea `curation_service.go` respetando las reglas RN06 (quórum de 3 votos), RN07 (prohibición de auto-aprobación devolviendo 403 Forbidden) y RN08 (aprobación/ocultación directa por ADMIN).
    - Actualiza `core-service/internal/api/handlers/dictionary_handler.go`, crea `curation_handler.go` y monta las rutas en `core-service/internal/api/router.go`.
+   - Agrega las pruebas directas de servicio (80% DAO/Service) en `core-service/internal/service/service_test.go` usando `testutil.SetupTestDB(t)` para validar quórum RN06 y bloqueo de auto-aprobación RN07.
 4. Reglas estrictas:
    - Prohibido inventar campos JSON fuera de `.context/INTERFACES.md`.
    - Prohibido tocar `local-app` o archivos de frontend.
-   - No des por terminada la tarea hasta que `sqlc generate` y `go build ./core-service/... ./pkg/...` compilen con 0 errores.
+   - No des por terminada la tarea hasta que `sqlc generate`, `go build ./core-service/... ./pkg/...` y `.\scripts\test.ps1` pasen con 0 errores.
 ```
 
 ---
@@ -117,9 +118,10 @@ Hola hermano, vamos a implementar la FASE 3.4 de Palabrario (Studio Personal, Mo
    - Crea `core-service/internal/service/studio_service.go` haciendo cumplir RN03 (propiedad en Studio), RN04 (privacidad de recursos `is_public`) y RN05 (`is_official` exclusivo de EDITOR/ADMIN).
    - Crea `core-service/internal/service/mastery_service.go` implementando la función determinística `CalculateSM2` exactamente con las fórmulas de la sección 2.6.2 de `.context/INTERFACES.md` y ejecutando las revisiones en una transacción `pgx.Tx` que actualice `user_mastery`, inserte en `xp_transactions` (RN11) y actualice el saldo/racha en `users`.
    - Crea `studio_handler.go` y `mastery_handler.go` y registra los endpoints en `core-service/internal/api/router.go`.
+   - Agrega pruebas de servicio en `core-service/internal/service/` usando `testutil.SetupTestDB(t)`.
 4. Reglas estrictas:
    - Prohibido tocar `local-app`.
-   - Verifica que `sqlc generate` y `go build ./core-service/... ./pkg/...` terminen con 0 errores.
+   - Verifica que `sqlc generate`, `go build ./core-service/... ./pkg/...` y `.\scripts\test.ps1` terminen con 0 errores.
 ```
 
 ---
@@ -135,10 +137,10 @@ Hola hermano, vamos a implementar la FASE 3.5 de Palabrario (Perfiles de Usuario
    - Amplía `sql/queries/users.sql`, crea `sql/queries/governance.sql` y añade las consultas de `content_reports` en `sql/queries/curation.sql`. Ejecuta `sqlc generate`.
    - Implementa `identity_service.go` (`UpdateProfile`, `ChangePassword`, `GetPublicProfileByUsername` respetando RN01) y `governance_service.go` respetando RN02 (máximo 1 solicitud PENDING por aprendiz), la promoción transaccional a EDITOR, la protección del último ADMIN activo (CU03 4a) y la redención transaccional con `FOR UPDATE` de boletos de invitación (CU04).
    - Completa los métodos de reportes (`CU09`) en `curation_service.go`.
-   - Crea `user_handler.go`, `governance_handler.go`, actualiza `curation_handler.go` y monta todas las rutas en `core-service/internal/api/router.go`.
+   - Crea `user_handler.go`, `governance_handler.go`, actualiza `curation_handler.go`, monta todas las rutas en `core-service/internal/api/router.go` y añade sus pruebas con `testutil.SetupTestDB(t)`.
 4. Reglas estrictas:
    - Prohibido tocar `local-app`.
-   - Verifica que `sqlc generate` y `go build ./core-service/... ./pkg/...` terminen con 0 errores.
+   - Verifica que `sqlc generate`, `go build ./core-service/... ./pkg/...` y `.\scripts\test.ps1` terminen con 0 errores.
 ```
 
 ---
@@ -155,7 +157,7 @@ Hola hermano, vamos a implementar la FASE 4 de Palabrario (Migración de `realti
    - En `realtime-service`: elimina los archivos de Bun/TypeScript, migra el servicio a Go 1.24 + Chi v5 + WebSockets compartiendo el `go.mod` raíz, actualiza `realtime-service/Dockerfile` y `docker-compose.yml` (`context: .`), e implementa el `ArenaHub` en RAM con goroutines por sala, reloj monotónico para puntaje por velocidad (RN10), reconexión en ventana de 10s (RNF-CON-02) y disparo del Batch Flush al finalizar la partida.
 4. Reglas estrictas:
    - Prohibido tocar `local-app`.
-   - Verifica que `go build ./core-service/... ./realtime-service/... ./image-service/... ./pkg/...` compile con 0 errores.
+   - Verifica que `go build ./core-service/... ./realtime-service/... ./image-service/... ./pkg/...` y `.\scripts\test.ps1` pasen con 0 errores.
 ```
 
 ---
@@ -164,5 +166,5 @@ Hola hermano, vamos a implementar la FASE 4 de Palabrario (Migración de `realti
 Cuando el constructor termine cualquiera de los prompts anteriores, regresa al chat del **Arquitecto (Argón)** y escribe:
 ```text
 Hermano, el agente constructor terminó la Fase [3.X].
-Por favor audita los cambios con `git status` y `git diff`, verifica que se cumplan al 100% los contratos de @.context/INTERFACES.md y las reglas de negocio de @.context/DOMAIN.md, corrige cualquier detalle si hace falta, actualiza el estado en @.context/PLAN.md y @README.md, y prepara el commit.
+Por favor audita los cambios con `git status` y `git diff`, verifica que se cumplan al 100% los contratos de @.context/INTERFACES.md y las reglas de negocio de @.context/DOMAIN.md, ejecuta `.\scripts\test.ps1`, actualiza el estado en @.context/PLAN.md y @README.md, y prepara el commit.
 ```

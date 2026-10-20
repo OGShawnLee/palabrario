@@ -543,11 +543,11 @@ INSERT INTO regions (id_region, code, name, parent_zone, country_code, flag_emoj
 ('a1111111-0000-0000-0000-000000000008', 'PAN', 'Panhispánico', 'General', NULL, '🌐')
 ON CONFLICT (code) DO NOTHING;
 
--- 2. Cuentas y Usuarios demo (Contraseña: 'password123')
+-- 2. Cuentas y Usuarios demo (Contraseña: 'password123' -> hash bcrypt válido cost 10)
 INSERT INTO accounts (id_account, email, password_hash, role) VALUES
-('b1111111-0000-0000-0000-000000000001', 'admin@palabrario.org', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8.3dtOfsvAPGNGDGqOSwhNGEiccrdUHFKnByP0S9PsEfs6c0i', 'ADMIN'),
-('b1111111-0000-0000-0000-000000000002', 'silas@palabrario.org', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8.3dtOfsvAPGNGDGqOSwhNGEiccrdUHFKnByP0S9PsEfs6c0i', 'EDITOR'),
-('b1111111-0000-0000-0000-000000000003', 'gael@palabrario.org', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8.3dtOfsvAPGNGDGqOSwhNGEiccrdUHFKnByP0S9PsEfs6c0i', 'LEARNER')
+('b1111111-0000-0000-0000-000000000001', 'admin@palabrario.org', '$2a$10$f6V4aUFb5FkBdEG21Iz1W.5AONrEdWxEKGRtwSzfPEWIwJVe02Rdu', 'ADMIN'),
+('b1111111-0000-0000-0000-000000000002', 'silas@palabrario.org', '$2a$10$f6V4aUFb5FkBdEG21Iz1W.5AONrEdWxEKGRtwSzfPEWIwJVe02Rdu', 'EDITOR'),
+('b1111111-0000-0000-0000-000000000003', 'gael@palabrario.org', '$2a$10$f6V4aUFb5FkBdEG21Iz1W.5AONrEdWxEKGRtwSzfPEWIwJVe02Rdu', 'LEARNER')
 ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO users (id_user, name, user_name, anchor_dialect, total_xp, current_level) VALUES
@@ -679,10 +679,30 @@ INSERT INTO achievements (id_achievement, slug, title, description, badge_icon_u
 (3, 'ojo_critico', 'Guateque Lingüístico', 'Participa en tu primera partida multijugador en vivo en la Arena.', 'badge_arena', 200, 'GOLD', 'COMPETITION')
 ON CONFLICT (slug) DO NOTHING;
 
--- Ajustar las secuencias automáticas tras insertar datos semilla explícitos
-SELECT setval('words_id_word_seq', COALESCE((SELECT MAX(id_word) FROM words), 1));
-SELECT setval('senses_id_sense_seq', COALESCE((SELECT MAX(id_sense) FROM senses), 1));
-SELECT setval('examples_id_example_seq', COALESCE((SELECT MAX(id_example) FROM examples), 1));
-SELECT setval('decks_id_deck_seq', COALESCE((SELECT MAX(id_deck) FROM decks), 1));
-SELECT setval('semantic_concepts_id_concept_seq', COALESCE((SELECT MAX(id_concept) FROM semantic_concepts), 1));
-SELECT setval('achievements_id_achievement_seq', COALESCE((SELECT MAX(id_achievement) FROM achievements), 1));
+-- 9. Sincronización Dinámica de Secuencias SERIAL (100% agnóstica a cambios de esquema)
+DO $$
+DECLARE
+  rec RECORD;
+  max_id BIGINT;
+  has_rows BOOLEAN;
+BEGIN
+  FOR rec IN
+    SELECT
+      n.nspname AS schema_name,
+      t.relname AS table_name,
+      a.attname AS column_name,
+      pg_get_serial_sequence(format('%I.%I', n.nspname, t.relname), a.attname) AS seq_name
+    FROM pg_class t
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    JOIN pg_attribute a ON a.attrelid = t.oid
+    WHERE n.nspname = 'public'
+      AND t.relkind = 'r'
+      AND a.attnum > 0
+      AND NOT a.attisdropped
+      AND pg_get_serial_sequence(format('%I.%I', n.nspname, t.relname), a.attname) IS NOT NULL
+  LOOP
+    EXECUTE format('SELECT COALESCE(MAX(%I), 1), COUNT(*) > 0 FROM %I.%I', rec.column_name, rec.schema_name, rec.table_name)
+      INTO max_id, has_rows;
+    PERFORM setval(rec.seq_name, max_id, has_rows);
+  END LOOP;
+END $$;

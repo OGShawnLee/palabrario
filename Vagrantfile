@@ -15,6 +15,7 @@ Vagrant.configure("2") do |config|
   config.vm.network "forwarded_port", guest: 8001, host: 8001  # realtime-service
   config.vm.network "forwarded_port", guest: 8002, host: 8002  # image-service
   config.vm.network "forwarded_port", guest: 5432, host: 5432  # postgres
+  config.vm.network "forwarded_port", guest: 5433, host: 5433  # postgres-test (efímero en RAM)
 
   config.vm.provider "virtualbox" do |vb|
     vb.name = "palabrio-dev"

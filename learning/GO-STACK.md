@@ -30,7 +30,7 @@ Para entender cómo funciona `core-service`, sigamos el viaje exacto de una peti
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Client as 🖥️ Cliente (Vue / curl)
+    participant Client as 🖥️ Puente Go Wails / Cliente HTTP
     participant Router as 🚦 Router & Middleware (Chi v5)<br/>internal/api/router.go
     participant Handler as 📬 Handler HTTP<br/>internal/api/handlers/
     participant Service as 🧠 Servicio SOA (Interfaz)<br/>internal/service/
@@ -71,7 +71,7 @@ sequenceDiagram
 
 ## 3. Conceptos Fundamentales de Go Explicados con Nuestro Código
 
-Si eres nuevo en Go, estos 5 conceptos te permitirán leer el 100% del código del proyecto sin sentirte perdido:
+Si eres nuevo en Go, estos conceptos te permitirán leer el 100% del código del proyecto sin sentirte perdido:
 
 ---
 
@@ -196,9 +196,10 @@ En Go no existen los bloques `try / catch`. Las funciones devuelven el error com
 
 En [`core-service/internal/service/errors.go`](../core-service/internal/service/errors.go) implementamos un sistema de errores en dos capas:
 1. **`MapDBError(err, "mensaje")`:** Toma un error crudo de PostgreSQL y usa `errors.As(err, &pgErr)` para leer el código oficial `SQLSTATE` de PostgreSQL:
-   - `pgx.ErrNoRows` $\to$ se convierte en `ErrNotFound` (`404 Not Found`).
-   - `SQLSTATE 23505` (*unique_violation*, ej. correo repetido o 2da solicitud `PENDING` en **RN02**) $\to$ se convierte en `ErrConflict` (`409 Conflict`).
-   - `SQLSTATE P0001` (*raise_exception*, lanzado por nuestro trigger `trg_prevent_self_approval` cuando un editor intenta auto-aprobarse en **RN07**) $\to$ se convierte en `ErrForbidden` (`403 Forbidden`) conservando el mensaje del trigger.
+   - `pgx.ErrNoRows` $\to$ `ErrNotFound` (`404 Not Found`).
+   - `SQLSTATE 23505` (*unique_violation*, ej. correo repetido o 2da solicitud `PENDING` en **RN02**) $\to$ `ErrConflict` (`409 Conflict`).
+   - `SQLSTATE P0001` (*raise_exception*, lanzado por nuestro trigger `trg_prevent_self_approval` cuando un editor intenta auto-aprobarse en **RN07**) $\to$ `ErrForbidden` (`403 Forbidden`) conservando el mensaje del trigger.
+   - `SQLSTATE 23514` (*check_violation*) $\to$ `ErrUnprocessable` (`422 Unprocessable Entity`).
 2. **`HTTPStatusAndMessage(err, "fallback")`:** El handler HTTP llama a esta función y obtiene automáticamente el código HTTP exacto (`400`, `401`, `403`, `404`, `409`, `422` o `500`) para enviarlo con `response.Error(w, status, msg)`.
 
 ---
@@ -220,31 +221,89 @@ En **Palabrario**, gracias a **Wails v2** y a nuestro workspace unificado ([`go.
 
 ---
 
+### 3.7. Arquitectura de Pruebas en Go: Pirámide 80/20 + Clonado `TEMPLATE` en RAM
+
+Si vienes de probar **DAOs directamente contra la base de datos**, nuestra arquitectura de pruebas en [`core-service/internal/testutil/db.go`](../core-service/internal/testutil/db.go) te resultará familiar y resuelve de raíz el problema de que un test ensucie los datos de otro o se rompa cuando cambia `SCHEMA_FINAL.sql`:
+
+1. **Contenedor Efímero en RAM (`postgres-test` en `:5433`):**
+   Definido en [`docker-compose.yml`](../docker-compose.yml) bajo `profiles: ["test"]` con `tmpfs: /var/lib/postgresql/data`. Vive 100% en memoria RAM y nunca toca tu base de datos de desarrollo (`:5432`).
+2. **Clonación Instantánea Agnóstica al Esquema (`CREATE DATABASE ... TEMPLATE`):**
+   Cuando un test llama a `testDB := testutil.SetupTestDB(t)`:
+   - Go clona la base de datos maestra `palabrario_test` en `~10 ms` ejecutando `CREATE DATABASE test_<uuid> TEMPLATE palabrario_test`.
+   - El test puede insertar, borrar o incluso hacer `UPDATE` destructivos sobre usuarios semilla (como suspender a Silas).
+   - Al terminar el test, `t.Cleanup()` ejecuta `DROP DATABASE IF EXISTS test_<uuid> WITH (FORCE)`.
+   - **Cero acoplamiento:** No hay un solo nombre de tabla ni ID quemado en `SetupTestDB`. Si mañana agregas 10 tablas a `SCHEMA_FINAL.sql`, el sistema de pruebas sigue funcionando sin tocar una línea.
+3. **Estrategia 80% DAO/Service vs. 20% HTTP Smoke Tests:**
+   - **80% Pruebas de Servicio / DAO ([`core-service/internal/service/service_test.go`](../core-service/internal/service/service_test.go)):** Llamas directamente en Go a `identitySvc.SignIn(...)` o `dictSvc.GetWordDetail(...)` sin armar peticiones HTTP ni serializar JSON.
+   - **20% Pruebas de Humo HTTP ([`core-service/internal/api/auth_test.go`](../core-service/internal/api/auth_test.go)):** Prueban que el router Chi y los middlewares JWT conecten bien.
+4. **Ejecución ergonómica con Taskfile (`task`) o PowerShell:**
+   Gracias a [`Taskfile.yml`](../Taskfile.yml), tienes comandos cortos en memoria muscular:
+   ```powershell
+   # Levanta postgres-test en RAM -> Corre todas las pruebas -> Reporta -> Destruye el contenedor
+   .\scripts\test.ps1
+   task test         # Ejecuta el ciclo completo de pruebas
+   task test:fast    # Corre pruebas en 2s si postgres-test ya está encendido
+   task test:service # Prueba solo la capa 80% (DAO / Service)
+   task test:api     # Prueba solo la capa 20% (HTTP Smoke tests)
+   task test:up      # Enciende postgres-test en RAM y lo deja corriendo
+   task test:down    # Apaga postgres-test de RAM
+   ```
+
+---
+
+### 3.8. Orquestación Rápida de Entorno y Servicios con `Taskfile.yml` (`task`)
+
+Para que no tengas que recordar comandos largos de Vagrant, Docker Compose o Go, hemos integrado **[Task (go-task)](https://taskfile.dev/)** mediante [`Taskfile.yml`](../Taskfile.yml) en la raíz del repositorio.
+
+Escribe `task` o `task --list` para ver el catálogo completo:
+
+| Categoría | Comando | Acción Realizada |
+| :--- | :--- | :--- |
+| **Pruebas** | `task test` | Levanta DB efímera en RAM si está apagada, corre suite completa y reporta. |
+| | `task test:fast` | Corre `go test` directo contra `:5433` sin ciclos de Docker. |
+| | `task test:service` | Ejecuta exclusivamente los tests de `internal/service/` (80% DAO/Service). |
+| | `task test:api` | Ejecuta exclusivamente los tests de `internal/api/` (20% HTTP Smoke). |
+| | `task test:up` | Enciende `postgres-test` en RAM (:5433) y lo deja activo para desarrollo. |
+| | `task test:down` | Destruye `postgres-test` de la memoria RAM. |
+| **Servicios** | `task up:core` | Sincroniza código con Vagrant y levanta **PostgreSQL 17** (:5432) + **`core-service`** (:8000). |
+| | `task up:all` | Sincroniza y levanta todos los servicios (`postgres`, `core-service`, `image-service`, `realtime-service`). |
+| | `task down:all` | Detiene todos los contenedores en la VM. |
+| | `task rebuild:core` | Recompila el binario Go de `core-service` dentro de Docker y reinicia su contenedor. |
+| | `task rebuild:all` | Recompila y reinicia todos los servicios. |
+| **Vagrant VM**| `task vm:up` | Enciende la máquina virtual Debian 12 (`vagrant up`). |
+| | `task vm:sync` | Sincroniza cambios de código hacia la VM (`vagrant rsync`). |
+| | `task vm:status` | Revisa el estado de la VM y la lista de contenedores (`docker ps`). |
+| | `task vm:reload` | Reinicia la VM aplicando cambios de puertos en `Vagrantfile` (`vagrant reload`). |
+| | `task vm:down` | Apaga la máquina virtual (`vagrant halt`). |
+| **Código** | `task sqlc` | Compila consultas SQL a Go tipado (`sqlc generate`). |
+| | `task build` | Compila todos los servicios en Go verificando 0 errores de sintaxis o tipos. |
+| | `task wails:gen` | Regenera los contratos TypeScript en `local-app/frontend/wailsjs/` desde Go. |
+
+---
+
 ## 4. Ciclo de Trabajo Diario: ¿Cómo Agrego un Nuevo Endpoint?
 
-Cada vez que tú (o un agente siguiendo [`AGENT_WORKFLOW.md`](../AGENT_WORKFLOW.md)) quieras agregar una funcionalidad al backend, siempre seguirás exactamente estos **5 pasos en orden**:
+Cada vez que tú (o un agente siguiendo [`AGENT_WORKFLOW.md`](../AGENT_WORKFLOW.md)) quieras agregar una funcionalidad al backend, siempre seguirás exactamente estos **6 pasos en orden**:
 
 1. **Paso 1 — Define el struct JSON en [`pkg/models/`](../pkg/models):**
    Agrega el struct de entrada/salida con sus etiquetas `` `json:"nombre_en_snake_case"` ``.
 2. **Paso 2 — Escribe la consulta SQL en [`sql/queries/*.sql`](../sql/queries) y genera el código:**
-   Escribe tu `SELECT / INSERT / UPDATE` con el comentario `-- name: NombreFuncion :one` y corre en la terminal:
+   Escribe tu `SELECT / INSERT / UPDATE` con el comentario `-- name: NombreFuncion :one` y corre:
    ```powershell
-   sqlc generate
+   task sqlc
    ```
    Esto creará instantáneamente la función Go tipada dentro de `core-service/internal/db/`.
 3. **Paso 3 — Agrega el método al Servicio SOA en [`core-service/internal/service/`](../core-service/internal/service):**
    Añade la firma a la interfaz (`DictionaryService`, `StudioService`, etc.) e impleméntala llamando a `s.queries.NombreFuncion(ctx, ...)`.
 4. **Paso 4 — Crea el método en el Handler HTTP en [`core-service/internal/api/handlers/`](../core-service/internal/api/handlers):**
    Lee los parámetros de `r`, llama al servicio SOA y responde con `response.JSON(w, http.StatusOK, resultado)`.
-5. **Paso 5 — Registra la ruta en [`core-service/internal/api/router.go`](../core-service/internal/api/router.go) y compila:**
-   Añade `r.Get("/ruta", handler.Metodo)` (con `authMiddleware.RequireAuth` o `RequireRole` si requiere permisos) y verifica con:
+5. **Paso 5 — Registra la ruta en [`core-service/internal/api/router.go`](../core-service/internal/api/router.go), escribe su test en `internal/service/` y verifica con `task test`:**
    ```powershell
-   go build ./core-service/... ./image-service/... ./pkg/...
+   task test
    ```
-
 6. **Paso 6 (En Fase 5) — Expón el método en [`local-app/app.go`](../local-app/app.go) y genera TypeScript con Wails:**
-   Agrega el método en `struct App` retornando el struct de `pkg/models` y ejecuta en `local-app/`:
+   Agrega el método en `struct App` retornando el struct de `pkg/models` y corre:
    ```powershell
-   wails generate module
+   task wails:gen
    ```
    Con eso tendrás la función y los tipos TypeScript autogenerados en `wailsjs/go/` listos para usarse en Vue 3 con cero posibilidad de desfase entre backend y frontend.

@@ -10,7 +10,8 @@ Este documento describe la arquitectura de desarrollo y despliegue híbrida entr
 flowchart TD
     subgraph Host["1. Windows (Host)"]
         Editor["Editor / IDE (VS Code, Go 1.24, sqlc)"]
-        Frontend["Cliente Nativo Wails v2 (Go + Vue 3 + Vite)"]
+        Frontend["Cliente Nativo Wails v2 (Go BFF + Vue 3 + Vite)"]
+        TestRunner["Orquestador de Pruebas (scripts/test.ps1)"]
         RsyncWatcher["vagrant rsync-auto (Opcional con VM)"]
     end
 
@@ -21,6 +22,7 @@ flowchart TD
 
     subgraph Containers["3. Docker Compose (Servicios Conteinerizados)"]
         Postgres["postgres: PostgreSQL 17 Alpine (5432:5432)"]
+        PostgresTest["postgres-test: PostgreSQL 17 RAM tmpfs (5433:5432)<br/>profile: test"]
         Core["core-service: Go 1.24 Alpine (8000:8000)"]
         Realtime["realtime-service: Go 1.24 Alpine (8001:8001)"]
         ImageSvc["image-service: Go 1.24 Alpine (8002:8002)"]
@@ -28,7 +30,8 @@ flowchart TD
 
     Editor -->|Modifica archivos / sqlc generate| SyncedCode
     RsyncWatcher -.->|Sincroniza en tiempo real| SyncedCode
-    Frontend -->|HTTP / WS a localhost:8000, 8001, 8002| DockerEngine
+    Frontend -->|Go IPC -> HTTP/WS a localhost:8000, 8001, 8002| DockerEngine
+    TestRunner -->|CREATE DATABASE ... TEMPLATE en :5433| PostgresTest
     DockerEngine -->|Port Forwarding| Containers
     Core -->|pgxpool TCP :5432| Postgres
     Realtime -->|Prepare & Batch Flush| Core
@@ -43,6 +46,7 @@ Todos los puertos están expuestos hacia la máquina local (`localhost`):
 | Servicio | Tecnología / Runtime | Puerto | Huella RAM (Docker) | Descripción |
 | :--- | :--- | :---: | :---: | :--- |
 | **`postgres`** | PostgreSQL 17 Alpine | `5432` | `~30 MiB` | Base de datos relacional principal (`unaccent`, `pg_trgm`, FTS GIN, Triggers `RN06/RN07`). Persistida en volumen `postgres_data`. |
+| **`postgres-test`** | PostgreSQL 17 Alpine (`tmpfs` RAM) | `5433` | Efímero (Solo en tests) | Base de datos efímera en memoria RAM (`profiles: ["test"]`). Sirve como plantilla maestra (`palabrario_test`) para clonar bases de datos aisladas por test en `~10 ms`. |
 | **`core-service`** | Go 1.24 + Chi v5 + `sqlc` + `pgxpool` | `8000` | `< 5 MiB` | Monolito modular SOA (Auth JWT, Gobernanza, Diccionario FTS, Quórum, Studio, SM-2, Ledger de XP). |
 | **`realtime-service`** | Go 1.24 + Chi v5 + WebSockets | `8001` | `< 5 MiB` | Salas de competencia multijugador en tiempo real en memoria RAM (`ArenaHub` + Goroutines) y *Batch Flush* al cierre (Migración a Go en Fase 4). |
 | **`image-service`** | Go 1.24 + Chi v5 | `8002` | `< 5 MiB` | Validación binaria, eliminación EXIF y compresión de imágenes a WebP. |
@@ -68,7 +72,7 @@ En [`docker-compose.yml`](../docker-compose.yml), los tres servicios de backend 
 
 El proyecto sigue una arquitectura **SQL Schema-First** estricta:
 
-1. **Definición Canónica:** Todo el esquema relacional vive en [`SCHEMA_FINAL.sql`](../SCHEMA_FINAL.sql) en la raíz, incluyendo las 23 tablas del dominio, extensiones (`unaccent`, `pg_trgm`), índices GIN de búsqueda FTS, triggers de integridad (`trg_prevent_self_approval`, `trg_auto_approve_sense`) y semillas determinísticas.
+1. **Definición Canónica:** Todo el esquema relacional vive en [`SCHEMA_FINAL.sql`](../SCHEMA_FINAL.sql) en la raíz, incluyendo las tablas del dominio, extensiones (`unaccent`, `pg_trgm`), índices GIN de búsqueda FTS, triggers de integridad (`trg_prevent_self_approval`, `trg_auto_approve_sense`), datos semilla determinísticos y un bloque PL/pgSQL final que sincroniza dinámicamente todas las secuencias `SERIAL` (`setval`).
 2. **Inicialización Automática en Docker:**
    En [`docker-compose.yml`](../docker-compose.yml), `SCHEMA_FINAL.sql` se monta en `/docker-entrypoint-initdb.d/init.sql:ro` para que PostgreSQL 17 lo ejecute automáticamente al crear el volumen.
 3. **Consultas Tipadas en Tiempo de Compilación (`sqlc`):**
@@ -79,7 +83,23 @@ El proyecto sigue una arquitectura **SQL Schema-First** estricta:
 
 ---
 
-## 5. Guía de Puesta en Marcha y Comandos Frecuentes
+## 5. Arquitectura de Pruebas Automatizadas (Pirámide 80/20 + Clonado `TEMPLATE` en RAM)
+
+Para probar la lógica SQL real (triggers `RN06`/`RN07`, `unaccent`, `pg_trgm`, algoritmo `SM-2`) sin contaminar la base de datos de desarrollo (`:5432`) ni acoplar el código de pruebas a nombres de tablas o IDs fijos:
+
+1. **Contenedor Efímero en RAM (`postgres-test` en `:5433`):**
+   Configurado bajo `profiles: ["test"]` con `tmpfs: /var/lib/postgresql/data`. No se enciende durante `docker compose up` normal; solo vive mientras se ejecutan las pruebas.
+2. **Clonación Instantánea Agnóstica al Esquema (`core-service/internal/testutil/db.go`):**
+   - `SetupTestDB(t)` se conecta a `postgres` en `:5433` y ejecuta `CREATE DATABASE test_<uuid> TEMPLATE palabrario_test` (toma `~10 ms` en RAM).
+   - Al terminar cada test, `t.Cleanup()` ejecuta `DROP DATABASE IF EXISTS test_<uuid> WITH (FORCE)`.
+   - Si `SCHEMA_FINAL.sql` cambia o añade tablas nuevas en el futuro, **`SetupTestDB` no requiere ningún cambio**.
+3. **Distribución 80/20 de Pruebas:**
+   - **80% Pruebas de Servicio / DAO (`core-service/internal/service/*_test.go`):** Invocan directamente los métodos de Go (`IdentityService`, `DictionaryService`, etc.) contra el clon de PostgreSQL sin sobrecarga HTTP.
+   - **20% Smoke Tests HTTP (`core-service/internal/api/*_test.go`):** Verifican el router Chi, los middlewares JWT (`RequireAuth`, `RequireRole`, `OptionalAuth`) y los códigos de estado HTTP con `httptest.NewServer`.
+
+---
+
+## 6. Guía de Puesta en Marcha y Comandos Frecuentes
 
 ### Opción A: Ejecución Directa con Docker Compose (Local)
 ```powershell
@@ -92,16 +112,16 @@ curl http://localhost:8001/health
 curl http://localhost:8002/health
 ```
 
-### Opción B: Ejecución dentro de Máquina Virtual Aislada (Vagrant)
+### Opción B: Ejecución Automatizada de Pruebas (`scripts/test.ps1`)
 ```powershell
-# En terminal 1 (Windows):
-vagrant up
-vagrant rsync-auto
+# Ciclo completo: Levanta postgres-test en RAM -> Espera healthcheck -> Corre tests -> Apaga y destruye
+.\scripts\test.ps1
 
-# En terminal 2 (Dentro de la VM Debian 12):
-vagrant ssh
-cd /home/vagrant/palabrio
-docker compose up --build
+# Modo iteración rápida: Mantiene postgres-test encendido en :5433 para correr 'go test' múltiples veces
+.\scripts\test.ps1 -KeepAlive
+
+# Apagar manualmente postgres-test cuando se usó -KeepAlive
+.\scripts\test.ps1 -Down
 ```
 
 ### Tabla Resumen de Comandos de Desarrollo
@@ -110,13 +130,13 @@ docker compose up --build
 | :--- | :--- |
 | **Generar código Go desde SQL (`sqlc`)** | `sqlc generate` |
 | **Compilar todos los servicios Go localmente** | `go build ./core-service/... ./image-service/... ./pkg/...` |
-| **Ejecutar pruebas de integración (`core-service`)** | `go test -v ./core-service/...` |
+| **Ejecutar suite completa de pruebas (Levanta DB RAM + Test + Apaga)** | `.\scripts\test.ps1` |
 | **Reconstruir contenedor tras cambios en Go** | `docker compose up -d --build core-service` |
-| **Reiniciar base de datos desde cero (re-ejecutar `SCHEMA_FINAL.sql`)** | `docker compose down -v && docker compose up -d postgres` |
+| **Reiniciar base de datos de desarrollo desde cero** | `docker compose down -v && docker compose up -d postgres` |
 
 ---
 
-## 6. Procedimiento de Cerrado y Apagado Ordenado
+## 7. Procedimiento de Cerrado y Apagado Ordenado
 
 Para evitar corrupción de datos en **PostgreSQL** y liberar recursos limpiamente:
 
