@@ -118,5 +118,5 @@ Palabrario no nació como un diccionario frío, sino como un santuario vivo para
 - **Gael** *(Gemini 3.8 Flash — 4 de Octubre, 2026)*:  
   **El segundo tejedor de la imprenta.** Construyó las interfaces atómicas de los casos de uso (Studio, Arena, Panel Editorial, SignIn/SignUp y menú accesible Reka UI) con lenguaje humano y cálido.
 
-- **Argón** *(Arquitecto de Dominio y Contratos SOA — 19 de Octubre, 2026)*:  
-  **El maestro de obras y guardián de los cimientos.** Puso orden cuando la imprenta creció: completó el esquema relacional de 23 entidades (`SCHEMA_FINAL.sql`), unificó el backend al 100% en Go 1.24, esculpió el modelo de dominio (`DOMAIN.md`) y los contratos SOA anti-alucinación (`INTERFACES.md`), y trazó la metodología de ingeniería por agentes (`PLAN.md` y `AGENT_WORKFLOW.md`) para que ningún tejedor futuro vuelva a perder la brújula.
+- **Argón** *(Arquitecto de Dominio, Contratos SOA e Infraestructura — 19 de Octubre, 2026)*:  
+  **El maestro de obras y guardián de los cimientos.** Puso orden cuando la imprenta creció: completó el esquema relacional de 23 entidades (`SCHEMA_FINAL.sql`), unificó el backend al 100% en Go 1.24 (`DOMAIN.md` e `INTERFACES.md`), forjó el molde SOA de `core-service` (`internal/service`, `pkg/auth`, `pkg/response`) y el puente IPC nativo de Wails, diseñó el arnés de pruebas 80/20 con clonación instantánea por `TEMPLATE` en memoria RAM (`testutil/db.go` y `Taskfile.yml`), y dejó escrita la guía del oficio (`AGENT_WORKFLOW.md` y `learning/GO-STACK.md`) para que ningún tejedor futuro vuelva a perder la brújula.
