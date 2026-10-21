@@ -50,12 +50,16 @@ func (rt *Router) Setup() http.Handler {
 	identityService := service.NewIdentityService(rt.db, tokenService)
 	dictionaryService := service.NewDictionaryService(rt.db)
 	curationService := service.NewCurationService(rt.db)
+	studioService := service.NewStudioService(rt.db)
+	masteryService := service.NewMasteryService(rt.db)
 
 	// 2. Capa de Middlewares y Handlers HTTP
 	authMiddleware := middleware.NewAuthMiddleware(tokenService)
 	authHandler := handlers.NewAuthHandler(identityService)
 	dictionaryHandler := handlers.NewDictionaryHandler(dictionaryService)
 	curationHandler := handlers.NewCurationHandler(curationService)
+	studioHandler := handlers.NewStudioHandler(studioService)
+	masteryHandler := handlers.NewMasteryHandler(masteryService)
 	healthHandler := handlers.NewHealthHandler(rt.db)
 
 	// Health check raíz
@@ -149,6 +153,58 @@ func (rt *Router) Setup() http.Handler {
 				r.Use(authMiddleware.RequireAuth)
 				r.Use(authMiddleware.RequireRole(models.RoleAdmin))
 				r.Put("/senses/{senseId}/state", curationHandler.AdminOverrideState)
+			})
+		})
+
+		// Módulo 5: Barajas de Estudio (CU10)
+		r.Route("/decks", func(r chi.Router) {
+			r.Get("/", studioHandler.ListDecks)
+			r.With(authMiddleware.OptionalAuth).Get("/{id}", studioHandler.GetDeck)
+
+			r.Group(func(r chi.Router) {
+				r.Use(authMiddleware.RequireAuth)
+				r.Post("/", studioHandler.CreateDeck)
+				r.Put("/{id}", studioHandler.UpdateDeck)
+				r.Delete("/{id}", studioHandler.DeleteDeck)
+				r.Post("/{id}/items", studioHandler.AddDeckItem)
+				r.Delete("/{id}/items/{senseId}", studioHandler.RemoveDeckItem)
+				r.Post("/{id}/save", studioHandler.SaveDeck)
+				r.Delete("/{id}/save", studioHandler.UnsaveDeck)
+			})
+		})
+
+		// Módulo 5: Colecciones Temáticas (CU11)
+		r.Route("/collections", func(r chi.Router) {
+			r.Get("/", studioHandler.ListCollections)
+			r.With(authMiddleware.OptionalAuth).Get("/{id}", studioHandler.GetCollection)
+
+			r.Group(func(r chi.Router) {
+				r.Use(authMiddleware.RequireAuth)
+				r.Post("/", studioHandler.CreateCollection)
+				r.Put("/{id}", studioHandler.UpdateCollection)
+				r.Delete("/{id}", studioHandler.DeleteCollection)
+				r.Post("/{id}/save", studioHandler.SaveCollection)
+				r.Delete("/{id}/save", studioHandler.UnsaveCollection)
+			})
+		})
+
+		// Módulo 5 & 6: Studio Personal, Repetición Espaciada SM-2 y Maestría (CU10, CU11, CU12, CU13)
+		r.Route("/studio", func(r chi.Router) {
+			r.Group(func(r chi.Router) {
+				r.Use(authMiddleware.RequireAuth)
+
+				// Studio Decks & Collections (CU10, CU11)
+				r.Get("/decks", studioHandler.ListStudioDecks)
+				r.Get("/collections", studioHandler.ListStudioCollections)
+
+				// Repetición Espaciada SM-2 (CU12)
+				r.Get("/study-session", masteryHandler.GetStudySession)
+				r.Post("/study-session/review", masteryHandler.SubmitReview)
+
+				// Maestría y Ledger de XP (CU13)
+				r.Get("/mastery", masteryHandler.GetMasteryDashboard)
+				r.Get("/mastery/items", masteryHandler.ListMasteryItems)
+				r.Get("/xp-ledger", masteryHandler.ListXPLedger)
 			})
 		})
 	})

@@ -170,7 +170,7 @@ go test -v ./core-service/...
 - [x] **Fase 2: Espacio de Trabajo y Contratos de Dominio** (`go.mod` + `pkg/models/` + `INTERFACES.md`)
 - [x] **Fase 3.1 & 3.2: Arquitectura Base de Servicios y Autenticación JWT**
 - [x] **Fase 3.3: Módulo de Diccionario, Autoría Léxica y Curaduría por Quórum (`CU05–CU08`)**
-- [ ] **Fase 3.4: Studio Personal, Motor de Repetición Espaciada (SM-2) y Ledger de XP (`CU10–CU13`)**
+- [x] **Fase 3.4: Studio Personal, Motor de Repetición Espaciada (SM-2) y Ledger de XP (`CU10–CU13`)**
 - [ ] **Fase 3.5: Gobernanza Institucional, Perfiles y Moderación de Reportes (`CU01–CU04, CU09`)**
 - [ ] **Fase 4: Migración de `realtime-service` a Go 1.24 + Arena Multijugador (WebSockets + Batch Flush) (`CU14–CU16`)**
 - [ ] **Fase 5: Integración End-to-End Desktop (Wails v2) y Pipeline CI/CD**

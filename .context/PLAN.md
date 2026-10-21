@@ -1,4 +1,4 @@
-﻿# 🗺️ Plan Maestro de Implementación y Estado Arquitectónico (`.context/PLAN.md`)
+﻿﻿# 🗺️ Plan Maestro de Implementación y Estado Arquitectónico (`.context/PLAN.md`)
 
 > **Documento de Planificación Estratégica y Hoja de Ruta a Largo Plazo (Backend-First)**  
 > **Proyecto:** Palabrario — Plataforma Gamificada de Aprendizaje y Preservación del Léxico Dialectal Panhispánico  
@@ -24,15 +24,15 @@
 
 ## 1. Diagnóstico Ejecutivo: ¿Dónde Estamos Hoy?
 
-Al auditar el código real del repositorio frente a los **16 Casos de Uso (`CU01–CU16`)** y las **11 Reglas de Negocio (`RN01–RN11`)**, el proyecto ha cerrado con éxito la **Fase 3.3** (Diccionario y Curaduría por Quórum) y se encuentra listo para iniciar la **Fase 3.4 (Studio Personal, Motor SM-2 y Ledger de XP)**:
+Al auditar el código real del repositorio frente a los **16 Casos de Uso (`CU01–CU16`)** y las **11 Reglas de Negocio (`RN01–RN11`)**, el proyecto ha cerrado con éxito la **Fase 3.3** (Diccionario y Curaduría por Quórum) y la **Fase 3.4** (Studio Personal, Motor SM-2 y Ledger de XP), y se encuentra listo para iniciar la **Fase 3.5 (Módulo de Cuenta, Perfiles Sociales, Gobernanza y Moderación)**:
 
 ```mermaid
 flowchart LR
     F1["✅ Fase 1\nEsquema SQL + Triggers\n(100%)"] --> F2["✅ Fase 2\nMonorepo Go + Contratos\n(100%)"]
     F2 --> F31["✅ Fase 3.1/3.2\nCore SOA Base + Auth JWT\n(100%)"]
     F31 --> F33["✅ Fase 3.3\nDiccionario & Curaduría\n(100%)"]
-    F33 --> F34["🚧 Fase 3.4 (ACTUAL)\nStudio & Motor SM-2\n(0% -> En Progreso)"]
-    F34 --> F35["⏳ Fase 3.5\nGobernanza & Reportes\n(0% en Backend)"]
+    F33 --> F34["✅ Fase 3.4\nStudio & Motor SM-2\n(100%)"]
+    F34 --> F35["🚧 Fase 3.5 (ACTUAL)\nGobernanza & Reportes\n(0% -> En Progreso)"]
     F35 --> F4["⏳ Fase 4\nMigración Realtime a Go\n+ Arena WS & Flush\n(10% Esqueleto)"]
     F4 --> F5["⏳ Fase 5\nPuente Wails (app.go)\n+ Bindings TS & UI\n(Auth & Search listos)"]
     F5 --> F6["🌱 Fase 6 (Largo Plazo)\nEventos de Temporada"]
@@ -42,12 +42,12 @@ flowchart LR
 
 | Componente / Módulo | Estado Actual Real | Lo que YA existe y compila | Lo que FALTA por construir |
 | :--- | :---: | :--- | :--- |
-| **1. Base de Datos ([`SCHEMA_FINAL.sql`](../SCHEMA_FINAL.sql))** | **100% Completo** | 23 tablas, extensiones `unaccent` + `pg_trgm`, vectores `tsvector` GIN, triggers `RN06` (auto-aprobación al 3er voto) y `RN07` (anti-autoaprobación), tablas de gobernanza (`editor_requests`, `invitation_tickets`, `ticket_redemptions`, `content_reports`) y guardados (`saved_decks`, `saved_collections`). | Únicamente escribir las consultas SQL en `sql/queries/*.sql` para los módulos pendientes (`studio.sql`, `mastery.sql`, `governance.sql`, `arena.sql` y reportes en `curation.sql`) y ejecutar `sqlc generate`. |
-| **2. Paquetes Compartidos ([`pkg/`](../pkg))** | **80% Completo** | `pkg/auth` (JWT + `bcrypt`), `pkg/response` (JSON/Error unificados), estructuras completas en `pkg/models/dictionary.go` y `pkg/models/curation.go`, y estructuras base en `auth.go`, `user.go`, `studio.go`, `arena.go`. | Agregar los DTOs de entrada/salida especificados en la sección 2 de [`INTERFACES.md`](./INTERFACES.md) (`governance.go`, y ampliaciones en `user.go`, `studio.go`, `arena.go`). |
+| **1. Base de Datos ([`SCHEMA_FINAL.sql`](../SCHEMA_FINAL.sql))** | **100% Completo** | 23 tablas, extensiones `unaccent` + `pg_trgm`, vectores `tsvector` GIN, triggers `RN06` (auto-aprobación al 3er voto) y `RN07` (anti-autoaprobación), tablas de gobernanza (`editor_requests`, `invitation_tickets`, `ticket_redemptions`, `content_reports`) y guardados (`saved_decks`, `saved_collections`). | Únicamente escribir las consultas SQL en `sql/queries/*.sql` para los módulos pendientes (`governance.sql`, `arena.sql` y reportes en `curation.sql`) y ejecutar `sqlc generate`. |
+| **2. Paquetes Compartidos ([`pkg/`](../pkg))** | **90% Completo** | `pkg/auth` (JWT + `bcrypt`), `pkg/response` (JSON/Error unificados), estructuras completas en `pkg/models/dictionary.go`, `pkg/models/curation.go` y `pkg/models/studio.go`, y estructuras base en `auth.go`, `user.go`, `arena.go`. | Agregar los DTOs de entrada/salida especificados en la sección 2 de [`INTERFACES.md`](./INTERFACES.md) (`governance.go`, y ampliaciones en `user.go`, `arena.go`). |
 | **3. `core-service` — Auth & Cuentas (`CU01`)** | **75% Completo** | Capa SOA `IdentityService` (`SignUp`, `SignIn` con verificación de `is_active`, `GetMe`), middlewares `RequireAuth`, `OptionalAuth` y `RequireRole`. | `PUT /api/v1/users/me` (actualizar perfil y dialecto ancla `CU01`), `PUT /api/v1/users/me/password` y `GET /api/v1/users/u/{username}` (perfil público/dual). |
 | **4. `core-service` — Diccionario (`CU05, CU06`)** | **100% Completo** | Capa SOA `DictionaryService` con `GET /api/v1/words/search` (`OptionalAuth` + FTS + trigramas), `GET /api/v1/words/{id}` (detalle con sentidos `APPROVED`, ejemplos, heterónimos y `ParentZone`), `GET /api/v1/regions`, `GET /api/v1/words/word-of-the-day`, explorador paginado `GET /api/v1/words`, y todo el bloque de autoría de `CU06` (`POST/PUT /words`, `POST/PUT/DELETE /senses`, `examples` y `concepts` con helper `NormalizeLemma`). | Nada en `core-service` (Cerrado al 100% en Fase 3.3; pendiente solo exponer métodos puente en `local-app/app.go` en Fase 5). |
 | **5. `core-service` — Curaduría y Moderación (`CU07–CU09`)** | **85% Completo** | Los triggers PL/pgSQL (`trg_prevent_self_approval` y `trg_auto_approve_sense`), el traductor `MapDBError` (`P0001` $\to$ `403 Forbidden`), consultas en `sql/queries/curation.sql`, `CurationService` y endpoints para cola de quórum (`/curation/queue`, `/my-proposals`, `/senses/{id}`), votación (`/vote` con `RN06` y `RN07`) y veto admin (`RN08` en `/admin/senses/{id}/state`) ya están listos y probados. | Consultas SQL adicionales en `sql/queries/curation.sql` y endpoints para reportes comunitarios `content_reports` (`CU09`: `POST /reports`, `GET /admin/reports` y `PUT /admin/reports/{id}/resolve`, programados para Fase 3.5). |
-| **6. `core-service` — Studio y SM-2 (`CU10–CU13`)** | **0% en Backend** | Modelos iniciales en `pkg/models/studio.go`. | Consultas en `sql/queries/studio.sql` y `mastery.sql`, `StudioService` (CRUD de barajas/colecciones y guardado comunitario) y `MasteryService` (algoritmo matemático SM-2 y ledger `xp_transactions`). |
+| **6. `core-service` — Studio y SM-2 (`CU10–CU13`)** | **100% Completo** | Modelos completos en `pkg/models/studio.go`, consultas en `sql/queries/studio.sql` y `sql/queries/mastery.sql`, `StudioService` (CRUD de barajas/colecciones y guardado comunitario con validación estricta de **RN03**, **RN04** y **RN05**), `MasteryService` (función pura determinística `CalculateSM2`, transacción ACID `pgx.Tx` actualizando `user_mastery`, `xp_transactions` **RN11** y racha/nivel en `users`), handlers `studio_handler.go` y `mastery_handler.go`, rutas en `router.go` y pruebas de integración en `studio_mastery_test.go`. | Nada en `core-service` (Cerrado al 100% en Fase 3.4; pendiente solo exponer métodos puente en `local-app/app.go` en Fase 5). |
 | **7. `core-service` — Gobernanza (`CU02–CU04`)** | **0% en Backend** | Tablas `editor_requests`, `invitation_tickets` y `ticket_redemptions` en `SCHEMA_FINAL.sql`. | Consultas en `sql/queries/governance.sql`, `GovernanceService` y endpoints `/api/v1/governance/*`. |
 | **8. `realtime-service` (`CU14–CU16`)** | **10% Esqueleto** | Actualmente tiene un placeholder de 9 líneas en TypeScript/Bun (`realtime-service/index.ts`). | **Migrar a Go 1.24 + Chi v5 + WebSockets**, implementar `ArenaHub` en RAM por PIN, tickers de ronda (`RN10`), reconexión `10s` (`RNF-CON-02`) y *Batch Flush* hacia `core-service`. |
 | **9. `image-service` (Multimedia)** | **25% Esqueleto** | Ya migrado a Go 1.24 + Chi v5 en puerto `8002` con `/health`, graceful shutdown y Dockerfile multi-stage. | Endpoint `POST /api/v1/images/upload` con validación de magic bytes, limpieza EXIF y compresión WebP. |
@@ -65,7 +65,7 @@ Cada fase de backend (3.3 a 4) está diseñada como una unidad atómica de traba
 
 > **Objetivo:** Cerrar al 100% el corazón lexicográfico y editorial de Palabrario en `core-service` siguiendo las secciones **2.3** y **2.4** de [`INTERFACES.md`](./INTERFACES.md).
 
-#### Tareas Exactas de Implementación (Verificadas en Commit `02b82e3`):
+#### Tareas Exactas de Implementación (Verificadas en Commit `c0e651e`):
 1. **[x] Modelos Compartidos (`pkg/models/`):**
    - Ampliado [`pkg/models/dictionary.go`](../pkg/models/dictionary.go) con `WordExploreFilter`, `WordSummaryCard`, `PaginatedWords`, `CreateExampleInput`, `CreateSenseRequest`, `CreateWordProposalRequest`, `UpdateWordRequest`, `UpdateSenseRequest`, `SemanticConcept`, `CreateConceptRequest`.
    - Creado [`pkg/models/curation.go`](../pkg/models/curation.go) con `ReviewDecision`, `SenseApprovalVote`, `SenseQuorumItem`, `SenseQuorumDetail`, `SubmitVoteRequest`, `AdminOverrideStateRequest`, `ContentReport`, `CreateReportRequest`, `ResolveReportRequest`.
@@ -83,25 +83,28 @@ Cada fase de backend (3.3 a 4) está diseñada como una unidad atómica de traba
 
 ---
 
-### 📍 FASE 3.4 (Prioridad Inmediata): Studio Personal, Motor Matemático SM-2 y Ledger de XP (`CU10, CU11, CU12, CU13`)
+### ✅ FASE 3.4 (COMPLETADA): Studio Personal, Motor Matemático SM-2 y Ledger de XP (`CU10, CU11, CU12, CU13`)
 
 > **Objetivo:** Implementar la gestión de barajas/colecciones y el motor de repetición espaciada SuperMemo SM-2 siguiendo las secciones **2.5** y **2.6** de [`INTERFACES.md`](./INTERFACES.md).
 > **Nota Técnica heredada de Fase 3.3:** Si alguna consulta en `studio.sql` o `mastery.sql` hace `JOIN` o `RETURNING` sobre las tablas `words` o `senses`, **nunca usar `RETURNING *` ni `SELECT w.*` / `s.*`** que incluyan las columnas `search_vector` o `sense_search_vector` (`tsvector`, OID 3614), ya que `pgx/v5` no las escanea en `*interface{}`. Listar siempre las columnas explícitamente.
 
 #### Tareas Exactas de Implementación:
-1. **Modelos Compartidos:** Ampliar [`pkg/models/studio.go`](../pkg/models/studio.go) con `StudioDeckSummary`, `CreateDeckRequest`, `UpdateDeckRequest`, `AddDeckItemRequest`, `CreateCollectionRequest`, `UpdateCollectionRequest`, `StudyCardItem`, `StudySessionPayload`, `SubmitReviewRequest`, `CardReviewResult`, `XPTransactionItem`, `AchievementStatus`, `MasteryDashboard`.
-2. **Consultas Tipadas:**
-   - Crear `sql/queries/studio.sql` (CRUD de `decks`, `deck_items`, `saved_decks`, `collections`, `collection_decks`, `saved_collections`).
-   - Crear `sql/queries/mastery.sql` (tarjetas pendientes `next_review_at <= now()`, `UpsertUserMastery`, `InsertXPTransaction`, `AddUserXPAndUpdateStreak`, `GetMasteryStageCounts`, `ListUserAchievements`).
-   - Ejecutar `sqlc generate`.
-3. **Servicios SOA:**
-   - Crear `core-service/internal/service/studio_service.go` validando estrictamente **RN03** (propiedad), **RN04** (privacidad) y **RN05** (`is_official`).
-   - Crear `core-service/internal/service/mastery_service.go` con la función pura `CalculateSM2` siguiendo la fórmula matemática exacta de `INTERFACES.md`.
-4. **Handlers y Router:** Crear `studio_handler.go` y `mastery_handler.go` y montar todas las rutas de las secciones **2.5.3** y **2.6.3** de `INTERFACES.md`.
+1. **[x] Modelos Compartidos (`pkg/models/studio.go`):**
+   - Ampliado [`pkg/models/studio.go`](../pkg/models/studio.go) con `StudioDeckSummary`, `CreateDeckRequest`, `UpdateDeckRequest`, `AddDeckItemRequest`, `CreateCollectionRequest`, `UpdateCollectionRequest`, `StudyCardItem`, `StudySessionPayload`, `SubmitReviewRequest`, `CardReviewResult`, `XPTransactionItem`, `AchievementStatus`, `MasteryDashboard` y constantes `XPReason*`.
+2. **[x] Consultas Tipadas (`sql/queries/`):**
+   - Creado [`sql/queries/studio.sql`](../sql/queries/studio.sql) con 24 consultas tipadas (`ListPublicDecks`, `ListStudioDecks`, `GetDeckByID`, `ListDeckItemsByDeckID`, `CreateDeck`, `UpdateDeck`, `DeleteDeck`, `AddDeckItem`, `RemoveDeckItem`, `SaveDeck`, `UnsaveDeck`, `IsDeckSavedByUser`, `ListPublicCollections`, `ListStudioCollections`, `GetCollectionByID`, `ListCollectionDecks`, `CreateCollection`, `UpdateCollection`, `DeleteCollection`, `AddCollectionDeck`, `ClearCollectionDecks`, `SaveCollection`, `UnsaveCollection`, `IsCollectionSavedByUser`).
+   - Creado [`sql/queries/mastery.sql`](../sql/queries/mastery.sql) con 15 consultas tipadas (`GetStudySessionCardsByDeck`, `CountDueStudySessionCardsByDeck`, `GetStudySessionCardsAll`, `CountDueStudySessionCardsAll`, `GetUserMasteryForSense`, `UpsertUserMastery`, `InsertXPTransaction`, `AddUserXPAndUpdateStreak`, `GetMasteryStageCounts`, `GetUserGamificationProfile`, `ListUserAchievements`, `UnlockUserAchievement`, `ListMasteryCardsByStage`, `ListRecentXPTransactions`, `GetExamplesForSenses`).
+   - Ejecutado `sqlc generate`.
+3. **[x] Servicios SOA (`core-service/internal/service/`):**
+   - Creado [`core-service/internal/service/studio_service.go`](../core-service/internal/service/studio_service.go) validando estrictamente **RN03** (propiedad en edición/borrado), **RN04** (privacidad en lectura/guardado de recursos `is_public = false`) y **RN05** (`is_official` e `is_featured` forzados a `false` si el actor es `LEARNER`).
+   - Creado [`core-service/internal/service/mastery_service.go`](../core-service/internal/service/mastery_service.go) con la función pura `CalculateSM2` siguiendo la fórmula matemática exacta de `INTERFACES.md` y ejecutando `SubmitReview` dentro de una transacción ACID `pgx.Tx` que actualiza `user_mastery`, inserta en `xp_transactions` (**RN11**) y actualiza saldo/nivel/racha en `users`.
+4. **[x] Handlers, Router y Pruebas (`core-service/internal/`):**
+   - Creado [`studio_handler.go`](../core-service/internal/api/handlers/studio_handler.go) y [`mastery_handler.go`](../core-service/internal/api/handlers/mastery_handler.go) y montadas todas las rutas de las secciones **2.5.3** y **2.6.3** de `INTERFACES.md` en [`router.go`](../core-service/internal/api/router.go).
+   - Creado [`studio_mastery_test.go`](../core-service/internal/service/studio_mastery_test.go) verificando **RN03**, **RN04**, **RN05**, precisión matemática de **SM-2** y transaccionalidad ACID de **RN11** sobre PostgreSQL efímero (`:5433`).
 
 ---
 
-### 📍 FASE 3.5: Módulo de Cuenta, Perfiles Sociales, Gobernanza y Moderación (`CU01, CU02, CU03, CU04, CU09`)
+### 📍 FASE 3.5 (Prioridad Inmediata): Módulo de Cuenta, Perfiles Sociales, Gobernanza y Moderación (`CU01, CU02, CU03, CU04, CU09`)
 
 > **Objetivo:** Completar la gestión de perfil propio/público, el flujo de ascenso a Editor, los boletos de invitación y la resolución de reportes siguiendo las secciones **2.1**, **2.2** y **2.4** de [`INTERFACES.md`](./INTERFACES.md).
 
