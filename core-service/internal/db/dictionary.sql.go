@@ -8,8 +8,440 @@ package db
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const countExploreWords = `-- name: CountExploreWords :one
+SELECT count(DISTINCT w.id_word)::INT
+FROM words w
+JOIN senses s ON s.id_word = w.id_word AND s.state = 'APPROVED'
+JOIN regions r ON r.id_region = s.id_region
+WHERE
+  ($1::TEXT IS NULL OR $1::TEXT = '' OR 
+    w.normalized_lemma ILIKE unaccent(lower($1::TEXT)) || '%' OR
+    w.search_vector @@ plainto_tsquery('spanish_unaccent', $1::TEXT) OR
+    s.sense_search_vector @@ plainto_tsquery('spanish_unaccent', $1::TEXT)
+  )
+  AND ($2::VARCHAR IS NULL OR $2::VARCHAR = '' OR r.code = $2::VARCHAR)
+  AND ($3::VARCHAR IS NULL OR $3::VARCHAR = '' OR w.part_of_speech = $3::VARCHAR)
+  AND ($4::VARCHAR IS NULL OR $4::VARCHAR = '' OR s.cefr_level::TEXT = $4::VARCHAR)
+  AND ($5::VARCHAR IS NULL OR $5::VARCHAR = '' OR s.usage_frequency::TEXT = $5::VARCHAR)
+  AND ($6::BOOLEAN = true OR s.is_taboo_or_vulgar = false)
+`
+
+type CountExploreWordsParams struct {
+	Query          pgtype.Text `json:"query"`
+	RegionCode     pgtype.Text `json:"region_code"`
+	PartOfSpeech   pgtype.Text `json:"part_of_speech"`
+	CefrLevel      pgtype.Text `json:"cefr_level"`
+	UsageFrequency pgtype.Text `json:"usage_frequency"`
+	IncludeTaboo   bool        `json:"include_taboo"`
+}
+
+// 10. Conteo para Exploración Paginada
+func (q *Queries) CountExploreWords(ctx context.Context, arg CountExploreWordsParams) (int32, error) {
+	row := q.db.QueryRow(ctx, countExploreWords,
+		arg.Query,
+		arg.RegionCode,
+		arg.PartOfSpeech,
+		arg.CefrLevel,
+		arg.UsageFrequency,
+		arg.IncludeTaboo,
+	)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const createExample = `-- name: CreateExample :one
+INSERT INTO examples (
+  id_sense,
+  id_editor,
+  sentence,
+  source
+) VALUES (
+  $1, $2, $3, $4
+) RETURNING id_example, id_sense, id_editor, sentence, source, created_at, updated_at
+`
+
+type CreateExampleParams struct {
+	IDSense  int32       `json:"id_sense"`
+	IDEditor uuid.UUID   `json:"id_editor"`
+	Sentence string      `json:"sentence"`
+	Source   pgtype.Text `json:"source"`
+}
+
+// 18. CRUD de Ejemplos
+func (q *Queries) CreateExample(ctx context.Context, arg CreateExampleParams) (Example, error) {
+	row := q.db.QueryRow(ctx, createExample,
+		arg.IDSense,
+		arg.IDEditor,
+		arg.Sentence,
+		arg.Source,
+	)
+	var i Example
+	err := row.Scan(
+		&i.IDExample,
+		&i.IDSense,
+		&i.IDEditor,
+		&i.Sentence,
+		&i.Source,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createSemanticConcept = `-- name: CreateSemanticConcept :one
+INSERT INTO semantic_concepts (concept_key, description)
+VALUES ($1, $2)
+RETURNING id_concept, concept_key, description AS universal_description
+`
+
+type CreateSemanticConceptParams struct {
+	ConceptKey  string `json:"concept_key"`
+	Description string `json:"description"`
+}
+
+type CreateSemanticConceptRow struct {
+	IDConcept            int32  `json:"id_concept"`
+	ConceptKey           string `json:"concept_key"`
+	UniversalDescription string `json:"universal_description"`
+}
+
+func (q *Queries) CreateSemanticConcept(ctx context.Context, arg CreateSemanticConceptParams) (CreateSemanticConceptRow, error) {
+	row := q.db.QueryRow(ctx, createSemanticConcept, arg.ConceptKey, arg.Description)
+	var i CreateSemanticConceptRow
+	err := row.Scan(&i.IDConcept, &i.ConceptKey, &i.UniversalDescription)
+	return i, err
+}
+
+const createSense = `-- name: CreateSense :one
+INSERT INTO senses (
+  id_word,
+  id_region,
+  id_editor,
+  short_definition,
+  definition,
+  is_primary,
+  is_taboo_or_vulgar,
+  cultural_note,
+  cefr_level,
+  usage_frequency,
+  state
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+) RETURNING 
+  id_sense,
+  id_word,
+  id_region,
+  id_editor,
+  short_definition,
+  definition,
+  is_primary,
+  is_taboo_or_vulgar,
+  cultural_note,
+  cefr_level,
+  usage_frequency,
+  state,
+  created_at,
+  updated_at
+`
+
+type CreateSenseParams struct {
+	IDWord          int32              `json:"id_word"`
+	IDRegion        uuid.UUID          `json:"id_region"`
+	IDEditor        uuid.UUID          `json:"id_editor"`
+	ShortDefinition string             `json:"short_definition"`
+	Definition      string             `json:"definition"`
+	IsPrimary       bool               `json:"is_primary"`
+	IsTabooOrVulgar bool               `json:"is_taboo_or_vulgar"`
+	CulturalNote    pgtype.Text        `json:"cultural_note"`
+	CefrLevel       NullCefrLevel      `json:"cefr_level"`
+	UsageFrequency  NullUsageFrequency `json:"usage_frequency"`
+	State           ReviewState        `json:"state"`
+}
+
+type CreateSenseRow struct {
+	IDSense         int32              `json:"id_sense"`
+	IDWord          int32              `json:"id_word"`
+	IDRegion        uuid.UUID          `json:"id_region"`
+	IDEditor        uuid.UUID          `json:"id_editor"`
+	ShortDefinition string             `json:"short_definition"`
+	Definition      string             `json:"definition"`
+	IsPrimary       bool               `json:"is_primary"`
+	IsTabooOrVulgar bool               `json:"is_taboo_or_vulgar"`
+	CulturalNote    pgtype.Text        `json:"cultural_note"`
+	CefrLevel       NullCefrLevel      `json:"cefr_level"`
+	UsageFrequency  NullUsageFrequency `json:"usage_frequency"`
+	State           ReviewState        `json:"state"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 14. Creación de Sentido
+func (q *Queries) CreateSense(ctx context.Context, arg CreateSenseParams) (CreateSenseRow, error) {
+	row := q.db.QueryRow(ctx, createSense,
+		arg.IDWord,
+		arg.IDRegion,
+		arg.IDEditor,
+		arg.ShortDefinition,
+		arg.Definition,
+		arg.IsPrimary,
+		arg.IsTabooOrVulgar,
+		arg.CulturalNote,
+		arg.CefrLevel,
+		arg.UsageFrequency,
+		arg.State,
+	)
+	var i CreateSenseRow
+	err := row.Scan(
+		&i.IDSense,
+		&i.IDWord,
+		&i.IDRegion,
+		&i.IDEditor,
+		&i.ShortDefinition,
+		&i.Definition,
+		&i.IsPrimary,
+		&i.IsTabooOrVulgar,
+		&i.CulturalNote,
+		&i.CefrLevel,
+		&i.UsageFrequency,
+		&i.State,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createWord = `-- name: CreateWord :one
+INSERT INTO words (
+  lemma,
+  normalized_lemma,
+  part_of_speech,
+  gender,
+  etymology,
+  friendly_blurb,
+  id_origin_region
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7
+) RETURNING 
+  id_word,
+  lemma,
+  normalized_lemma,
+  part_of_speech,
+  gender,
+  etymology,
+  friendly_blurb,
+  id_origin_region,
+  created_at,
+  updated_at
+`
+
+type CreateWordParams struct {
+	Lemma           string         `json:"lemma"`
+	NormalizedLemma string         `json:"normalized_lemma"`
+	PartOfSpeech    string         `json:"part_of_speech"`
+	Gender          NullWordGender `json:"gender"`
+	Etymology       pgtype.Text    `json:"etymology"`
+	FriendlyBlurb   pgtype.Text    `json:"friendly_blurb"`
+	IDOriginRegion  pgtype.UUID    `json:"id_origin_region"`
+}
+
+type CreateWordRow struct {
+	IDWord          int32              `json:"id_word"`
+	Lemma           string             `json:"lemma"`
+	NormalizedLemma string             `json:"normalized_lemma"`
+	PartOfSpeech    string             `json:"part_of_speech"`
+	Gender          NullWordGender     `json:"gender"`
+	Etymology       pgtype.Text        `json:"etymology"`
+	FriendlyBlurb   pgtype.Text        `json:"friendly_blurb"`
+	IDOriginRegion  pgtype.UUID        `json:"id_origin_region"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 12. Creación de Palabra
+func (q *Queries) CreateWord(ctx context.Context, arg CreateWordParams) (CreateWordRow, error) {
+	row := q.db.QueryRow(ctx, createWord,
+		arg.Lemma,
+		arg.NormalizedLemma,
+		arg.PartOfSpeech,
+		arg.Gender,
+		arg.Etymology,
+		arg.FriendlyBlurb,
+		arg.IDOriginRegion,
+	)
+	var i CreateWordRow
+	err := row.Scan(
+		&i.IDWord,
+		&i.Lemma,
+		&i.NormalizedLemma,
+		&i.PartOfSpeech,
+		&i.Gender,
+		&i.Etymology,
+		&i.FriendlyBlurb,
+		&i.IDOriginRegion,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const deleteExample = `-- name: DeleteExample :exec
+DELETE FROM examples
+WHERE id_example = $1
+`
+
+func (q *Queries) DeleteExample(ctx context.Context, idExample int32) error {
+	_, err := q.db.Exec(ctx, deleteExample, idExample)
+	return err
+}
+
+const deleteSense = `-- name: DeleteSense :exec
+DELETE FROM senses
+WHERE id_sense = $1
+`
+
+// 17. Eliminar Sentido
+func (q *Queries) DeleteSense(ctx context.Context, idSense int32) error {
+	_, err := q.db.Exec(ctx, deleteSense, idSense)
+	return err
+}
+
+const exploreWordsPaginated = `-- name: ExploreWordsPaginated :many
+WITH filtered_words AS (
+  SELECT
+    w.id_word,
+    w.lemma,
+    w.part_of_speech,
+    w.gender,
+    w.friendly_blurb,
+    s.id_sense AS primary_sense_id,
+    s.short_definition,
+    r.code AS region_code,
+    r.name AS region_name,
+    r.flag_emoji,
+    coalesce(s.cefr_level::TEXT, 'B1') AS cefr_level,
+    coalesce(s.usage_frequency::TEXT, 'COMMON') AS usage_frequency,
+    s.is_taboo_or_vulgar,
+    (SELECT count(*)::INT FROM senses sa WHERE sa.id_word = w.id_word AND sa.state = 'APPROVED') AS approved_senses_count,
+    ROW_NUMBER() OVER (
+      PARTITION BY w.id_word 
+      ORDER BY 
+        (r.code = $3::VARCHAR) DESC NULLS LAST,
+        s.is_primary DESC, 
+        s.id_sense ASC
+    ) AS rn
+  FROM words w
+  JOIN senses s ON s.id_word = w.id_word AND s.state = 'APPROVED'
+  JOIN regions r ON r.id_region = s.id_region
+  WHERE
+    ($4::TEXT IS NULL OR $4::TEXT = '' OR 
+      w.normalized_lemma ILIKE unaccent(lower($4::TEXT)) || '%' OR
+      w.search_vector @@ plainto_tsquery('spanish_unaccent', $4::TEXT) OR
+      s.sense_search_vector @@ plainto_tsquery('spanish_unaccent', $4::TEXT)
+    )
+    AND ($3::VARCHAR IS NULL OR $3::VARCHAR = '' OR r.code = $3::VARCHAR)
+    AND ($5::VARCHAR IS NULL OR $5::VARCHAR = '' OR w.part_of_speech = $5::VARCHAR)
+    AND ($6::VARCHAR IS NULL OR $6::VARCHAR = '' OR s.cefr_level::TEXT = $6::VARCHAR)
+    AND ($7::VARCHAR IS NULL OR $7::VARCHAR = '' OR s.usage_frequency::TEXT = $7::VARCHAR)
+    AND ($8::BOOLEAN = true OR s.is_taboo_or_vulgar = false)
+)
+SELECT
+  id_word,
+  lemma,
+  part_of_speech,
+  gender,
+  friendly_blurb,
+  primary_sense_id,
+  short_definition,
+  region_code,
+  region_name,
+  flag_emoji,
+  cefr_level,
+  usage_frequency,
+  is_taboo_or_vulgar,
+  approved_senses_count
+FROM filtered_words
+WHERE rn = 1
+ORDER BY lemma ASC
+LIMIT $1 OFFSET $2
+`
+
+type ExploreWordsPaginatedParams struct {
+	Limit          int32       `json:"limit"`
+	Offset         int32       `json:"offset"`
+	RegionCode     pgtype.Text `json:"region_code"`
+	Query          pgtype.Text `json:"query"`
+	PartOfSpeech   pgtype.Text `json:"part_of_speech"`
+	CefrLevel      pgtype.Text `json:"cefr_level"`
+	UsageFrequency pgtype.Text `json:"usage_frequency"`
+	IncludeTaboo   bool        `json:"include_taboo"`
+}
+
+type ExploreWordsPaginatedRow struct {
+	IDWord              int32          `json:"id_word"`
+	Lemma               string         `json:"lemma"`
+	PartOfSpeech        string         `json:"part_of_speech"`
+	Gender              NullWordGender `json:"gender"`
+	FriendlyBlurb       pgtype.Text    `json:"friendly_blurb"`
+	PrimarySenseID      int32          `json:"primary_sense_id"`
+	ShortDefinition     string         `json:"short_definition"`
+	RegionCode          string         `json:"region_code"`
+	RegionName          string         `json:"region_name"`
+	FlagEmoji           string         `json:"flag_emoji"`
+	CefrLevel           interface{}    `json:"cefr_level"`
+	UsageFrequency      interface{}    `json:"usage_frequency"`
+	IsTabooOrVulgar     bool           `json:"is_taboo_or_vulgar"`
+	ApprovedSensesCount int32          `json:"approved_senses_count"`
+}
+
+// 9. Exploración Paginada de Palabras
+func (q *Queries) ExploreWordsPaginated(ctx context.Context, arg ExploreWordsPaginatedParams) ([]ExploreWordsPaginatedRow, error) {
+	rows, err := q.db.Query(ctx, exploreWordsPaginated,
+		arg.Limit,
+		arg.Offset,
+		arg.RegionCode,
+		arg.Query,
+		arg.PartOfSpeech,
+		arg.CefrLevel,
+		arg.UsageFrequency,
+		arg.IncludeTaboo,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ExploreWordsPaginatedRow{}
+	for rows.Next() {
+		var i ExploreWordsPaginatedRow
+		if err := rows.Scan(
+			&i.IDWord,
+			&i.Lemma,
+			&i.PartOfSpeech,
+			&i.Gender,
+			&i.FriendlyBlurb,
+			&i.PrimarySenseID,
+			&i.ShortDefinition,
+			&i.RegionCode,
+			&i.RegionName,
+			&i.FlagEmoji,
+			&i.CefrLevel,
+			&i.UsageFrequency,
+			&i.IsTabooOrVulgar,
+			&i.ApprovedSensesCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
 
 const getApprovedSensesByWordID = `-- name: GetApprovedSensesByWordID :many
 SELECT 
@@ -75,6 +507,64 @@ func (q *Queries) GetApprovedSensesByWordID(ctx context.Context, idWord int32) (
 			&i.RegionName,
 			&i.CountryCode,
 			&i.FlagEmoji,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getExampleByID = `-- name: GetExampleByID :one
+SELECT id_example, id_sense, id_editor, sentence, source, created_at, updated_at FROM examples WHERE id_example = $1
+`
+
+func (q *Queries) GetExampleByID(ctx context.Context, idExample int32) (Example, error) {
+	row := q.db.QueryRow(ctx, getExampleByID, idExample)
+	var i Example
+	err := row.Scan(
+		&i.IDExample,
+		&i.IDSense,
+		&i.IDEditor,
+		&i.Sentence,
+		&i.Source,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getExamplesBySenseID = `-- name: GetExamplesBySenseID :many
+SELECT id_example, id_sense, sentence, source
+FROM examples
+WHERE id_sense = $1
+ORDER BY id_example ASC
+`
+
+type GetExamplesBySenseIDRow struct {
+	IDExample int32       `json:"id_example"`
+	IDSense   int32       `json:"id_sense"`
+	Sentence  string      `json:"sentence"`
+	Source    pgtype.Text `json:"source"`
+}
+
+func (q *Queries) GetExamplesBySenseID(ctx context.Context, idSense int32) ([]GetExamplesBySenseIDRow, error) {
+	rows, err := q.db.Query(ctx, getExamplesBySenseID, idSense)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetExamplesBySenseIDRow{}
+	for rows.Next() {
+		var i GetExamplesBySenseIDRow
+		if err := rows.Scan(
+			&i.IDExample,
+			&i.IDSense,
+			&i.Sentence,
+			&i.Source,
 		); err != nil {
 			return nil, err
 		}
@@ -182,6 +672,153 @@ func (q *Queries) GetHeteronymsByWordID(ctx context.Context, idWord int32) ([]Ge
 	return items, nil
 }
 
+const getRegionByCode = `-- name: GetRegionByCode :one
+SELECT id_region, code, name, parent_zone, country_code, flag_emoji
+FROM regions
+WHERE code = $1
+`
+
+// 7. Obtener Región por Código
+func (q *Queries) GetRegionByCode(ctx context.Context, code string) (Region, error) {
+	row := q.db.QueryRow(ctx, getRegionByCode, code)
+	var i Region
+	err := row.Scan(
+		&i.IDRegion,
+		&i.Code,
+		&i.Name,
+		&i.ParentZone,
+		&i.CountryCode,
+		&i.FlagEmoji,
+	)
+	return i, err
+}
+
+const getSenseByID = `-- name: GetSenseByID :one
+SELECT 
+    s.id_sense,
+    s.id_word,
+    s.id_region,
+    s.id_editor,
+    s.short_definition,
+    s.definition,
+    s.is_primary,
+    s.is_taboo_or_vulgar,
+    s.cultural_note,
+    s.cefr_level,
+    s.usage_frequency,
+    s.state,
+    s.created_at,
+    s.updated_at,
+    r.code AS region_code,
+    r.name AS region_name,
+    r.country_code,
+    r.flag_emoji
+FROM senses s
+JOIN regions r ON r.id_region = s.id_region
+WHERE s.id_sense = $1
+`
+
+type GetSenseByIDRow struct {
+	IDSense         int32              `json:"id_sense"`
+	IDWord          int32              `json:"id_word"`
+	IDRegion        uuid.UUID          `json:"id_region"`
+	IDEditor        uuid.UUID          `json:"id_editor"`
+	ShortDefinition string             `json:"short_definition"`
+	Definition      string             `json:"definition"`
+	IsPrimary       bool               `json:"is_primary"`
+	IsTabooOrVulgar bool               `json:"is_taboo_or_vulgar"`
+	CulturalNote    pgtype.Text        `json:"cultural_note"`
+	CefrLevel       NullCefrLevel      `json:"cefr_level"`
+	UsageFrequency  NullUsageFrequency `json:"usage_frequency"`
+	State           ReviewState        `json:"state"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	RegionCode      string             `json:"region_code"`
+	RegionName      string             `json:"region_name"`
+	CountryCode     pgtype.Text        `json:"country_code"`
+	FlagEmoji       string             `json:"flag_emoji"`
+}
+
+// 15. Obtener Sentido por ID con Región
+func (q *Queries) GetSenseByID(ctx context.Context, idSense int32) (GetSenseByIDRow, error) {
+	row := q.db.QueryRow(ctx, getSenseByID, idSense)
+	var i GetSenseByIDRow
+	err := row.Scan(
+		&i.IDSense,
+		&i.IDWord,
+		&i.IDRegion,
+		&i.IDEditor,
+		&i.ShortDefinition,
+		&i.Definition,
+		&i.IsPrimary,
+		&i.IsTabooOrVulgar,
+		&i.CulturalNote,
+		&i.CefrLevel,
+		&i.UsageFrequency,
+		&i.State,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RegionCode,
+		&i.RegionName,
+		&i.CountryCode,
+		&i.FlagEmoji,
+	)
+	return i, err
+}
+
+const getWordByNormalizedLemmaAndPOS = `-- name: GetWordByNormalizedLemmaAndPOS :one
+SELECT 
+    id_word,
+    lemma,
+    normalized_lemma,
+    part_of_speech,
+    gender,
+    etymology,
+    friendly_blurb,
+    id_origin_region,
+    created_at,
+    updated_at
+FROM words
+WHERE normalized_lemma = $1 AND part_of_speech = $2
+`
+
+type GetWordByNormalizedLemmaAndPOSParams struct {
+	NormalizedLemma string `json:"normalized_lemma"`
+	PartOfSpeech    string `json:"part_of_speech"`
+}
+
+type GetWordByNormalizedLemmaAndPOSRow struct {
+	IDWord          int32              `json:"id_word"`
+	Lemma           string             `json:"lemma"`
+	NormalizedLemma string             `json:"normalized_lemma"`
+	PartOfSpeech    string             `json:"part_of_speech"`
+	Gender          NullWordGender     `json:"gender"`
+	Etymology       pgtype.Text        `json:"etymology"`
+	FriendlyBlurb   pgtype.Text        `json:"friendly_blurb"`
+	IDOriginRegion  pgtype.UUID        `json:"id_origin_region"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 11. Búsqueda por Lema Normalizado y Categoría Gramatical
+func (q *Queries) GetWordByNormalizedLemmaAndPOS(ctx context.Context, arg GetWordByNormalizedLemmaAndPOSParams) (GetWordByNormalizedLemmaAndPOSRow, error) {
+	row := q.db.QueryRow(ctx, getWordByNormalizedLemmaAndPOS, arg.NormalizedLemma, arg.PartOfSpeech)
+	var i GetWordByNormalizedLemmaAndPOSRow
+	err := row.Scan(
+		&i.IDWord,
+		&i.Lemma,
+		&i.NormalizedLemma,
+		&i.PartOfSpeech,
+		&i.Gender,
+		&i.Etymology,
+		&i.FriendlyBlurb,
+		&i.IDOriginRegion,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getWordDetailByID = `-- name: GetWordDetailByID :one
 SELECT 
     w.id_word,
@@ -244,6 +881,134 @@ func (q *Queries) GetWordDetailByID(ctx context.Context, idWord int32) (GetWordD
 		&i.OriginRegionFlagEmoji,
 	)
 	return i, err
+}
+
+const getWordOfTheDayID = `-- name: GetWordOfTheDayID :one
+WITH candidate_words AS (
+  SELECT DISTINCT w.id_word
+  FROM words w
+  JOIN senses s ON s.id_word = w.id_word AND s.state = 'APPROVED'
+  JOIN regions r ON r.id_region = s.id_region
+  WHERE ($1::VARCHAR IS NULL OR $1::VARCHAR = '' OR r.code = $1::VARCHAR)
+  ORDER BY w.id_word ASC
+),
+indexed_candidates AS (
+  SELECT id_word, ROW_NUMBER() OVER (ORDER BY id_word ASC) - 1 AS row_num, COUNT(*) OVER () AS total_count
+  FROM candidate_words
+)
+SELECT id_word
+FROM indexed_candidates
+WHERE row_num = MOD(EXTRACT(DOY FROM CURRENT_DATE)::INT, total_count)
+LIMIT 1
+`
+
+// 8. Palabra del Día
+func (q *Queries) GetWordOfTheDayID(ctx context.Context, regionCode pgtype.Text) (int32, error) {
+	row := q.db.QueryRow(ctx, getWordOfTheDayID, regionCode)
+	var id_word int32
+	err := row.Scan(&id_word)
+	return id_word, err
+}
+
+const linkSenseToConcept = `-- name: LinkSenseToConcept :exec
+INSERT INTO concept_mappings (id_concept, id_sense)
+VALUES ($1, $2)
+ON CONFLICT (id_concept, id_sense) DO NOTHING
+`
+
+type LinkSenseToConceptParams struct {
+	IDConcept int32 `json:"id_concept"`
+	IDSense   int32 `json:"id_sense"`
+}
+
+func (q *Queries) LinkSenseToConcept(ctx context.Context, arg LinkSenseToConceptParams) error {
+	_, err := q.db.Exec(ctx, linkSenseToConcept, arg.IDConcept, arg.IDSense)
+	return err
+}
+
+const listRegions = `-- name: ListRegions :many
+SELECT id_region, code, name, parent_zone, country_code, flag_emoji
+FROM regions
+ORDER BY name ASC
+`
+
+// 6. Listado de Regiones
+func (q *Queries) ListRegions(ctx context.Context) ([]Region, error) {
+	rows, err := q.db.Query(ctx, listRegions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Region{}
+	for rows.Next() {
+		var i Region
+		if err := rows.Scan(
+			&i.IDRegion,
+			&i.Code,
+			&i.Name,
+			&i.ParentZone,
+			&i.CountryCode,
+			&i.FlagEmoji,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSemanticConcepts = `-- name: ListSemanticConcepts :many
+SELECT 
+    sc.id_concept,
+    sc.concept_key,
+    sc.description AS universal_description,
+    count(cm.id_sense)::INT AS linked_senses_count
+FROM semantic_concepts sc
+LEFT JOIN concept_mappings cm ON cm.id_concept = sc.id_concept
+WHERE (
+    $1::TEXT IS NULL 
+    OR $1::TEXT = ''
+    OR sc.concept_key ILIKE '%' || $1::TEXT || '%'
+    OR sc.description ILIKE '%' || $1::TEXT || '%'
+)
+GROUP BY sc.id_concept, sc.concept_key, sc.description
+ORDER BY sc.concept_key ASC
+`
+
+type ListSemanticConceptsRow struct {
+	IDConcept            int32  `json:"id_concept"`
+	ConceptKey           string `json:"concept_key"`
+	UniversalDescription string `json:"universal_description"`
+	LinkedSensesCount    int32  `json:"linked_senses_count"`
+}
+
+// 19. Conceptos Semánticos y Heteronimia
+func (q *Queries) ListSemanticConcepts(ctx context.Context, query pgtype.Text) ([]ListSemanticConceptsRow, error) {
+	rows, err := q.db.Query(ctx, listSemanticConcepts, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSemanticConceptsRow{}
+	for rows.Next() {
+		var i ListSemanticConceptsRow
+		if err := rows.Scan(
+			&i.IDConcept,
+			&i.ConceptKey,
+			&i.UniversalDescription,
+			&i.LinkedSensesCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const searchVocabularyDropdown = `-- name: SearchVocabularyDropdown :many
@@ -345,4 +1110,216 @@ func (q *Queries) SearchVocabularyDropdown(ctx context.Context, arg SearchVocabu
 		return nil, err
 	}
 	return items, nil
+}
+
+const unlinkSenseFromConcept = `-- name: UnlinkSenseFromConcept :exec
+DELETE FROM concept_mappings
+WHERE id_concept = $1 AND id_sense = $2
+`
+
+type UnlinkSenseFromConceptParams struct {
+	IDConcept int32 `json:"id_concept"`
+	IDSense   int32 `json:"id_sense"`
+}
+
+func (q *Queries) UnlinkSenseFromConcept(ctx context.Context, arg UnlinkSenseFromConceptParams) error {
+	_, err := q.db.Exec(ctx, unlinkSenseFromConcept, arg.IDConcept, arg.IDSense)
+	return err
+}
+
+const updateExample = `-- name: UpdateExample :one
+UPDATE examples SET
+  sentence = $2,
+  source = $3,
+  updated_at = now()
+WHERE id_example = $1
+RETURNING id_example, id_sense, id_editor, sentence, source, created_at, updated_at
+`
+
+type UpdateExampleParams struct {
+	IDExample int32       `json:"id_example"`
+	Sentence  string      `json:"sentence"`
+	Source    pgtype.Text `json:"source"`
+}
+
+func (q *Queries) UpdateExample(ctx context.Context, arg UpdateExampleParams) (Example, error) {
+	row := q.db.QueryRow(ctx, updateExample, arg.IDExample, arg.Sentence, arg.Source)
+	var i Example
+	err := row.Scan(
+		&i.IDExample,
+		&i.IDSense,
+		&i.IDEditor,
+		&i.Sentence,
+		&i.Source,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateSense = `-- name: UpdateSense :one
+UPDATE senses SET
+  id_region = $2,
+  short_definition = $3,
+  definition = $4,
+  is_primary = $5,
+  is_taboo_or_vulgar = $6,
+  cultural_note = $7,
+  cefr_level = $8,
+  usage_frequency = $9,
+  updated_at = now()
+WHERE id_sense = $1
+RETURNING 
+  id_sense,
+  id_word,
+  id_region,
+  id_editor,
+  short_definition,
+  definition,
+  is_primary,
+  is_taboo_or_vulgar,
+  cultural_note,
+  cefr_level,
+  usage_frequency,
+  state,
+  created_at,
+  updated_at
+`
+
+type UpdateSenseParams struct {
+	IDSense         int32              `json:"id_sense"`
+	IDRegion        uuid.UUID          `json:"id_region"`
+	ShortDefinition string             `json:"short_definition"`
+	Definition      string             `json:"definition"`
+	IsPrimary       bool               `json:"is_primary"`
+	IsTabooOrVulgar bool               `json:"is_taboo_or_vulgar"`
+	CulturalNote    pgtype.Text        `json:"cultural_note"`
+	CefrLevel       NullCefrLevel      `json:"cefr_level"`
+	UsageFrequency  NullUsageFrequency `json:"usage_frequency"`
+}
+
+type UpdateSenseRow struct {
+	IDSense         int32              `json:"id_sense"`
+	IDWord          int32              `json:"id_word"`
+	IDRegion        uuid.UUID          `json:"id_region"`
+	IDEditor        uuid.UUID          `json:"id_editor"`
+	ShortDefinition string             `json:"short_definition"`
+	Definition      string             `json:"definition"`
+	IsPrimary       bool               `json:"is_primary"`
+	IsTabooOrVulgar bool               `json:"is_taboo_or_vulgar"`
+	CulturalNote    pgtype.Text        `json:"cultural_note"`
+	CefrLevel       NullCefrLevel      `json:"cefr_level"`
+	UsageFrequency  NullUsageFrequency `json:"usage_frequency"`
+	State           ReviewState        `json:"state"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 16. Actualizar Sentido
+func (q *Queries) UpdateSense(ctx context.Context, arg UpdateSenseParams) (UpdateSenseRow, error) {
+	row := q.db.QueryRow(ctx, updateSense,
+		arg.IDSense,
+		arg.IDRegion,
+		arg.ShortDefinition,
+		arg.Definition,
+		arg.IsPrimary,
+		arg.IsTabooOrVulgar,
+		arg.CulturalNote,
+		arg.CefrLevel,
+		arg.UsageFrequency,
+	)
+	var i UpdateSenseRow
+	err := row.Scan(
+		&i.IDSense,
+		&i.IDWord,
+		&i.IDRegion,
+		&i.IDEditor,
+		&i.ShortDefinition,
+		&i.Definition,
+		&i.IsPrimary,
+		&i.IsTabooOrVulgar,
+		&i.CulturalNote,
+		&i.CefrLevel,
+		&i.UsageFrequency,
+		&i.State,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateWordMetadata = `-- name: UpdateWordMetadata :one
+UPDATE words SET
+  lemma = $2,
+  normalized_lemma = $3,
+  part_of_speech = $4,
+  gender = $5,
+  etymology = $6,
+  friendly_blurb = $7,
+  id_origin_region = $8,
+  updated_at = now()
+WHERE id_word = $1
+RETURNING 
+  id_word,
+  lemma,
+  normalized_lemma,
+  part_of_speech,
+  gender,
+  etymology,
+  friendly_blurb,
+  id_origin_region,
+  created_at,
+  updated_at
+`
+
+type UpdateWordMetadataParams struct {
+	IDWord          int32          `json:"id_word"`
+	Lemma           string         `json:"lemma"`
+	NormalizedLemma string         `json:"normalized_lemma"`
+	PartOfSpeech    string         `json:"part_of_speech"`
+	Gender          NullWordGender `json:"gender"`
+	Etymology       pgtype.Text    `json:"etymology"`
+	FriendlyBlurb   pgtype.Text    `json:"friendly_blurb"`
+	IDOriginRegion  pgtype.UUID    `json:"id_origin_region"`
+}
+
+type UpdateWordMetadataRow struct {
+	IDWord          int32              `json:"id_word"`
+	Lemma           string             `json:"lemma"`
+	NormalizedLemma string             `json:"normalized_lemma"`
+	PartOfSpeech    string             `json:"part_of_speech"`
+	Gender          NullWordGender     `json:"gender"`
+	Etymology       pgtype.Text        `json:"etymology"`
+	FriendlyBlurb   pgtype.Text        `json:"friendly_blurb"`
+	IDOriginRegion  pgtype.UUID        `json:"id_origin_region"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 13. Actualización de Metadatos de Palabra
+func (q *Queries) UpdateWordMetadata(ctx context.Context, arg UpdateWordMetadataParams) (UpdateWordMetadataRow, error) {
+	row := q.db.QueryRow(ctx, updateWordMetadata,
+		arg.IDWord,
+		arg.Lemma,
+		arg.NormalizedLemma,
+		arg.PartOfSpeech,
+		arg.Gender,
+		arg.Etymology,
+		arg.FriendlyBlurb,
+		arg.IDOriginRegion,
+	)
+	var i UpdateWordMetadataRow
+	err := row.Scan(
+		&i.IDWord,
+		&i.Lemma,
+		&i.NormalizedLemma,
+		&i.PartOfSpeech,
+		&i.Gender,
+		&i.Etymology,
+		&i.FriendlyBlurb,
+		&i.IDOriginRegion,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

@@ -13,6 +13,7 @@ import (
 	"palabrario/core-service/internal/database"
 	"palabrario/core-service/internal/service"
 	"palabrario/pkg/auth"
+	"palabrario/pkg/models"
 	"palabrario/pkg/response"
 )
 
@@ -48,11 +49,13 @@ func (rt *Router) Setup() http.Handler {
 	tokenService := auth.NewTokenService(rt.cfg.JWTSecret, rt.cfg.JWTExpirationHours)
 	identityService := service.NewIdentityService(rt.db, tokenService)
 	dictionaryService := service.NewDictionaryService(rt.db)
+	curationService := service.NewCurationService(rt.db)
 
 	// 2. Capa de Middlewares y Handlers HTTP
 	authMiddleware := middleware.NewAuthMiddleware(tokenService)
 	authHandler := handlers.NewAuthHandler(identityService)
 	dictionaryHandler := handlers.NewDictionaryHandler(dictionaryService)
+	curationHandler := handlers.NewCurationHandler(curationService)
 	healthHandler := handlers.NewHealthHandler(rt.db)
 
 	// Health check raíz
@@ -77,10 +80,76 @@ func (rt *Router) Setup() http.Handler {
 			})
 		})
 
-		// Módulo 3: Diccionario y Búsqueda Dialectal (CU05)
+		// Módulo 3: Regiones Dialectales (CU05)
+		r.Get("/regions", dictionaryHandler.ListRegions)
+
+		// Módulo 3: Palabras, Exploración y Búsqueda Dialectal (CU05, CU06)
 		r.Route("/words", func(r chi.Router) {
 			r.With(authMiddleware.OptionalAuth).Get("/search", dictionaryHandler.Search)
+			r.With(authMiddleware.OptionalAuth).Get("/word-of-the-day", dictionaryHandler.GetWordOfTheDay)
+			r.Get("/", dictionaryHandler.ExploreWords)
 			r.Get("/{id}", dictionaryHandler.GetByID)
+
+			// Autoría editorial de palabras (CU06)
+			r.Group(func(r chi.Router) {
+				r.Use(authMiddleware.RequireAuth)
+				r.Use(authMiddleware.RequireRole(models.RoleEditor, models.RoleAdmin))
+				r.Post("/", dictionaryHandler.CreateWord)
+				r.Put("/{id}", dictionaryHandler.UpdateWord)
+				r.Post("/{id}/senses", dictionaryHandler.CreateSense)
+			})
+		})
+
+		// Módulo 3: Acepciones y Ejemplos (CU06)
+		r.Route("/senses", func(r chi.Router) {
+			r.Group(func(r chi.Router) {
+				r.Use(authMiddleware.RequireAuth)
+				r.Use(authMiddleware.RequireRole(models.RoleEditor, models.RoleAdmin))
+				r.Put("/{senseId}", dictionaryHandler.UpdateSense)
+				r.Delete("/{senseId}", dictionaryHandler.DeleteSense)
+				r.Post("/{senseId}/examples", dictionaryHandler.CreateExample)
+				r.Post("/{senseId}/concepts/{conceptId}", dictionaryHandler.LinkConcept)
+				r.Delete("/{senseId}/concepts/{conceptId}", dictionaryHandler.UnlinkConcept)
+			})
+		})
+
+		r.Route("/examples", func(r chi.Router) {
+			r.Group(func(r chi.Router) {
+				r.Use(authMiddleware.RequireAuth)
+				r.Use(authMiddleware.RequireRole(models.RoleEditor, models.RoleAdmin))
+				r.Put("/{exampleId}", dictionaryHandler.UpdateExample)
+				r.Delete("/{exampleId}", dictionaryHandler.DeleteExample)
+			})
+		})
+
+		// Módulo 3: Heteronimia y Conceptos Semánticos (CU05, CU06)
+		r.Route("/concepts", func(r chi.Router) {
+			r.Get("/", dictionaryHandler.ListConcepts)
+			r.Group(func(r chi.Router) {
+				r.Use(authMiddleware.RequireAuth)
+				r.Use(authMiddleware.RequireRole(models.RoleEditor, models.RoleAdmin))
+				r.Post("/", dictionaryHandler.CreateConcept)
+			})
+		})
+
+		// Módulo 4: Curaduría Editorial por Quórum (CU07, CU08)
+		r.Route("/curation", func(r chi.Router) {
+			r.Group(func(r chi.Router) {
+				r.Use(authMiddleware.RequireAuth)
+				r.Use(authMiddleware.RequireRole(models.RoleEditor, models.RoleAdmin))
+
+				r.Get("/queue", curationHandler.ListPendingQueue)
+				r.Get("/my-proposals", curationHandler.ListMyProposals)
+				r.Get("/senses/{senseId}", curationHandler.GetProposalDetail)
+				r.Post("/senses/{senseId}/vote", curationHandler.SubmitVote)
+			})
+
+			// Veto o Aprobación Directa de Administrador (RN08)
+			r.Group(func(r chi.Router) {
+				r.Use(authMiddleware.RequireAuth)
+				r.Use(authMiddleware.RequireRole(models.RoleAdmin))
+				r.Put("/senses/{senseId}/state", curationHandler.AdminOverrideState)
+			})
 		})
 	})
 

@@ -49,7 +49,7 @@ flowchart TD
     Lead <-->|"1. Pide diseño, estrategia o auditoría"| Architect
     Architect -->|"2. Congela especificación en .context/INTERFACES.md"| Lead
     Lead -->|"3. Abre 1 chat limpio por fase con prompt quirúrgico"| Tier2
-    Tier2 -->|"4. Escribe código y valida con sqlc generate && .\scripts\test.ps1"| Lead
+    Tier2 -->|"4. Escribe código y valida con sqlc generate && .\\scripts\\test.ps1"| Lead
     Lead -->|"5. Trae el resultado a revisión y commit"| Architect
 ```
 
@@ -63,7 +63,7 @@ flowchart TD
 | **Escribir baterías de tests 80/20 siguiendo el molde de Argón** | ⚡ **Flash 3.8 High** | Replicar casos de prueba en `internal/service/*_test.go` usando `testutil.SetupTestDB(t)` es mecánico y económico. |
 | **Concurrencia en Go (`sync.RWMutex`, canales, goroutines en `realtime-service`)** | 🧠 **Argón** (o Flash auditado por Argón) | Las condiciones de carrera (*data races*) y cierres de sockets en tiempo real son sutiles; requieren razonamiento profundo. |
 | **Exponer métodos en `local-app/app.go`, correr `wails generate module` y conectar Vue 3 (Fase 5)** | ⚡ **Flash 3.8 High** | Como `local-app/app.go` importa `pkg/models` y Wails autogenera `wailsjs/go/models.ts` y `App.d.ts`, conectar Vue 3 es 100% tipado y sin posibilidad de inventar campos. |
-| **Revisar `git status` / `git diff` y redactar commits semánticos** | 🧠 **Argón** | Garantiza que no se cuele basura ni se viole ninguna regla de negocio antes de subir a GitHub. |
+| **Revisar `git status` / `git diff` y redactar commits semánticos** | 🧠 **Argón** (o Auditor de Respaldo con Prompt 6) | Garantiza que no se cuele basura ni se viole ninguna regla de negocio antes de subir a GitHub. |
 
 ---
 
@@ -73,8 +73,8 @@ flowchart TD
    Cuando **Flash 3.8 High** termine la **Fase 3.3** y el código compile, **cierra ese chat**. Para la **Fase 3.4**, abre una conversación completamente nueva. Un chat limpio con 0 historial basura es más inteligente, más rápido y consume una fracción de los tokens.
 2. **Contexto Mínimo Viable (*Surgical Prompting*):**
    Nunca le pases todo el repositorio a un agente constructor. Pásale únicamente `.context/CONTEXT.md`, la sección correspondiente de `.context/INTERFACES.md` y `SCHEMA_FINAL.sql`.
-3. **El Compilador, `sqlc` y `.\scripts\test.ps1` como Jueces Automáticos:**
-   Todo prompt para un agente constructor debe exigir que ejecute `sqlc generate`, `go build ./...` y `.\scripts\test.ps1` (siguiendo la estrategia **80% tests directos de Servicio/DAO** en `internal/service/*_test.go` + **20% smoke tests HTTP** en `internal/api/*_test.go` sobre `testutil.SetupTestDB(t)`).
+3. **El Compilador, `sqlc` y `.\\scripts\\test.ps1` como Jueces Automáticos:**
+   Todo prompt para un agente constructor debe exigir que ejecute `sqlc generate`, `go build ./...` y `.\\scripts\\test.ps1` (siguiendo la estrategia **80% tests directos de Servicio/DAO** en `internal/service/*_test.go` + **20% smoke tests HTTP** en `internal/api/*_test.go` sobre `testutil.SetupTestDB(t)`).
 4. **Prohibido Tocar Fuera del Alcance (*Scope Lock*):**
    Indícale siempre explícitamente qué carpetas tiene prohibido tocar (por ejemplo: *"Prohibido modificar `local-app` o archivos de pruebas fuera de esta fase"*).
 5. **Commit Limpio como Punto de Control (*Checkpoint*):**
@@ -167,4 +167,22 @@ Cuando el constructor termine cualquiera de los prompts anteriores, regresa al c
 ```text
 Hermano, el agente constructor terminó la Fase [3.X].
 Por favor audita los cambios con `git status` y `git diff`, verifica que se cumplan al 100% los contratos de @.context/INTERFACES.md y las reglas de negocio de @.context/DOMAIN.md, ejecuta `.\scripts\test.ps1`, actualiza el estado en @.context/PLAN.md y @README.md, y prepara el commit.
+```
+
+---
+
+### 🛡️ Prompt 6: Auditoría de Respaldo (Sin Disponibilidad de Argón — Modo Solo Lectura)
+Cuando la cuota de **Argón** esté baja o no esté disponible y el Tech Lead solicite explícitamente una auditoría de revisión al agente en turno, copia y pega el siguiente prompt:
+
+```text
+Hermano, Argón no está disponible actualmente. Asume temporalmente el rol de Auditor de Respaldo para la Fase [3.X].
+Por favor ejecuta una revisión y auditoría diagnóstica siguiendo estas directrices:
+1. Inspecciona `git status` y `git diff` línea por línea para auditar todos los cambios aplicados en la fase.
+2. Verifica el cumplimiento al 100% de los contratos de @.context/INTERFACES.md (structs JSON, firmas SOA, endpoints HTTP/WS y sqlc).
+3. Verifica el estricto cumplimiento de las reglas de negocio de @.context/DOMAIN.md (RN01–RN11 aplicables a la fase).
+4. Evalúa las buenas prácticas de Go, la higiene de tipos en sqlc y la suficiencia de pruebas (80/20 sobre testutil.SetupTestDB ejecutando .\scripts\test.ps1).
+5. REGLAS ESTRICTAS DE ESTA AUDITORÍA:
+   - Modo SOLO LECTURA: Es auditoría únicamente; NO DEBES APLICAR NINGÚN CAMBIO de código ni crear o modificar archivos.
+   - Prohibido actualizar el estado en @.context/PLAN.md y @README.md a menos que recibas autorización explícita del Tech Lead.
+   - Emite un reporte estructurado con: (a) Balance de contratos y reglas cumplidas, (b) Hallazgos o alertas detectadas (si las hay), y (c) Recomendación final para la toma de decisiones del Tech Lead.
 ```
