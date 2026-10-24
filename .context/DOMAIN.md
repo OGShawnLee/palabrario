@@ -64,8 +64,10 @@ erDiagram
     USERS ||--o{ USER_ACHIEVEMENTS : "desbloquea"
 
     DECKS ||--o{ MATCHES : "banco de partida (CU14)"
+    MATCHES ||--|{ MATCH_ROUNDS : "estructura rondas 3NF (CU14)"
     MATCHES ||--|{ MATCH_PARTICIPANTS : "consolida podio (CU16)"
     USERS ||--o{ MATCH_PARTICIPANTS : "compite (CU15)"
+    MATCH_ROUNDS ||--o{ QUIZ_ATTEMPTS : "desglose replay por ronda (CU16)"
 ```
 
 ---
@@ -235,19 +237,34 @@ Implementan la economía auditable de progreso (**RN11**).
 
 ---
 
-### 3.5. Contexto 5: Evaluación Curricular y Arena Multijugador en Tiempo Real (`Quiz & Realtime Arena`)
-Desacopla la competencia síncrona de baja latencia de la persistencia relacional en lote (**CU14, CU15, CU16, RN10**).
+### 3.5. Contexto 5: Evaluación Curricular, Arena Multijugador en Tiempo Real y Replay 3NF (`Quiz & Realtime Arena`)
+Desacopla la competencia síncrona de baja latencia en RAM de la persistencia relacional en lote (**CU14, CU15, CU16, RN10, RNF-CON-02**), garantizando trazabilidad granular ronda por ronda (*Replay*) en Tercera Forma Normal (3NF).
 
-#### 16. `Question` y `QuizAttempt` (Tablas: `questions`, `quiz_attempts`)
-* **`Question`:** Reactivo curricular curado por un `EDITOR` para un `Sense`, con 5 modalidades pedagógicas (`DEFINITION_TO_WORD`, `WORD_TO_DEFINITION`, `SENTENCE_COMPLETION`, `REGIONAL_EQUIVALENT`, `TONE_OR_REGISTER`), 3 distractores en JSONB (`custom_distractors`) y retroalimentación educativa (`explanation`). Si un sentido de una baraja aún no tiene pregunta artesanal, el motor genera un reactivo dinámico extrayendo definiciones de otros sentidos de la misma baraja.
-* **`QuizAttempt`:** Registro individual de respuesta en sesiones de práctica o estudio SM-2 (`selected_option`, `is_correct`, `quality_rating`, `time_spent_ms`).
+#### 16. `Question`, `MatchRound` y `QuizAttempt` (Tablas: `questions`, `match_rounds`, `quiz_attempts`)
+* **`Question`:** Reactivo curricular curado por un `EDITOR` para un `Sense`, con 5 modalidades pedagógicas (`DEFINITION_TO_WORD`, `WORD_TO_DEFINITION`, `SENTENCE_COMPLETION`, `REGIONAL_EQUIVALENT`, `TONE_OR_REGISTER`), 3 distractores en JSONB (`custom_distractors`) y retroalimentación educativa (`explanation`). Si un sentido de una baraja aún no tiene pregunta artesanal, el motor genera un reactivo dinámico extrayendo definiciones de otros sentidos distintos de la misma baraja.
+* **`MatchRound` (Tabla `match_rounds` en 3NF):** Almacena de manera 100% relacional (sin blobs JSON corruptibles) cada una de las rondas generadas al preparar una partida (`id_match`, `round_number`, `id_sense`, `id_question`, `modality`, `prompt`, `option_a`, `option_b`, `option_c`, `option_d`, `correct_option`, `explanation`). Garantiza una relación biyectiva $1\text{ Ronda} = 1\text{ Sentido Único}$ dentro de la partida.
+* **`QuizAttempt` (Tabla `quiz_attempts`):** Registra tanto intentos individuales de práctica como el **desglose granular por ronda de cada competidor en la Arena** (`id_match`, `round_number`, `id_user`, `id_sense`, `selected_option`, `is_correct`, `time_spent_ms`, `points_earned`), con clave foránea compuesta hacia `match_rounds(id_match, round_number)` y restricción `UNIQUE (id_match, round_number, id_user)`. Esto habilita la retrospección completa (*Match Replay*) ronda por ronda.
 
 #### 17. `Match` y `MatchParticipant` (Tablas: `matches`, `match_participants`)
-Representan el ciclo de vida y el resultado consolidado de una partida multijugador en la Arena (**CU14, CU15, CU16**).
-* **Ciclo de Vida Híbrido (RAM $\to$ PostgreSQL):**
-  1. **Apertura (`CU14`):** Se valida que el `Deck` tenga reactivos suficientes y se expide un `room_code` (PIN único).
-  2. **Ejecución en Memoria (`CU15`):** Durante el estado `WAITING` e `IN_PROGRESS`, `realtime-service` mantiene en RAM las conexiones WebSocket, los temporizadores sincronizados (`round_time_sec`) y el cálculo de puntajes ponderados por velocidad de respuesta (**RN10**).
-  3. **Consolidación Transaccional (`CU16`):** Al concluir la última ronda (`FINISHED`), se ejecuta un único *Batch Flush* ACID en PostgreSQL que persiste `matches`, inserta las filas de `match_participants`, registra las ganancias en `xp_transactions` (**RN11**) y actualiza `user_mastery` (**RN09**).
+Representan el ciclo de vida, las reglas operativas de la sala y el resultado consolidado de una partida multijugador en la Arena (**CU14, CU15, CU16**).
+* **Invariantes y Reglas de Dominio de la Arena:**
+  1. **Apertura y Límites de Baraja (`CU14`):**
+     * **Piso absoluto de 8 sentidos:** La baraja seleccionada (`id_deck`) debe contar con al menos **8 sentidos en estado `APPROVED`**; de lo contrario, el sistema rechaza la apertura con `422 Unprocessable Entity` (`ErrUnprocessable`).
+     * **Cero preguntas repetidas (`TotalRounds <= ApprovedSenses`):** El número de rondas (`total_rounds`, rango `8..20`, default `8`) no puede superar la cantidad de sentidos aprobados disponibles en la baraja.
+     * **Persistencia inicial en 3NF:** Se inserta el registro en `matches` (`WAITING`) con un `room_code` (PIN alfanumérico único de 6 caracteres) y se insertan inmediatamente sus $N$ filas en `match_rounds`.
+  2. **Topología de Sala, Rol del Host y Sucesión Automática (`CU15` / `RNF-CON-02`):**
+     * **Capacidad máxima:** Hasta **8 participantes simultáneos** por sala (`MaxParticipants = 8`).
+     * **Facultades del Host:** Quien prepara la sala es el `Host` inicial (`IsHost = true`) y posee la facultad exclusiva de disparar `START_MATCH` en estado `WAITING`. Durante `IN_PROGRESS`, compite en igualdad absoluta de condiciones (**RN10**).
+     * **Ventana de Reconexión (`RNF-CON-02`):** Ante una caída de WebSocket, el participante conserva su lugar, puntaje (`Score`) y tiempos en RAM durante **10 segundos** (`IsReady = false` mientras está desconectado). Si reconecta dentro de los 10s, reanuda su sesión sin pérdida.
+     * **Sucesión de Host por Antigüedad:** Si el `Host` se desconecta en estado `WAITING` y no regresa tras expirar los 10 segundos de gracia, el rol `IsHost = true` se transfiere automáticamente al **siguiente participante conectado más antiguo** (menor `JoinedAt`) y se difunde `ROOM_STATE`. Si no queda ningún jugador conectado, la sala se destruye en RAM.
+  3. **Puntuación por Velocidad (`RN10`) y Desempate Determinístico (`total_time_spent_ms`):**
+     * El tiempo de respuesta se mide exclusivamente con el reloj monotónico del servidor (`elapsedMs`), otorgando entre `500` y `1000` puntos por acierto según la velocidad, o `0` en fallo/timeout.
+     * En cada ronda se acumula `total_time_spent_ms` por participante (sumando `round_time_sec * 1000` si no respondió antes del timeout).
+     * **Ordenamiento Canónico de Podio (Tie-Breaker):** Al calcular `final_rank` (`1, 2, 3...`) y proclamar al `winner_user_id`, los participantes se ordenan por:
+       $$\text{Score DESC} \;\longrightarrow\; \text{CorrectAnswers DESC} \;\longrightarrow\; \text{TotalTimeSpentMs ASC}$$
+  4. **Consolidación Transaccional con Seguridad S2S (`CU16`):**
+     * Al concluir la última ronda (`FINISHED`), `realtime-service` invoca a `core-service` autenticándose mediante un **JWT Interno Servicio-a-Servicio (S2S)** firmado con una sub-llave criptográfica derivada (`HMAC-SHA256`), imposible de falsificar con tokens de cliente.
+     * En un único *Batch Flush* ACID (`pgx.Tx`), `core-service` cierra `matches`, inserta `match_participants`, persiste el desglose por ronda en `quiz_attempts` para el *Replay*, asienta los premios en `xp_transactions` (**RN11**: `+150`, `+100`, `+75`, `+40 XP`) y actualiza `user_mastery` (**RN09**: `qualityRating = 3` para sentidos acertados y `1` para sentidos fallados).
 
 ---
 

@@ -42,12 +42,12 @@ flowchart TB
 
     subgraph SharedPkg["Paquetes Go Compartidos (Raíz Monorepo: palabrario/pkg)"]
         PkgModels["pkg/models (DTOs Canónicos Compartidos)"]
-        PkgAuth["pkg/auth (JWT HMAC-SHA256 & Bcrypt)"]
+        PkgAuth["pkg/auth (JWT Usuario + S2S Sub-Key Derivada)"]
         PkgResp["pkg/response (Serializador JSON)"]
     end
 
     subgraph CoreService["core-service (:8000) — Monolito Modular en Go 1.24 + Chi v5 + sqlc"]
-        Router["Router Chi v5 + Middlewares (RequireAuth, OptionalAuth, RequireRole)"]
+        Router["Router Chi v5 + Middlewares (RequireAuth, OptionalAuth, RequireRole, RequireInternalService)"]
         subgraph SOALayer["Capa SOA (core-service/internal/service)"]
             S1["IdentityService (CU01)"]
             S2["GovernanceService (CU02, CU03, CU04)"]
@@ -55,7 +55,7 @@ flowchart TB
             S4["CurationService (CU07, CU08, CU09)"]
             S5["StudioService (CU10, CU11)"]
             S6["MasteryService (CU12, CU13)"]
-            S7["ArenaCatalogService (CU14, CU16)"]
+            S7["ArenaCatalogService (CU14, CU16 + Replay)"]
         end
         DBLayer["core-service/internal/db (Generado por sqlc + pgxpool/v5)"]
         Router --> SOALayer --> DBLayer
@@ -63,7 +63,7 @@ flowchart TB
 
     subgraph RealtimeService["realtime-service (:8001) — Go 1.24 + Chi v5 + WebSockets"]
         WSHub["Arena Hub en RAM (sync.RWMutex + Goroutines por Sala)"]
-        WSTimer["Tickers de Ronda (RN10) & Ventana Reconexión 10s (RNF-CON-02)"]
+        WSTimer["Tickers de Ronda (RN10), Reconexión 10s (RNF-CON-02) & Sucesión Host"]
         WSHub --> WSTimer
     end
 
@@ -72,7 +72,7 @@ flowchart TB
     end
 
     subgraph Database["Persistencia Relacional"]
-        PG[("PostgreSQL 17 Alpine (:5432)\n23 Tablas · FTS · pg_trgm · Triggers RN06/RN07")]
+        PG[("PostgreSQL 17 Alpine (:5432)\n24 Tablas (incl. match_rounds 3NF) · FTS · pg_trgm · Triggers RN06/RN07")]
     end
 
     WailsBFF -.->|"Importa Structs"| PkgModels
@@ -82,7 +82,7 @@ flowchart TB
     WailsBFF -->|"Multipart /api/v1/images/upload"| ImgProc
 
     DBLayer -->|"TCP Pool ACID"| PG
-    WSHub -->|"HTTP Interno: Prepare & Consolidate (Batch Flush)"| Router
+    WSHub -->|"HTTP Interno S2S (JWT Sub-Key): Package & Consolidate"| Router
 ```
 
 ### 1.1. Estructura de Directorios Objetivo en `core-service`
@@ -112,11 +112,11 @@ core-service/
     │   ├── curation_service.go          # CurationService (CU07, CU08, CU09)
     │   ├── studio_service.go            # StudioService (CU10, CU11)
     │   ├── mastery_service.go           # MasteryService + Algoritmo SM-2 Puro (CU12, CU13)
-    │   └── arena_catalog_service.go     # ArenaCatalogService (CU14, CU16)
+    │   └── arena_catalog_service.go     # ArenaCatalogService (CU14, CU16 + Replay 3NF)
     └── api/
         ├── router.go                    # Montaje de rutas Chi v5 y middlewares
         ├── middleware/
-        │   └── auth.go                  # RequireAuth, OptionalAuth, RequireRole
+        │   └── auth_middleware.go       # RequireAuth, OptionalAuth, RequireRole, RequireInternalService
         └── handlers/
             ├── health.go
             ├── auth_handler.go
@@ -135,10 +135,10 @@ core-service/
 | :--- | :---: | :--- |
 | `ErrInvalidInput` | `400 Bad Request` | Campos obligatorios vacíos, formato inválido, `quality_rating` fuera de `1..4`, etc. |
 | `ErrUnauthorized` | `401 Unauthorized` | Token JWT ausente, expirado, firma inválida o credenciales incorrectas en login. |
-| `ErrForbidden` | `403 Forbidden` | Rol insuficiente (`RBAC`), intento de editar un recurso ajeno (`RN01`, `RN03`), intento de leer baraja privada ajena (`RN04`) o intento de auto-aprobar un sentido propio (`RN07`). |
-| `ErrNotFound` | `404 Not Found` | Recurso (`id_word`, `id_sense`, `id_deck`, `room_code`, `user_name`) inexistente o sentido en estado `HIDDEN`/`DRAFT` consultado desde ruta pública. |
-| `ErrConflict` | `409 Conflict` | Email/`user_name` duplicado, solicitud `PENDING` de Editor ya existente (`RN02`), voto duplicado o boleto agotado/caducado (`CU04`). |
-| `ErrUnprocessable` | `422 Unprocessable Entity` | La baraja seleccionada para abrir una Arena tiene menos de 4 sentidos `APPROVED` (`CU14 2a`). |
+| `ErrForbidden` | `403 Forbidden` | Rol insuficiente (`RBAC`), intento de editar un recurso ajeno (`RN01`, `RN03`), intento de leer baraja privada ajena (`RN04`), intento de auto-aprobar un sentido propio (`RN07`) o token de usuario intentando invocar un endpoint interno S2S. |
+| `ErrNotFound` | `404 Not Found` | Recurso (`id_word`, `id_sense`, `id_deck`, `room_code`, `id_match`, `user_name`) inexistente o sentido en estado `HIDDEN`/`DRAFT` consultado desde ruta pública. |
+| `ErrConflict` | `409 Conflict` | Email/`user_name` duplicado, solicitud `PENDING` de Editor ya existente (`RN02`), voto duplicado, boleto agotado/caducado (`CU04`) o partida ya consolidada (`FINISHED`). |
+| `ErrUnprocessable` | `422 Unprocessable Entity` | La baraja seleccionada para abrir una Arena tiene menos de 8 sentidos `APPROVED` o menos sentidos aprobados que el número de rondas `total_rounds` solicitado (`CU14 1a`). |
 
 ---
 
@@ -220,9 +220,9 @@ type IdentityService interface {
 | `POST` | `/api/v1/auth/sign-up` | Público | Base Auth | ✅ Listo | `201`, `400`, `409` |
 | `POST` | `/api/v1/auth/sign-in` | Público | RF01 | ✅ Listo | `200`, `400`, `401`, `403` (si `is_active=false`) |
 | `GET` | `/api/v1/auth/me` | `RequireAuth` | CU01 | ✅ Listo | `200`, `401`, `404` |
-| `PUT` | `/api/v1/users/me` | `RequireAuth` | CU01 (RN01) | ⏳ Fase 3.5 | `200`, `400`, `401` |
-| `PUT` | `/api/v1/users/me/password` | `RequireAuth` | CU01 (RN01) | ⏳ Fase 3.5 | `204`, `400`, `401` (contraseña actual inválida) |
-| `GET` | `/api/v1/users/u/{username}` | `OptionalAuth` | CU01 / UI | ⏳ Fase 3.5 | `200`, `404` |
+| `PUT` | `/api/v1/users/me` | `RequireAuth` | CU01 (RN01) | ✅ Listo | `200`, `400`, `401` |
+| `PUT` | `/api/v1/users/me/password` | `RequireAuth` | CU01 (RN01) | ✅ Listo | `204`, `400`, `401` (contraseña actual inválida) |
+| `GET` | `/api/v1/users/u/{username}` | `OptionalAuth` | CU01 / UI | ✅ Listo | `200`, `404` |
 
 ---
 
@@ -345,12 +345,9 @@ type GovernanceService interface {
 
 ### MÓDULO 3: Diccionario Panhispánico, Autoría Léxica y Heteronimia (`DictionaryService` — `CU05, CU06`)
 
-> [!IMPORTANT]
-> **Prioridad Inmediata (Fase 3.3):** Este módulo es el foco actual en `core-service`. A continuación se detalla cada DTO, consulta `sqlc` y endpoint necesario para completarlo al 100%.
-
 #### 2.3.1. Estructuras de Datos Completas (`pkg/models/dictionary.go`)
 
-Además de las estructuras ya existentes (`WordGender`, `WordSearchResult`, `Example`, `HeteronymItem`, `SenseDetail`, `WordDetail`), se deben añadir en `pkg/models/dictionary.go`:
+Además de las estructuras ya existentes (`WordGender`, `WordSearchResult`, `Example`, `HeteronymItem`, `SenseDetail`, `WordDetail`), se definen en `pkg/models/dictionary.go`:
 
 ```go
 // Filtro de exploración paginada (GET /api/v1/words)
@@ -452,9 +449,9 @@ type CreateConceptRequest struct {
 }
 ```
 
-#### 2.3.2. Consultas `sqlc` Exactas a Definir en `sql/queries/dictionary.sql`
+#### 2.3.2. Consultas `sqlc` Exactas en `sql/queries/dictionary.sql`
 
-Además de las 5 consultas ya existentes (`SearchVocabularyDropdown`, `GetWordByID`, `GetApprovedSensesByWordID`, `GetExamplesBySenseIDs`, `GetHeteronymsByWordID`), se deben añadir:
+Además de las 5 consultas base (`SearchVocabularyDropdown`, `GetWordByID`, `GetApprovedSensesByWordID`, `GetExamplesBySenseIDs`, `GetHeteronymsByWordID`), incluye:
 
 1. `-- name: ListRegions :many`
    Selecciona todas las filas de `regions` ordenadas por `name ASC`.
@@ -486,29 +483,29 @@ Además de las 5 consultas ya existentes (`SearchVocabularyDropdown`, `GetWordBy
 
 | Método | Ruta | Middleware | Caso de Uso | Estado | Respuesta Exitosa |
 | :---: | :--- | :---: | :---: | :---: | :--- |
-| `GET` | `/api/v1/regions` | Público | CU05 | ⏳ Fase 3.3 | `200 OK` $\to$ `[]models.Region` |
-| `GET` | `/api/v1/words/word-of-the-day` | Público | CU05 | ⏳ Fase 3.3 | `200 OK` $\to$ `models.WordDetail` (`?dialect=MX`) |
+| `GET` | `/api/v1/regions` | Público | CU05 | ✅ Listo | `200 OK` $\to$ `[]models.Region` |
+| `GET` | `/api/v1/words/word-of-the-day` | Público | CU05 | ✅ Listo | `200 OK` $\to$ `models.WordDetail` (`?dialect=MX`) |
 | `GET` | `/api/v1/words/search` | Público | CU05 (RF06) | ✅ Listo | `200 OK` $\to$ `[]models.WordSearchResult` (`?q=&dialect=&limit=8`) |
-| `GET` | `/api/v1/words` | Público | CU05 (RF07) | ⏳ Fase 3.3 | `200 OK` $\to$ `models.PaginatedWords` |
+| `GET` | `/api/v1/words` | Público | CU05 (RF07) | ✅ Listo | `200 OK` $\to$ `models.PaginatedWords` |
 | `GET` | `/api/v1/words/{id}` | Público | CU05 (RF07) | ✅ Listo | `200 OK` $\to$ `models.WordDetail` |
-| `POST` | `/api/v1/words` | `RequireRole(EDITOR, ADMIN)` | CU06 (RF08) | ⏳ Fase 3.3 | `201 Created` $\to$ `models.WordDetail` |
-| `PUT` | `/api/v1/words/{id}` | `RequireRole(EDITOR, ADMIN)` | CU06 | ⏳ Fase 3.3 | `200 OK` $\to$ `models.WordDetail` |
-| `POST` | `/api/v1/words/{id}/senses` | `RequireRole(EDITOR, ADMIN)` | CU06 (RF08) | ⏳ Fase 3.3 | `201 Created` $\to$ `models.SenseDetail` |
-| `PUT` | `/api/v1/senses/{senseId}` | `RequireRole(EDITOR, ADMIN)` | CU06 (2a) | ⏳ Fase 3.3 | `200 OK` $\to$ `models.SenseDetail` (`403` si otro editor o ya aprobado) |
-| `DELETE` | `/api/v1/senses/{senseId}` | `RequireRole(EDITOR, ADMIN)` | CU06 | ⏳ Fase 3.3 | `204 No Content` |
-| `POST` | `/api/v1/senses/{senseId}/examples` | `RequireRole(EDITOR, ADMIN)` | CU06 | ⏳ Fase 3.3 | `201 Created` $\to$ `models.Example` |
-| `PUT` | `/api/v1/examples/{exampleId}` | `RequireRole(EDITOR, ADMIN)` | CU06 | ⏳ Fase 3.3 | `200 OK` $\to$ `models.Example` |
-| `DELETE` | `/api/v1/examples/{exampleId}` | `RequireRole(EDITOR, ADMIN)` | CU06 | ⏳ Fase 3.3 | `204 No Content` |
-| `GET` | `/api/v1/concepts` | Público | CU05 / CU06 | ⏳ Fase 3.3 | `200 OK` $\to$ `[]models.SemanticConcept` (`?q=`) |
-| `POST` | `/api/v1/concepts` | `RequireRole(EDITOR, ADMIN)` | CU06 | ⏳ Fase 3.3 | `201 Created` $\to$ `models.SemanticConcept` |
-| `POST` | `/api/v1/senses/{senseId}/concepts/{conceptId}` | `RequireRole(EDITOR, ADMIN)` | CU06 | ⏳ Fase 3.3 | `204 No Content` |
-| `DELETE` | `/api/v1/senses/{senseId}/concepts/{conceptId}` | `RequireRole(EDITOR, ADMIN)` | CU06 | ⏳ Fase 3.3 | `204 No Content` |
+| `POST` | `/api/v1/words` | `RequireRole(EDITOR, ADMIN)` | CU06 (RF08) | ✅ Listo | `201 Created` $\to$ `models.WordDetail` |
+| `PUT` | `/api/v1/words/{id}` | `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Listo | `200 OK` $\to$ `models.WordDetail` |
+| `POST` | `/api/v1/words/{id}/senses` | `RequireRole(EDITOR, ADMIN)` | CU06 (RF08) | ✅ Listo | `201 Created` $\to$ `models.SenseDetail` |
+| `PUT` | `/api/v1/senses/{senseId}` | `RequireRole(EDITOR, ADMIN)` | CU06 (2a) | ✅ Listo | `200 OK` $\to$ `models.SenseDetail` (`403` si otro editor o ya aprobado) |
+| `DELETE` | `/api/v1/senses/{senseId}` | `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Listo | `204 No Content` |
+| `POST` | `/api/v1/senses/{senseId}/examples` | `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Listo | `201 Created` $\to$ `models.Example` |
+| `PUT` | `/api/v1/examples/{exampleId}` | `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Listo | `200 OK` $\to$ `models.Example` |
+| `DELETE` | `/api/v1/examples/{exampleId}` | `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Listo | `204 No Content` |
+| `GET` | `/api/v1/concepts` | Público | CU05 / CU06 | ✅ Listo | `200 OK` $\to$ `[]models.SemanticConcept` (`?q=`) |
+| `POST` | `/api/v1/concepts` | `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Listo | `201 Created` $\to$ `models.SemanticConcept` |
+| `POST` | `/api/v1/senses/{senseId}/concepts/{conceptId}` | `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Listo | `204 No Content` |
+| `DELETE` | `/api/v1/senses/{senseId}/concepts/{conceptId}` | `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Listo | `204 No Content` |
 
 ---
 
 ### MÓDULO 4: Curaduría Editorial por Quórum y Moderación (`CurationService` — `CU07, CU08, CU09`)
 
-#### 2.4.1. Estructuras de Datos (`pkg/models/curation.go` — Nuevo Archivo)
+#### 2.4.1. Estructuras de Datos (`pkg/models/curation.go`)
 
 ```go
 package models
@@ -618,20 +615,20 @@ type ResolveReportRequest struct {
 
 | Método | Ruta | Middleware | Caso de Uso | Estado | Respuesta Exitosa |
 | :---: | :--- | :---: | :---: | :---: | :--- |
-| `GET` | `/api/v1/curation/queue` | `RequireRole(EDITOR, ADMIN)` | CU07 (RN06/07) | ⏳ Fase 3.3 | `200 OK` $\to$ `[]models.SenseQuorumItem` (`?region=MX`) |
-| `GET` | `/api/v1/curation/my-proposals` | `RequireRole(EDITOR, ADMIN)` | CU06 / CU07 | ⏳ Fase 3.3 | `200 OK` $\to$ `[]models.SenseQuorumItem` (`?state=DRAFT`) |
-| `GET` | `/api/v1/curation/senses/{senseId}` | `RequireRole(EDITOR, ADMIN)` | CU07 | ⏳ Fase 3.3 | `200 OK` $\to$ `models.SenseQuorumDetail` |
-| `POST` | `/api/v1/curation/senses/{senseId}/vote` | `RequireRole(EDITOR, ADMIN)` | CU07 / CU08 | ⏳ Fase 3.3 | `200 OK` $\to$ `models.SenseQuorumDetail` (`403` en RN07) |
-| `PUT` | `/api/v1/curation/senses/{senseId}/state` | `RequireRole(ADMIN)` | CU08 (1b, RN08)| ⏳ Fase 3.3 | `200 OK` $\to$ `models.SenseDetail` |
-| `POST` | `/api/v1/reports` | `RequireAuth` | CU09 (RF11) | ⏳ Fase 3.5 | `201 Created` $\to$ `models.ContentReport` |
-| `GET` | `/api/v1/reports` | `RequireRole(ADMIN)` | CU09 | ⏳ Fase 3.5 | `200 OK` $\to$ `[]models.ContentReport` (`?status=PENDING`) |
-| `PUT` | `/api/v1/reports/{reportId}/resolve` | `RequireRole(ADMIN)` | CU09 (RN08) | ⏳ Fase 3.5 | `200 OK` $\to$ `models.ContentReport` |
+| `GET` | `/api/v1/curation/queue` | `RequireRole(EDITOR, ADMIN)` | CU07 (RN06/07) | ✅ Listo | `200 OK` $\to$ `[]models.SenseQuorumItem` (`?region=MX`) |
+| `GET` | `/api/v1/curation/my-proposals` | `RequireRole(EDITOR, ADMIN)` | CU06 / CU07 | ✅ Listo | `200 OK` $\to$ `[]models.SenseQuorumItem` (`?state=DRAFT`) |
+| `GET` | `/api/v1/curation/senses/{senseId}` | `RequireRole(EDITOR, ADMIN)` | CU07 | ✅ Listo | `200 OK` $\to$ `models.SenseQuorumDetail` |
+| `POST` | `/api/v1/curation/senses/{senseId}/vote` | `RequireRole(EDITOR, ADMIN)` | CU07 / CU08 | ✅ Listo | `200 OK` $\to$ `models.SenseQuorumDetail` (`403` en RN07) |
+| `PUT` | `/api/v1/curation/senses/{senseId}/state` | `RequireRole(ADMIN)` | CU08 (1b, RN08)| ✅ Listo | `200 OK` $\to$ `models.SenseDetail` |
+| `POST` | `/api/v1/reports` | `RequireAuth` | CU09 (RF11) | ✅ Listo | `201 Created` $\to$ `models.ContentReport` |
+| `GET` | `/api/v1/reports` | `RequireRole(ADMIN)` | CU09 | ✅ Listo | `200 OK` $\to$ `[]models.ContentReport` (`?status=PENDING`) |
+| `PUT` | `/api/v1/reports/{reportId}/resolve` | `RequireRole(ADMIN)` | CU09 (RN08) | ✅ Listo | `200 OK` $\to$ `models.ContentReport` |
 
 ---
 
 ### MÓDULO 5: Studio Personal — Barajas y Colecciones (`StudioService` — `CU10, CU11`)
 
-#### 2.5.1. Estructuras de Datos a Ampliar en `pkg/models/studio.go`
+#### 2.5.1. Estructuras de Datos en `pkg/models/studio.go`
 
 ```go
 // Enriquecimiento de Deck para la vista del Studio Personal (GUIStudioDeckCard):
@@ -691,30 +688,30 @@ type UpdateCollectionRequest struct {
 
 | Método | Ruta | Middleware | Caso de Uso | Estado | Respuesta Exitosa |
 | :---: | :--- | :---: | :---: | :---: | :--- |
-| `GET` | `/api/v1/decks` | Público | CU10 (RN04) | ⏳ Fase 3.4 | `200 OK` $\to$ `[]models.Deck` (`?q=&official_only=false`) |
-| `GET` | `/api/v1/studio/decks` | `RequireAuth` | CU10 | ⏳ Fase 3.4 | `200 OK` $\to$ `[]models.StudioDeckSummary` (Propias + Guardadas) |
-| `GET` | `/api/v1/decks/{id}` | `OptionalAuth` | CU10 (RN04) | ⏳ Fase 3.4 | `200 OK` $\to$ `models.Deck` (con `Items` y `SenseDetail`) |
-| `POST` | `/api/v1/decks` | `RequireAuth` | CU10 (RN03/05)| ⏳ Fase 3.4 | `201 Created` $\to$ `models.Deck` |
-| `PUT` | `/api/v1/decks/{id}` | `RequireAuth` | CU10 (RN03/05)| ⏳ Fase 3.4 | `200 OK` $\to$ `models.Deck` |
-| `DELETE` | `/api/v1/decks/{id}` | `RequireAuth` | CU10 (RN03) | ⏳ Fase 3.4 | `204 No Content` |
-| `POST` | `/api/v1/decks/{id}/items` | `RequireAuth` | CU10 (3a) | ⏳ Fase 3.4 | `201 Created` $\to$ `models.DeckItem` |
-| `DELETE` | `/api/v1/decks/{id}/items/{senseId}` | `RequireAuth` | CU10 (RN03) | ⏳ Fase 3.4 | `204 No Content` |
-| `POST` | `/api/v1/decks/{id}/save` | `RequireAuth` | CU10 (RN04) | ⏳ Fase 3.4 | `204 No Content` |
-| `DELETE` | `/api/v1/decks/{id}/save` | `RequireAuth` | CU10 | ⏳ Fase 3.4 | `204 No Content` |
-| `GET` | `/api/v1/collections` | Público | CU11 (RN04) | ⏳ Fase 3.4 | `200 OK` $\to$ `[]models.Collection` (`?featured=true`) |
-| `GET` | `/api/v1/studio/collections` | `RequireAuth` | CU11 | ⏳ Fase 3.4 | `200 OK` $\to$ `[]models.Collection` (Propias + Guardadas) |
-| `GET` | `/api/v1/collections/{id}` | `OptionalAuth` | CU11 (RN04) | ⏳ Fase 3.4 | `200 OK` $\to$ `models.Collection` (con `Decks`) |
-| `POST` | `/api/v1/collections` | `RequireAuth` | CU11 (RN03/05)| ⏳ Fase 3.4 | `201 Created` $\to$ `models.Collection` |
-| `PUT` | `/api/v1/collections/{id}` | `RequireAuth` | CU11 (RN03/05)| ⏳ Fase 3.4 | `200 OK` $\to$ `models.Collection` |
-| `DELETE` | `/api/v1/collections/{id}` | `RequireAuth` | CU11 (RN03) | ⏳ Fase 3.4 | `204 No Content` |
-| `POST` | `/api/v1/collections/{id}/save` | `RequireAuth` | CU11 (1a) | ⏳ Fase 3.4 | `204 No Content` |
-| `DELETE` | `/api/v1/collections/{id}/save` | `RequireAuth` | CU11 | ⏳ Fase 3.4 | `204 No Content` |
+| `GET` | `/api/v1/decks` | Público | CU10 (RN04) | ✅ Listo | `200 OK` $\to$ `[]models.Deck` (`?q=&official_only=false`) |
+| `GET` | `/api/v1/studio/decks` | `RequireAuth` | CU10 | ✅ Listo | `200 OK` $\to$ `[]models.StudioDeckSummary` (Propias + Guardadas) |
+| `GET` | `/api/v1/decks/{id}` | `OptionalAuth` | CU10 (RN04) | ✅ Listo | `200 OK` $\to$ `models.Deck` (con `Items` y `SenseDetail`) |
+| `POST` | `/api/v1/decks` | `RequireAuth` | CU10 (RN03/05)| ✅ Listo | `201 Created` $\to$ `models.Deck` |
+| `PUT` | `/api/v1/decks/{id}` | `RequireAuth` | CU10 (RN03/05)| ✅ Listo | `200 OK` $\to$ `models.Deck` |
+| `DELETE` | `/api/v1/decks/{id}` | `RequireAuth` | CU10 (RN03) | ✅ Listo | `204 No Content` |
+| `POST` | `/api/v1/decks/{id}/items` | `RequireAuth` | CU10 (3a) | ✅ Listo | `201 Created` $\to$ `models.DeckItem` |
+| `DELETE` | `/api/v1/decks/{id}/items/{senseId}` | `RequireAuth` | CU10 (RN03) | ✅ Listo | `204 No Content` |
+| `POST` | `/api/v1/decks/{id}/save` | `RequireAuth` | CU10 (RN04) | ✅ Listo | `204 No Content` |
+| `DELETE` | `/api/v1/decks/{id}/save` | `RequireAuth` | CU10 | ✅ Listo | `204 No Content` |
+| `GET` | `/api/v1/collections` | Público | CU11 (RN04) | ✅ Listo | `200 OK` $\to$ `[]models.Collection` (`?featured=true`) |
+| `GET` | `/api/v1/studio/collections` | `RequireAuth` | CU11 | ✅ Listo | `200 OK` $\to$ `[]models.Collection` (Propias + Guardadas) |
+| `GET` | `/api/v1/collections/{id}` | `OptionalAuth` | CU11 (RN04) | ✅ Listo | `200 OK` $\to$ `models.Collection` (con `Decks`) |
+| `POST` | `/api/v1/collections` | `RequireAuth` | CU11 (RN03/05)| ✅ Listo | `201 Created` $\to$ `models.Collection` |
+| `PUT` | `/api/v1/collections/{id}` | `RequireAuth` | CU11 (RN03/05)| ✅ Listo | `200 OK` $\to$ `models.Collection` |
+| `DELETE` | `/api/v1/collections/{id}` | `RequireAuth` | CU11 (RN03) | ✅ Listo | `204 No Content` |
+| `POST` | `/api/v1/collections/{id}/save` | `RequireAuth` | CU11 (1a) | ✅ Listo | `204 No Content` |
+| `DELETE` | `/api/v1/collections/{id}/save` | `RequireAuth` | CU11 | ✅ Listo | `204 No Content` |
 
 ---
 
 ### MÓDULO 6: Repetición Espaciada SM-2 y Ledger de XP (`MasteryService` — `CU12, CU13`)
 
-#### 2.6.1. Estructuras de Datos a Añadir en `pkg/models/studio.go`
+#### 2.6.1. Estructuras de Datos en `pkg/models/studio.go`
 
 ```go
 type StudyCardItem struct {
@@ -793,7 +790,7 @@ type MasteryDashboard struct {
 
 #### 2.6.2. Algoritmo Determinístico SuperMemo SM-2 en `MasteryService` (`RN09` y `RN11`)
 
-La función pura `CalculateSM2(prev *UserMastery, qualityRating int, now time.Time) UserMastery` debe seguir exactamente esta especificación:
+La función pura `CalculateSM2(prev *UserMastery, qualityRating int, now time.Time) (UserMastery, int)` sigue exactamente esta especificación:
 1. **Mapeo de Escala UI (`1..4`) a Escala SM-2 (`1..5`):**
    - `1` (*Otra vez / Fallo*) $\to q = 1$ (Incorrecto)
    - `2` (*Difícil*) $\to q = 3$ (Correcto con esfuerzo alto)
@@ -826,59 +823,76 @@ La función pura `CalculateSM2(prev *UserMastery, qualityRating int, now time.Ti
 
 | Método | Ruta | Middleware | Caso de Uso | Estado | Respuesta Exitosa |
 | :---: | :--- | :---: | :---: | :---: | :--- |
-| `GET` | `/api/v1/studio/study-session` | `RequireAuth` | CU12 (RN09) | ⏳ Fase 3.4 | `200 OK` $\to$ `models.StudySessionPayload` (`?deck_id=1&limit=15`) |
-| `POST` | `/api/v1/studio/study-session/review` | `RequireAuth` | CU12 (RN09/11)| ⏳ Fase 3.4 | `200 OK` $\to$ `models.CardReviewResult` |
-| `GET` | `/api/v1/studio/mastery` | `RequireAuth` | CU13 (RN09/11)| ⏳ Fase 3.4 | `200 OK` $\to$ `models.MasteryDashboard` |
-| `GET` | `/api/v1/studio/mastery/items` | `RequireAuth` | CU13 | ⏳ Fase 3.4 | `200 OK` $\to$ `[]models.StudyCardItem` (`?stage=MASTERED`) |
-| `GET` | `/api/v1/studio/xp-ledger` | `RequireAuth` | CU13 (RN11) | ⏳ Fase 3.4 | `200 OK` $\to$ `[]models.XPTransactionItem` (`?limit=50`) |
+| `GET` | `/api/v1/studio/study-session` | `RequireAuth` | CU12 (RN09) | ✅ Listo | `200 OK` $\to$ `models.StudySessionPayload` (`?deck_id=1&limit=15`) |
+| `POST` | `/api/v1/studio/study-session/review` | `RequireAuth` | CU12 (RN09/11)| ✅ Listo | `200 OK` $\to$ `models.CardReviewResult` |
+| `GET` | `/api/v1/studio/mastery` | `RequireAuth` | CU13 (RN09/11)| ✅ Listo | `200 OK` $\to$ `models.MasteryDashboard` |
+| `GET` | `/api/v1/studio/mastery/items` | `RequireAuth` | CU13 | ✅ Listo | `200 OK` $\to$ `[]models.StudyCardItem` (`?stage=MASTERED`) |
+| `GET` | `/api/v1/studio/xp-ledger` | `RequireAuth` | CU13 (RN11) | ✅ Listo | `200 OK` $\to$ `[]models.XPTransactionItem` (`?limit=50`) |
 
 ---
 
 ### MÓDULO 7: Arena Multijugador en Go (`ArenaCatalogService` en `:8000` + `realtime-service` en `:8001` — `CU14, CU15, CU16`)
 
-#### 2.7.1. Migración y Diseño de `realtime-service` en Go 1.24 (`:8001`)
+#### 2.7.1. Diseño de `realtime-service` en Go 1.24 (`:8001`) y Seguridad S2S (`pkg/auth`)
 
 `realtime-service` se implementa en **Go 1.24** dentro del mismo monorepo (`go.mod` raíz `palabrario`), utilizando:
 - **Router HTTP:** `github.com/go-chi/chi/v5` (exponiendo `GET /health` y `GET /ws/arena/{roomCode}`).
-- **Motor WebSocket:** `github.com/gorilla/websocket` (o `github.com/coder/websocket`) con buffers de lectura/escritura de `1024 bytes` y `WriteWait` de `5s`.
-- **Autenticación Directa:** Importa `palabrario/pkg/auth` y valida el token JWT recibido en `?token={jwt}` o `Authorization: Bearer {jwt}` usando la misma `JWT_SECRET` sin llamadas de red adicionales.
-- **Concurrencia en Memoria RAM (`ArenaHub`):**
+- **Motor WebSocket:** `github.com/gorilla/websocket` con buffers de lectura/escritura de `1024 bytes` y `WriteWait` de `5s`.
+- **Autenticación de Clientes (WebSocket):** Importa `palabrario/pkg/auth` y valida el token JWT de usuario recibido en `?token={jwt}` o `Authorization: Bearer {jwt}` usando `VerifyToken`.
+- **Autenticación Interna Servicio-a-Servicio (`S2S` Imposible de Falsificar por Clientes):**
+  - En [`pkg/auth/auth.go`](../pkg/auth/auth.go), `TokenService` deriva una sub-llave criptográfica exclusiva para llamadas internas:
+    $$\text{s2sSecretKey} = \text{SHA256}(\text{JWT\_SECRET} + \text{":palabrario-s2s-internal"})$$
+  - `TokenService` expone:
+    - `GenerateInternalToken(serviceName string, matchScope string) (string, error)` $\to$ emite un JWT firmado con `s2sSecretKey`, `Issuer: "palabrario-internal-s2s"`, `Subject: serviceName`, `MatchScope: matchScope` y `TTL = 30s`.
+    - `VerifyInternalToken(tokenString string) (*InternalServiceClaims, error)` $\to$ verifica la firma exclusivamente contra `s2sSecretKey` y valida `Issuer == "palabrario-internal-s2s"`.
+  - Asimismo, `VerifyToken` (tokens de usuarios humanos) valida explícitamente `claims.Issuer == "palabrario-core-service"`, garantizando separación criptográfica total: **ningún JWT de jugador puede superar jamás el middleware `RequireInternalService` en `core-service`**.
+- **Concurrencia en Memoria RAM (`ArenaHub` y `ActiveRoom`):**
   - Un `ArenaHub` global protegido con `sync.RWMutex` mantiene el mapa `rooms map[string]*ActiveRoom` indexado por `room_code` (PIN de 6 caracteres alfanuméricos en mayúsculas, ej. `"MX8921"`).
+  - **Capacidad máxima de sala:** `MaxParticipants = 8`. Si un 9° usuario distinto intenta unirse, se rechaza con error WebSocket (`"La sala está llena (máximo 8 participantes)"`).
   - Cada `ActiveRoom` corre su propia goroutine coordinadora (`room.RunLoop()`) con canales tipados (`joinCh`, `leaveCh`, `answerCh`, `startCh`) eliminando condiciones de carrera (*data races*) al calificar respuestas simultáneas en milisegundos.
-  - **Tolerancia a Micro-Desconexiones (`RNF-CON-02`):** Cuando un socket se cierra durante `WAITING` o `IN_PROGRESS`, el jugador en `ActiveRoom.Participants[userID]` se marca como `Connected = false` con `DisconnectedAt = time.Now()`, conservando su `Score` y `Rank` en RAM. Si se reconecta antes de `10 segundos`, reanuda su estado inmediatamente.
+  - **Tolerancia a Micro-Desconexiones (`RNF-CON-02`) y Sucesión Automática de Host:**
+    - Cuando un socket se cierra durante `WAITING` o `IN_PROGRESS`, el jugador en `ActiveRoom.Participants[userID]` NO es eliminado de inmediato: se marca internamente como `Connected = false` (`IsReady = false` en el `ArenaParticipant` difundido en `ROOM_STATE`) con un timer de expiración de **10 segundos**, conservando su `Score`, `Rank`, respuestas previas y tiempos acumulados. Si reconecta antes de `10s`, reanuda su estado (`Connected = true`, `IsReady = true`) inmediatamente.
+    - **Sucesión de Host en Lobby (`WAITING`):** Si el `Host` (`userID == room.HostUserID`) se desconecta en estado `WAITING` y expiran los `10 segundos` sin reconexión:
+      1. Se retira al Host desconectado del lobby.
+      2. Si quedan jugadores conectados en la sala, el participante conectado más antiguo (menor timestamp `JoinedAt`) es promovido automáticamente a `room.HostUserID = oldest.IDUser` y su flag cambia a `IsHost = true`, difundiendo el nuevo `ROOM_STATE` para que la sala no quede huérfana.
+      3. Si no queda ningún jugador conectado (`connectedCount == 0`), la sala se cierra y se elimina del `ArenaHub`.
 
 #### 2.7.2. Estructuras de Datos Completas en `pkg/models/arena.go`
 
-Además de `MatchStatus`, `ArenaParticipant`, `ArenaQuestion`, `ArenaRoomState` y `WSEvent`, se añaden en `pkg/models/arena.go`:
+Además de `MatchStatus`, `ArenaParticipant`, `ArenaQuestion`, `ArenaRoomState` y `WSEvent`, se definen en `pkg/models/arena.go`:
 
 ```go
 // Solicitud del cliente a core-service para preparar una nueva sala (CU14)
 type CreateMatchRequest struct {
-	IDDeck       int `json:"id_deck"`        // Obligatorio: Baraja base (mín. 4 sentidos APPROVED)
-	TotalRounds  int `json:"total_rounds"`   // 5..20 (default 10)
-	RoundTimeSec int `json:"round_time_sec"` // 10..30 segundos por ronda (default 15)
+	IDDeck       int   `json:"id_deck"`             // Obligatorio: Baraja base (mín. 8 sentidos APPROVED y >= TotalRounds)
+	TotalRounds  int   `json:"total_rounds"`        // 8..20 (default 8)
+	RoundTimeSec int   `json:"round_time_sec"`      // 10..30 segundos por ronda (default 15)
+	IsPublic     *bool `json:"is_public,omitempty"` // Opcional (default true)
 }
 
-// Reactivo interno completo (incluye CorrectOption para calificación en el servidor;
-// cuando realtime-service emite el evento WS "QUESTION" a los clientes, omite CorrectOption)
+// Reactivo interno completo (incluye CorrectOption para calificación en el servidor y persistencia en match_rounds;
+// cuando realtime-service emite el evento WS "QUESTION" a los clientes, envía ArenaQuestion omitiendo CorrectOption)
 type InternalArenaQuestion struct {
 	RoundNumber   int      `json:"round_number"`
 	IDSense       int      `json:"id_sense"`
+	IDQuestion    *int     `json:"id_question,omitempty"`
+	Lemma         string   `json:"lemma,omitempty"`
 	Modality      string   `json:"modality"`       // 'DEFINITION_TO_WORD', 'WORD_TO_DEFINITION', etc.
 	Prompt        string   `json:"prompt"`
-	Options       []string `json:"options"`        // 4 opciones barajadas (1 correcta + 3 distractores)
+	Options       []string `json:"options"`        // 4 opciones barajadas (option_a..option_d: 1 correcta + 3 distractores)
 	CorrectOption string   `json:"correct_option"` // NUNCA enviado en el evento QUESTION, revelado en ROUND_RESULT
 	Explanation   string   `json:"explanation"`
 	TimeLimitSecs int      `json:"time_limit_secs"`
 }
 
-// Paquete devuelto al crear/preparar una sala en core-service
+// Paquete devuelto al crear/preparar una sala en core-service y al hidratar realtime-service
 type MatchPackage struct {
 	IDMatch      string                  `json:"id_match"`
 	RoomCode     string                  `json:"room_code"`      // PIN único de 6 caracteres, ej. "MX8921"
 	HostUserID   string                  `json:"host_user_id"`
 	IDDeck       int                     `json:"id_deck"`
 	DeckTitle    string                  `json:"deck_title"`
+	IsPublic     bool                    `json:"is_public"`
 	TotalRounds  int                     `json:"total_rounds"`
 	RoundTimeSec int                     `json:"round_time_sec"`
 	Questions    []InternalArenaQuestion `json:"questions"`
@@ -888,7 +902,7 @@ type MatchPackage struct {
 type SubmitAnswerPayload struct {
 	RoundNumber     int    `json:"round_number"`
 	SelectedOption  string `json:"selected_option"`
-	ClientElapsedMs int    `json:"client_elapsed_ms"`
+	ClientElapsedMs int    `json:"client_elapsed_ms"` // Solo telemetría; el servidor califica con su reloj monotónico
 }
 
 // Trama difundida por el servidor al cerrar una ronda en el evento WS "ROUND_RESULT"
@@ -897,17 +911,30 @@ type RoundResultPayload struct {
 	IDSense       int                `json:"id_sense"`
 	CorrectOption string             `json:"correct_option"`
 	Explanation   string             `json:"explanation"`
-	Leaderboard   []ArenaParticipant `json:"leaderboard"` // Ordenado por Score DESC
+	Leaderboard   []ArenaParticipant `json:"leaderboard"` // Ordenado por Score DESC, CorrectAnswers DESC, TotalTimeSpentMs ASC
+}
+
+// Detalle de respuesta de un participante en una ronda específica para persistir en quiz_attempts (CU16 Replay)
+type ParticipantRoundAttempt struct {
+	RoundNumber    int    `json:"round_number"`
+	IDSense        int    `json:"id_sense"`
+	IDQuestion     *int   `json:"id_question,omitempty"`
+	SelectedOption string `json:"selected_option"` // "" si no respondió (timeout)
+	IsCorrect      bool   `json:"is_correct"`
+	TimeSpentMs    int    `json:"time_spent_ms"`    // ElapsedMs del servidor (o RoundTimeSec*1000 en timeout)
+	PointsEarned   int    `json:"points_earned"`
 }
 
 // Payload de Batch Flush enviado de realtime-service a core-service al concluir la partida (CU16)
 type ParticipantFinalResult struct {
-	IDUser         string `json:"id_user"`
-	FinalScore     int    `json:"final_score"`
-	AccuracyRate   float32 `json:"accuracy_rate"`
-	FinalRank      int    `json:"final_rank"`
-	CorrectSenseIDs []int `json:"correct_sense_ids"`
-	WrongSenseIDs   []int `json:"wrong_sense_ids"`
+	IDUser           string                    `json:"id_user"`
+	FinalScore       int                       `json:"final_score"`
+	AccuracyRate     float32                   `json:"accuracy_rate"`
+	FinalRank        int                       `json:"final_rank"`
+	TotalTimeSpentMs int                       `json:"total_time_spent_ms"`
+	CorrectSenseIDs  []int                     `json:"correct_sense_ids"`
+	WrongSenseIDs    []int                     `json:"wrong_sense_ids"`
+	RoundAttempts    []ParticipantRoundAttempt `json:"round_attempts"`
 }
 
 type ConsolidateMatchRequest struct {
@@ -923,32 +950,85 @@ type MatchSummary struct {
 	DeckTitle    string             `json:"deck_title"`
 	WinnerUserID *string            `json:"winner_user_id,omitempty"`
 	Status       MatchStatus        `json:"status"`
+	TotalRounds  int                `json:"total_rounds"`
+	RoundTimeSec int                `json:"round_time_sec"`
 	Podium       []ArenaParticipant `json:"podium"`
 	FinishedAt   string             `json:"finished_at"`
 }
+
+// --- DTOs DE RETROSPECCIÓN Y REPLAY GRANULAR RONDA POR RONDA (CU16 Replay 3NF) ---
+
+type ParticipantRoundAnswer struct {
+	IDUser         string `json:"id_user"`
+	UserName       string `json:"user_name"`
+	Name           string `json:"name"`
+	AvatarURL      string `json:"avatar_url,omitempty"`
+	DialectCode    string `json:"dialect_code"`
+	FlagEmoji      string `json:"flag_emoji"`
+	SelectedOption string `json:"selected_option"`
+	IsCorrect      bool   `json:"is_correct"`
+	TimeSpentMs    int    `json:"time_spent_ms"`
+	PointsEarned   int    `json:"points_earned"`
+}
+
+type MatchRoundReplay struct {
+	RoundNumber   int                      `json:"round_number"`
+	IDSense       int                      `json:"id_sense"`
+	Lemma         string                   `json:"lemma"`
+	Modality      string                   `json:"modality"`
+	Prompt        string                   `json:"prompt"`
+	Options       []string                 `json:"options"`
+	CorrectOption string                   `json:"correct_option"`
+	Explanation   string                   `json:"explanation"`
+	Answers       []ParticipantRoundAnswer `json:"answers"`
+}
+
+type MatchReplayDetail struct {
+	MatchSummary
+	Rounds []MatchRoundReplay `json:"rounds"`
+}
 ```
 
-#### 2.7.3. Fórmula Oficial de Puntuación por Velocidad en la Arena (`RN10`)
+#### 2.7.3. Interfaz SOA (`ArenaCatalogService` en `core-service/internal/service/arena_catalog_service.go`)
+
+```go
+type ArenaCatalogService interface {
+	PrepareMatch(ctx context.Context, hostUserID string, hostRole models.AccountRole, req models.CreateMatchRequest) (*models.MatchPackage, error)
+	GetMatchPackageByRoomCode(ctx context.Context, roomCode string) (*models.MatchPackage, error)
+	ConsolidateMatch(ctx context.Context, req models.ConsolidateMatchRequest) (*models.MatchSummary, error)
+	ListMatchHistory(ctx context.Context, userID string, limit int) ([]models.MatchSummary, error)
+	GetMatchReplay(ctx context.Context, viewerID string, viewerRole models.AccountRole, matchID string) (*models.MatchReplayDetail, error)
+}
+```
+
+#### 2.7.4. Fórmula Oficial de Puntuación por Velocidad (`RN10`), Desempate y Premios (`RN11`)
 
 En `realtime-service`, el tiempo de respuesta se mide con el reloj monotónico del servidor (`elapsedMs = time.Since(roundStartedAt).Milliseconds()`) para evitar manipulación del cliente:
-- Si la respuesta llega después de `RoundTimeSec * 1000` o `SelectedOption != CorrectOption`:
+- Si la respuesta llega después de `RoundTimeSec * 1000`, el jugador no responde (timeout) o `SelectedOption != CorrectOption`:
   $$\text{Points} = 0$$
+  *(Si hubo timeout, a su `TotalTimeSpentMs` se le suma el tiempo límite de la ronda `RoundTimeSec * 1000`).*
 - Si `SelectedOption == CorrectOption` dentro del tiempo límite ($T_{\text{max}} = \text{RoundTimeSec} \times 1000$):
   $$\text{Points} = \left\lfloor 500 + 500 \times \left(1 - \frac{\min(\text{elapsedMs}, T_{\text{max}})}{T_{\text{max}}}\right) \right\rfloor \in [500, 1000]$$
-- Al finalizar la partida (**CU16**), el *Batch Flush* hacia `core-service` otorga experiencia auditable en `xp_transactions`:
+- **Criterio Determinístico de Clasificación y Desempate (`FinalRank`):**
+  Al ordenar el `Leaderboard` parcial y el podio final (`FinalRank = 1..N`), se aplica:
+  1. Mayor puntaje (`Score DESC`)
+  2. Mayor número de aciertos (`len(CorrectSenseIDs) DESC`)
+  3. Menor tiempo total invertido (`TotalTimeSpentMs ASC`)
+- Al finalizar la partida (**CU16**), el *Batch Flush* hacia `core-service` otorga experiencia auditable en `xp_transactions` (con `metadata_id = id_match`):
   - `1° Lugar (Rank 1)`: `+150 XP` (`reason = 'MATCH_WIN'`)
   - `2° Lugar (Rank 2)`: `+100 XP` (`reason = 'QUIZ_CORRECT'`)
   - `3° Lugar (Rank 3)`: `+75 XP` (`reason = 'QUIZ_CORRECT'`)
   - `Participación (Rank >= 4)`: `+40 XP` (`reason = 'QUIZ_CORRECT'`)
 
-#### 2.7.4. Endpoints HTTP y WebSocket de la Arena (`:8000` y `:8001`)
+#### 2.7.5. Endpoints HTTP y WebSocket de la Arena (`:8000` y `:8001`)
 
 | Servicio | Método / Protocolo | Ruta | Middleware | Caso de Uso | Descripción |
 | :---: | :---: | :--- | :---: | :---: | :--- |
-| `core-service (:8000)` | `POST` | `/api/v1/arena/matches/prepare` | `RequireAuth` | CU14 (RN10) | Valida que el `Deck` tenga $\ge 4$ sentidos `APPROVED` (`422` si no), genera el PIN único en `matches` (`WAITING`) y devuelve `MatchPackage`. |
-| `core-service (:8000)` | `GET` | `/api/v1/arena/matches/{roomCode}/package` | Interno / `RequireAuth` | CU14 / CU15 | Permite a `realtime-service` cargar en RAM el `MatchPackage` de una sala en estado `WAITING`. |
-| `core-service (:8000)` | `POST` | `/api/v1/arena/matches/consolidate` | Interno / `RequireAuth` | CU16 (RN09/11)| Ejecuta en una sola transacción `pgx.Tx` el cierre de `matches` (`FINISHED`), inserción en `match_participants`, asientos en `xp_transactions` y ajuste en `user_mastery`. |
-| `core-service (:8000)` | `GET` | `/api/v1/arena/matches/history` | `RequireAuth` | CU13 / CU16 | Devuelve las últimas partidas jugadas por el usuario autenticado. |
+| `core-service (:8000)` | `POST` | `/api/v1/arena/matches/prepare` | `RequireAuth` | CU14 (RN04/10) | Valida privacidad (`RN04`), exige que el `Deck` tenga $\ge 8$ sentidos `APPROVED` y $\ge \text{TotalRounds}$ (`422` si no), genera el PIN único en `matches` (`WAITING`), persiste las rondas en `match_rounds` (3NF) y devuelve `MatchPackage`. |
+| `core-service (:8000)` | `GET` | `/api/v1/arena/matches/{roomCode}/package` | `RequireInternalService` (JWT S2S) | CU14 / CU15 | Permite exclusivamente a `realtime-service` cargar en RAM el `MatchPackage` de una sala en estado `WAITING`. |
+| `core-service (:8000)` | `POST` | `/api/v1/arena/matches/consolidate` | `RequireInternalService` (JWT S2S) | CU16 (RN09/11)| Ejecuta en una sola transacción `pgx.Tx` el cierre de `matches` (`FINISHED`), inserción en `match_participants`, desglose de rondas en `quiz_attempts`, asientos en `xp_transactions` y ajuste en `user_mastery`. |
+| `core-service (:8000)` | `GET` | `/api/v1/arena/matches/history` | `RequireAuth` | CU13 / CU16 | Devuelve las últimas partidas jugadas por el usuario autenticado (`[]models.MatchSummary`). |
+| `core-service (:8000)` | `GET` | `/api/v1/arena/matches/{matchId}` | `RequireAuth` | CU16 (Replay) | Devuelve el `models.MatchReplayDetail` completo con podio y desglose ronda por ronda (`match_rounds` + `quiz_attempts`). |
 | `realtime-service (:8001)` | `GET` | `/health` | Público | Infra | Verifica salud del proceso Go y conteo de salas activas en RAM. |
 | `realtime-service (:8001)` | `WS` | `/ws/arena/{roomCode}?token={jwt}` | JWT (`pkg/auth`) | CU15 / CU16 | Canal bidireccional de baja latencia ($< 50\text{ ms}$) para eventos `JOIN_ROOM`, `ROOM_STATE`, `START_MATCH`, `COUNTDOWN`, `QUESTION`, `SUBMIT_ANSWER`, `ROUND_RESULT`, `PODIUM`. |
 

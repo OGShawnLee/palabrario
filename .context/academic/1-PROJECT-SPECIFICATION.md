@@ -4,7 +4,7 @@
 **Materia / Contexto:** Ingeniería de Software / Sistemas Distribuidos en Red / Despliegue de Software  
 **Equipo de Desarrollo:** [Equipo de Desarrollo de Palabrario]  
 **Fecha:** Octubre 2026  
-**Versión del Documento:** 1.2.0  
+**Versión del Documento:** 1.3.0  
 **Estado:** Borrador Canónico para Desarrollo  
 
 ---
@@ -16,6 +16,7 @@
 | **1.0.0** | Octubre 2026 | Equipo de Desarrollo | Elaboración de la Sección 1: Introducción, Propósito, Delimitación del Alcance y Glosario Exhaustivo de Términos. |
 | **1.1.0** | Octubre 2026 | Equipo de Desarrollo | Elaboración de la Sección 2: Contexto del Sistema, Clases de Usuario, Casos de Uso simplificados (CU01-CU16), Especificaciones de Prototipo Figma, Requisitos Funcionales, Requisitos No Funcionales y Restricciones. |
 | **1.2.0** | Octubre 2026 | Equipo de Desarrollo | Sincronización del stack de backend a Go 1.24 + Chi v5 + `sqlc` + `pgxpool` para `core-service` e `image-service`, manteniendo `realtime-service` en Bun + Elysia WebSockets. |
+| **1.3.0** | Octubre 2026 | Equipo de Desarrollo | Unificación del 100% del backend en Go 1.24 (`realtime-service` con Chi v5 + WebSockets), formalización de autenticación interna S2S con sub-llave derivada, umbral mínimo de 8 sentidos aprobados ($\ge \text{TotalRounds}$) en CU14, sucesión automática de Host en CU15 y desglose relacional en 3NF (`match_rounds` + `quiz_attempts`) para Replay en CU16. |
 
 ---
 
@@ -35,7 +36,7 @@ El propósito cardinal de este documento es definir, delimitar y formalizar de m
 
 El documento servirá como marco de referencia y contrato técnico vinculante para las fases subsiguientes del ciclo de vida del proyecto, cumpliendo los siguientes objetivos específicos:
 
-1. **Guía de Diseño e Implementación para el Backend:** Servir de especificación canónica para modelar las entidades de datos (PostgreSQL 17), los contratos de endpoints de la API REST del monolito modular (*Core Service* bajo Go 1.24, Chi v5, `sqlc` y `pgxpool`) y los protocolos orientados a eventos vía WebSockets (*Realtime Service* bajo Bun y Elysia).
+1. **Guía de Diseño e Implementación para el Backend:** Servir de especificación canónica para modelar las entidades de datos (PostgreSQL 17), los contratos de endpoints de la API REST del monolito modular (*Core Service* bajo Go 1.24, Chi v5, `sqlc` y `pgxpool`) y los protocolos orientados a eventos vía WebSockets (*Realtime Service* en Go 1.24 + Chi v5 + WebSockets).
 2. **Guía de Desarrollo para el Cliente Nativo:** Proveer las directrices funcionales de interacción, estados de vistas y flujos de navegación para la aplicación de escritorio desarrollada con Wails v2, Vue 3 y UnoCSS.
 3. **Validación y Pruebas de Software:** Suministrar los criterios de aceptación y casos de prueba indispensables para los procesos de Aseguramiento de Calidad (QA), verificación de integridad de datos y pruebas de concurrencia en partidas multijugador.
 4. **Pacto con los Interesados (Stakeholders):** Alinear las expectativas funcionales del equipo de desarrollo, los docentes y lingüistas curadores de contenido, los administradores de la plataforma y el cuerpo docente evaluador del proyecto.
@@ -82,7 +83,7 @@ El sistema cubrirá de forma exhaustiva las siguientes áreas funcionales:
   * Creación de salas de juego públicas y privadas protegidas mediante código PIN alfanumérico.
   * Sincronización estricta de rondas con temporizadores compartidos entre todos los clientes conectados.
   * Banco de preguntas curriculares generadas a partir de las barajas de estudio (definición a palabra, palabra a definición, completar oraciones, identificación de variantes dialectales).
-  * Gestión del estado de la sala en memoria para latencias en milisegundos y consolidación masiva de resultados, podios y puntos de experiencia (XP) al cierre de cada partida.
+  * Gestión del estado de la sala en memoria para latencias en milisegundos y consolidación masiva de resultados, podios, puntos de experiencia (XP) y desglose relacional ronda por ronda (*Replay*) al cierre de cada partida.
 
 * **Módulo de Gamificación, Ledger de Experiencia y Progresión:**
   * Registro transaccional inmutable de puntos de experiencia (`xp_transactions`) por resolución de trivias, rachas diarias consecutivas y victorias en arena.
@@ -113,24 +114,24 @@ A continuación, se define el conjunto de términos técnicos, filológicos y ar
 | **Administrador** | Roles del Sistema | Usuario con el máximo nivel de privilegios; supervisa la comunidad, gestiona boletos de acceso, atiende reportes de contenido y posee facultades de moderación y anulación sobre términos publicados. |
 | **Aprendiz (*Learner*)** | Roles del Sistema | Usuario final de la plataforma que interactúa con el diccionario, administra su Studio personal, repasa tarjetas mediante repetición espaciada y participa en partidas multijugador. |
 | **Baraja (*Deck*)** | Dominio Pedagógico | Conjunto ordenado de tarjetas de estudio asociadas a sentidos léxicos específicos, diseñado para ser estudiado de forma autónoma o utilizado como base temática en una arena multijugador. |
-| **Bun** | Infraestructura | Entorno de ejecución (*runtime*) moderno para JavaScript/TypeScript de alto rendimiento, utilizado para ejecutar el *Realtime Service*. |
+| **Bun** | Infraestructura | Entorno de ejecución (*runtime*) moderno para JavaScript/TypeScript utilizado en la etapa de prototipado inicial antes de la unificación del *Realtime Service* en Go 1.24. |
 | **CEFR / MCER** | Dominio Lingüístico | *Common European Framework of Reference for Languages* (Marco Común Europeo de Referencia para las Lenguas). Estándar internacional que clasifica la competencia lingüística en seis niveles: A1, A2, B1, B2, C1 y C2. |
-| **Chi (`go-chi/chi/v5`)** | Infraestructura | Router HTTP ligero, idiomático y modular para Go 1.24, utilizado para construir las rutas RESTful del *Core Service* y del *Image Service*. |
+| **Chi (`go-chi/chi/v5`)** | Infraestructura | Router HTTP ligero, idiomático y modular para Go 1.24, utilizado para construir las rutas RESTful del *Core Service*, el *Realtime Service* y el *Image Service*. |
 | **Colección** | Dominio Pedagógico | Agrupación lógica de múltiples barajas (*Decks*) organizadas según una ruta formativa o temática cultural común (ej. "Ruta de la Gastronomía Mexicana", "Gira de Modismos Rioplatenses"). |
 | **Editor** | Roles del Sistema | Docente o lingüista acreditado por la plataforma con facultades exclusivas para proponer nuevos lemas, redactar sentidos dialectales, formular preguntas curriculares y emitir votos en el quórum de curaduría. |
-| **Elysia** | Infraestructura | Framework web ligero y ultra-rápido para Bun, utilizado para construir el servidor de WebSockets del *Realtime Service*. |
+| **Elysia** | Infraestructura | Framework web ligero utilizado en la etapa de prototipado inicial del *Realtime Service* antes de su unificación en Go 1.24 + WebSockets. |
 | **Friendly Blurb** | Dominio Pedagógico | Breve reseña introductoria redactada con ingenio, humor y contexto cultural, orientada a anclar el significado del vocablo en la memoria del estudiante de manera amena y memorable. |
 | **FTS (*Full-Text Search*)** | Arquitectura de Datos | Motor de búsqueda de texto completo integrado en PostgreSQL, configurado con diccionarios de lematización en español (`spanish_stem`) e insensibilidad a tildes (`unaccent`). |
 | **GIN** | Arquitectura de Datos | *Generalized Inverted Index*. Tipo de índice de base de datos optimizado para búsquedas veloces sobre vectores de texto completo (`tsvector`) y operadores de trigramas. |
 | **Heteronimia Transdialectal** | Dominio Lingüístico | Fenómeno por el cual un mismo concepto semántico abstracto recibe denominaciones léxicas distintas según la región geográfica hispanohablante (ej. *pitillo*, *sorbete*, *pajita*, *popote*, *bombilla*). |
-| **JWT** | Seguridad | *JSON Web Token*. Estándar abierto (RFC 7519) utilizado para transmitir información de autenticación e identidad entre el cliente y el backend de forma compacta y firmada digitalmente. |
+| **JWT** | Seguridad | *JSON Web Token*. Estándar abierto (RFC 7519) utilizado para transmitir información de autenticación e identidad entre el cliente y el backend, así como para llamadas internas Servicio-a-Servicio (S2S) con sub-llave derivada. |
 | **Lema (*Lemma*)** | Dominio Lingüístico | Forma canónica de una palabra según las convenciones lexicográficas (ej. verbo en infinitivo, sustantivo en singular masculino); constituye la cabecera que agrupa a múltiples sentidos. |
 | **Monolito Modular** | Arquitectura de Software | Patrón arquitectónico donde el núcleo de la aplicación se ejecuta dentro de un único proceso unificado, pero su código fuente y lógica de negocio se encuentran estrictamente desacoplados en módulos delimitados por dominio (*bounded contexts*). |
 | **pg_trgm** | Arquitectura de Datos | Extensión de PostgreSQL que habilita el cálculo de similitud alfanumérica basado en trigramas, permitiendo la búsqueda difusa y tolerancia a errores ortográficos al escribir palabras. |
 | **Quórum Editorial** | Gobernanza | Mecanismo de validación por consenso donde se requiere un mínimo de tres (3) aprobaciones independientes de usuarios con rol de Editor para que un sentido léxico pase de borrador a publicado. |
 | **RBAC** | Seguridad | *Role-Based Access Control* (Control de Acceso Basado en Roles). Mecanismo de autorización que restringe el acceso a operaciones del sistema en función de los roles asignados (`LEARNER`, `EDITOR`, `ADMIN`). |
 | **Sentido (*Sense*)** | Dominio Lingüístico | Acepción o significado específico de un lema, contextualizado con una región geográfica, un nivel CEFR, una categoría gramatical, ejemplos de uso y advertencias de tabú. |
-| **Servicio Satélite** | Arquitectura de Software | Servicio independiente y especializado desacoplado del monolito modular para gestionar cargas de trabajo que demandan infraestructuras o runtimes divergentes (como baja latencia en WebSockets o procesamiento intensivo de archivos). |
+| **Servicio Satélite** | Arquitectura de Software | Servicio independiente y especializado desacoplado del monolito modular para gestionar cargas de trabajo que demandan infraestructuras o runtimes específicos (como baja latencia en WebSockets o procesamiento intensivo de archivos). |
 | **SM-2** | Dominio Pedagógico | Algoritmo clásico de repetición espaciada (*SuperMemo-2*) que computa los intervalos de tiempo ideales entre sesiones de repaso a partir de la dificultad del reactivo y el historial de aciertos. |
 | **`sqlc`** | Arquitectura de Datos | Generador de código que compila consultas SQL nativas de PostgreSQL hacia interfaces y estructuras Go 100% tipadas en tiempo de compilación, operando sobre `pgxpool`. |
 | **Studio** | Dominio de UI | Espacio de trabajo personal y privado del estudiante dentro de la interfaz de usuario, orientado a la gestión de sus barajas, colecciones y panel de maestría. |
@@ -160,7 +161,7 @@ El entorno del sistema se estructura alrededor de un límite perimetral claramen
 2. **Entorno de Backend Conteinerizado:**
    - La plataforma se ejecuta en un ecosistema de micro-contenedores gestionados por Docker Compose dentro de una máquina virtualizada de desarrollo (Vagrant/Debian 12) o Docker Engine local:
      * **Core Service (`core-service`):** Monolito modular en Go 1.24 + Chi v5 + `sqlc` + `pgxpool` que atiende las peticiones HTTP/REST (puerto 8000).
-     * **Realtime Service (`realtime-service`):** Servicio satélite en Bun + Elysia WebSockets para el control de partidas en tiempo real (puerto 8001).
+     * **Realtime Service (`realtime-service`):** Servicio satélite en Go 1.24 + Chi v5 + WebSockets para el control de partidas en tiempo real (puerto 8001).
      * **Image Service (`image-service`):** Servicio satélite en Go 1.24 + Chi v5 para saneamiento y optimización de medios (puerto 8002).
      * **PostgreSQL 17:** Base de datos relacional centralizada con extensiones de búsqueda FTS e integridad referencial estricta (puerto 5432).
 
@@ -179,7 +180,7 @@ flowchart TD
 
     subgraph SistemaPalabrario["Límite del Sistema: PALABRARIO"]
         AppCliente["Cliente de Escritorio Nativo\n(Wails v2 + Vue 3 + UnoCSS)"]
-        PlataformaBackend["Ecosistema Backend Distribuido\n• Core Service (Monolito Modular Go 1.24 + sqlc)\n• Realtime Service (WebSockets Bun)\n• Image Service (Go 1.24 + Chi)\n• PostgreSQL 17 (FTS & ACID)"]
+        PlataformaBackend["Ecosistema Backend Distribuido (100% Go 1.24)\n• Core Service (Monolito Modular Go 1.24 + sqlc)\n• Realtime Service (Go 1.24 + Chi + WebSockets)\n• Image Service (Go 1.24 + Chi)\n• PostgreSQL 17 (FTS & ACID)"]
         AppCliente <-->|HTTP REST / WebSockets| PlataformaBackend
     end
 
@@ -260,9 +261,9 @@ Para la elaboración manual del Diagrama de Casos de Uso en formato UML estánda
 | **CU11** | Estudio | Gestionar Colecciones Temáticas | Miembro | Agrupar barajas afines en rutas de aprendizaje y explorar colecciones públicas. |
 | **CU12** | Estudio | Estudiar con Repetición Espaciada | Miembro | Repasar vocabulario mediante tarjetas interactivas adaptadas al algoritmo SM-2. |
 | **CU13** | Estudio | Consultar Maestría y Progreso | Miembro | Visualizar métricas de retención, palabras dominadas, racha activa y ledger de XP. |
-| **CU14** | Arena | Crear y Configurar Arena | Miembro | Configurar una sala multijugador basada en una baraja de estudio y obtener código PIN. |
-| **CU15** | Arena | Participar en Partida Multijugador | Miembro | Unirse a una sala, responder desafíos sincronizados contra reloj y competir en vivo. |
-| **CU16** | Arena | Consolidar y Cerrar Partida | Sistema | Finalizar rondas de juego, computar podios, otorgar XP y actualizar maestría en lote. |
+| **CU14** | Arena | Crear y Configurar Arena | Miembro | Configurar una sala multijugador basada en una baraja de estudio ($\ge 8$ sentidos) y obtener código PIN. |
+| **CU15** | Arena | Participar en Partida Multijugador | Miembro | Unirse a una sala (máx. 8 jugadores), responder desafíos sincronizados contra reloj y competir en vivo. |
+| **CU16** | Arena | Consolidar y Cerrar Partida | Sistema | Finalizar rondas de juego, computar podios, otorgar XP, actualizar maestría y persistir el replay por ronda en lote. |
 
 #### 2.3.3. Reglas de Negocio Vinculadas
 
@@ -507,55 +508,56 @@ Para la elaboración manual del Diagrama de Casos de Uso en formato UML estánda
 
 ##### CU14: Crear y Configurar Arena
 * **Actor Principal:** El Miembro.
-* **Descripción:** El Miembro crea una sala de competencia en vivo a partir de una baraja de estudio, fijando número de rondas y visibilidad, para obtener un código PIN de invitación.
-* **Precondiciones:** El Miembro ha iniciado sesión y la baraja seleccionada cuenta con preguntas curriculares suficientes.
-* **Poscondiciones:** El Sistema crea la sala en memoria y la deja en estado de espera (`WAITING`) a la recepción de competidores.
+* **Descripción:** El Miembro crea una sala de competencia en vivo a partir de una baraja de estudio con al menos 8 sentidos aprobados (y al menos tantos sentidos aprobados como rondas configuradas), fijando número de rondas y visibilidad, para obtener un código PIN de invitación.
+* **Precondiciones:** El Miembro ha iniciado sesión y la baraja seleccionada cuenta con al menos 8 sentidos en estado `APPROVED` ($\ge \text{total\_rounds}$).
+* **Poscondiciones:** El Sistema persiste la partida en estado `WAITING` junto con sus rondas en Tercera Forma Normal (`match_rounds`) y habilita la sala en memoria a la recepción de hasta 8 competidores.
 * **Flujo Principal:**
   1. El Miembro solicita crear una arena multijugador a partir de una baraja de su elección.
-  2. El Miembro configura las reglas de la sala (número de rondas y modalidad pública o privada).
+  2. El Miembro configura las reglas de la sala (número de rondas entre 8 y 20, tiempo por ronda entre 10 y 30 segundos, y modalidad pública o privada).
   3. El Miembro confirma la apertura de la sala.
-  4. El Sistema genera un código PIN alfanumérico único para la sala.
-  5. El Sistema habilita el canal de WebSockets correspondiente y sitúa al Miembro como anfitrión en la sala de espera.
+  4. El Sistema genera un código PIN alfanumérico único de 6 caracteres para la sala y estructura las rondas sin repetición de sentidos en `match_rounds`.
+  5. El Sistema habilita el canal de WebSockets correspondiente y sitúa al Miembro como anfitrión (`Host`) en la sala de espera.
   6. El Sistema entrega el código PIN al Miembro para convocar a otros jugadores.
 * **Flujos Alternos:**
-  * **1a. Banco de reactivos insuficiente:** El Sistema informa que la baraja no cuenta con el mínimo de tarjetas requeridas para disputar una partida y solicita seleccionar otra.
-* **Reglas de Negocio:** RN10.
+  * **1a. Banco de reactivos insuficiente:** El Sistema informa (`422 Unprocessable Entity`) que la baraja no cuenta con el mínimo de 8 sentidos aprobados o suficientes sentidos para el número de rondas solicitadas y solicita seleccionar otra.
+* **Reglas de Negocio:** RN04, RN10.
 
 ##### CU15: Participar en Partida Multijugador
 * **Actor Principal:** El Miembro.
-* **Descripción:** El Miembro ingresa a una arena mediante su PIN, responde las preguntas sincronizadas en tiempo real antes de que expire el temporizador y compite por el podio.
+* **Descripción:** El Miembro ingresa a una arena mediante su PIN (hasta un máximo de 8 participantes), responde las preguntas sincronizadas en tiempo real antes de que expire el temporizador y compite por el podio.
 * **Precondiciones:** La sala se encuentra en estado de espera (`WAITING`) y no ha comenzado la partida.
-* **Poscondiciones:** Se registran las respuestas, aciertos y tiempos de respuesta de cada participante durante la partida.
+* **Poscondiciones:** Se registran en memoria las respuestas, aciertos, puntajes y tiempos acumulados (`total_time_spent_ms`) de cada participante durante la partida.
 * **Flujo Principal:**
   1. El Miembro introduce el código PIN de la sala y solicita unirse.
-  2. El Sistema valida el PIN, conecta al Miembro vía WebSockets y añade su identidad al vestíbulo de la sala.
-  3. El anfitrión da la orden de iniciar la contienda.
+  2. El Sistema valida el PIN, conecta al Miembro vía WebSockets y añade su identidad al vestíbulo de la sala (capacidad máxima de 8 jugadores).
+  3. El anfitrión (`Host`) da la orden exclusiva de iniciar la contienda (`START_MATCH`).
   4. El Sistema emite una cuenta regresiva sincronizada para todos los participantes.
   5. Para cada ronda:
-     a. El Sistema envía simultáneamente la pregunta y las opciones a todos los clientes.
-     b. El Sistema inicia el temporizador de cuenta regresiva de la ronda.
+     a. El Sistema envía simultáneamente la pregunta y las opciones a todos los clientes (omitiendo la respuesta correcta).
+     b. El Sistema inicia el temporizador de cuenta regresiva de la ronda gobernado por el reloj monotónico del servidor.
      c. El Miembro selecciona y transmite su respuesta antes de que finalice el tiempo.
-     d. El Sistema evalúa la respuesta, pondera el puntaje según exactitud y milisegundos transcurridos, y difunde el marcador parcial actualizado.
+     d. El Sistema evalúa la respuesta, pondera el puntaje según exactitud y milisegundos transcurridos, acumula `total_time_spent_ms`, y al cierre de la ronda difunde la respuesta correcta y el marcador parcial actualizado.
   6. Al concluir la totalidad de las rondas, la partida finaliza.
 * **Flujos Alternos:**
-  * **1a. Código PIN inexistente o sala llena:** El Sistema notifica que la sala no está disponible y deniega el acceso.
-  * **5c. Expiración de tiempo:** El Miembro no transmite respuesta antes de que expire el temporizador; el Sistema computa cero puntos en esa ronda para dicho participante.
-  * **5e. Desconexión o abandono de un participante:** El Sistema retira al Miembro de la sala activa, recalcula el número de competidores y continúa la partida con los restantes.
-* **Reglas de Negocio:** RN10.
+  * **1a. Código PIN inexistente o sala llena:** El Sistema notifica que la sala no está disponible o ha alcanzado el límite de 8 participantes y deniega el acceso.
+  * **5c. Expiración de tiempo:** El Miembro no transmite respuesta antes de que expire el temporizador; el Sistema computa cero puntos y suma el tiempo límite de la ronda a su `total_time_spent_ms`.
+  * **5e. Desconexión de un participante y sucesión de Host (`RNF-CON-02`):** El Sistema conserva el estado del jugador en memoria durante una ventana de reconexión de 10 segundos. Si no se reconecta tras 10 segundos y era el anfitrión en estado `WAITING`, el Sistema transfiere automáticamente el rol de `Host` al siguiente participante conectado más antiguo (o cierra la sala si queda vacía).
+* **Reglas de Negocio:** RN10, RNF-CON-02.
 
 ##### CU16: Consolidar y Cerrar Partida
 * **Actor Principal:** El Sistema.
-* **Descripción:** El Sistema concluye el ciclo de vida de la sala multijugador, proclama al ganador, adjudica los premios de experiencia (XP) y persiste los resultados finales en la base de datos relacional.
+* **Descripción:** El Sistema concluye el ciclo de vida de la sala multijugador, proclama al ganador desempatando por aciertos y menor `total_time_spent_ms`, adjudica los premios de experiencia (XP) y persiste los resultados finales y el desglose por ronda (*Replay*) en la base de datos relacional mediante comunicación interna autenticada S2S.
 * **Precondiciones:** Se ha agotado la última ronda de la partida multijugador en el servicio en tiempo real.
-* **Poscondiciones:** La partida pasa al estado finalizado (`FINISHED`), los resultados quedan persistidos de forma permanente en PostgreSQL y se actualiza la maestría de los jugadores.
+* **Poscondiciones:** La partida pasa al estado finalizado (`FINISHED`), los resultados, intentos por ronda (`quiz_attempts`), transacciones de XP y maestría SM-2 quedan persistidos de forma permanente en PostgreSQL, permitiendo consultar posteriormente el replay granular de la partida.
 * **Flujo Principal:**
   1. El Sistema detecta el fin de la última ronda de la arena multijugador.
-  2. El Sistema procesa la tabla final de clasificación y determina los puestos del podio y al ganador de la contienda.
+  2. El Sistema procesa la tabla final de clasificación ordenando por `Score DESC`, `CorrectAnswers DESC` y `TotalTimeSpentMs ASC`, determinando los puestos del podio y al ganador de la contienda.
   3. El Sistema difunde la pantalla final de premiación y podio a todos los clientes conectados a través del WebSocket.
-  4. El Sistema abre una transacción en la base de datos relacional:
-     a. Persiste el registro de la partida (`matches`) y las estadísticas de cada participante (`match_participants`).
-     b. Inserta los registros de ganancia de XP en el ledger (`xp_transactions`) por victoria y participación.
-     c. Actualiza los registros de maestría léxica (`user_mastery`) de los aprendices sobre las palabras puestas en juego.
+  4. El Sistema invoca al núcleo relacional autenticándose con un token JWT interno Servicio-a-Servicio (S2S) y abre una transacción ACID en PostgreSQL:
+     a. Persiste el cierre de la partida (`matches`) y las estadísticas finales de cada participante (`match_participants`).
+     b. Persiste el desglose granular de respuestas ronda por ronda en `quiz_attempts` vinculado a `match_rounds` para consultas de *Replay*.
+     c. Inserta los registros de ganancia de XP en el ledger (`xp_transactions`) por victoria y participación.
+     d. Actualiza los registros de maestría léxica (`user_mastery`) de los aprendices sobre las palabras puestas en juego mediante el algoritmo SM-2.
   5. El Sistema libera los recursos en memoria de la sala y cierra formalmente las conexiones de la sesión de juego.
 * **Flujos de Excepción:**
   * **4a. Falla de persistencia transaccional:** El Sistema registra el incidente en los registros de auditoría y programa un reintento en segundo plano de la consolidación de puntos para evitar pérdida de progreso.
@@ -766,8 +768,8 @@ Los requisitos funcionales expresan de forma formal, verificable y atómica el c
 | **RF12** | Gestión de Barajas y Colecciones Personales | CU10, CU11 | Alta | El sistema permitirá a los usuarios crear, editar y organizar barajas de tarjetas y colecciones temáticas en su espacio Studio. | **Dado** un usuario en el diccionario, **Cuando** presiona "Guardar en Baraja", **Entonces** la tarjeta se asocia de forma atómica a la baraja elegida. |
 | **RF13** | Motor de Repetición Espaciada (SM-2) | CU12 | Alta | El sistema calculará la fecha de próximo repaso y el factor de facilidad de cada tarjeta según las calificaciones de recuerdo obtenidas. | **Dado** un acierto consecutivo de dificultad 4, **Cuando** finaliza el repaso, **Entonces** la fecha de próximo repaso se espacia según la fórmula SM-2. |
 | **RF14** | Tablero de Maestría y Ledger de XP | CU13 | Alta | El sistema mantendrá un libro de transacciones de puntos de experiencia (`xp_transactions`) y calculará rachas diarias e insignias de dominio. | **Dado** un usuario que completa su meta diaria, **Cuando** finaliza, **Entonces** se inserta un registro en el ledger y la racha incrementa en 1. |
-| **RF15** | Creación y Lobbies de Arena por PIN | CU14 | Alta | El sistema permitirá crear salas de juego en tiempo real vinculadas a una baraja, expidiendo un código PIN para que otros jugadores se unan. | **Dado** un host que crea una sala, **Cuando** confirma, **Entonces** se expide un PIN de 6 caracteres y se inicializa la sala en memoria. |
-| **RF16** | Ejecución Sincronizada y Podio de Arena | CU15, CU16 | Alta | El sistema emitirá preguntas simultáneas vía WebSocket con temporizador de cuenta regresiva, computará marcadores y persistirá los resultados. | **Dado** el fin de la última ronda, **Cuando** concluye el tiempo, **Entonces** el sistema persiste los resultados en `matches` y otorga XP al podio. |
+| **RF15** | Creación y Lobbies de Arena por PIN | CU14 | Alta | El sistema permitirá crear salas de juego en tiempo real vinculadas a una baraja con $\ge 8$ sentidos aprobados, expidiendo un código PIN y persistiendo las rondas en `match_rounds`. | **Dado** un host que crea una sala con una baraja válida, **Cuando** confirma, **Entonces** se expide un PIN de 6 caracteres y se inicializa la sala. |
+| **RF16** | Ejecución Sincronizada, Podio y Replay de Arena | CU15, CU16 | Alta | El sistema emitirá preguntas simultáneas vía WebSocket, computará marcadores desempatando por `total_time_spent_ms` y persistirá el podio y el replay por ronda en `quiz_attempts`. | **Dado** el fin de la última ronda, **Cuando** concluye el tiempo, **Entonces** el sistema consolida vía JWT S2S en `matches`, `match_participants` y `quiz_attempts`. |
 
 ---
 
@@ -777,7 +779,7 @@ Los requisitos no funcionales definen los estándares de calidad arquitectónica
 
 #### 2.6.1. Seguridad (RNF-SEG)
 * **RNF-SEG-01 (Cifrado de Credenciales):** Las contraseñas de las cuentas de usuario deberán almacenarse mediante algoritmos de derivación de claves robustos (*Argon2id* o *Bcrypt* con factor de costo $\ge 10$). Está estrictamente prohibido el almacenamiento en texto plano.
-* **RNF-SEG-02 (Autenticación y Autorización por Tokens):** La identidad en la API REST deberá validarse mediante tokens criptográficos JWT (*JSON Web Tokens*) firmados con algoritmo HMAC-SHA256, con tiempo de expiración configurado y validación estricta de firma.
+* **RNF-SEG-02 (Autenticación y Autorización por Tokens):** La identidad en la API REST deberá validarse mediante tokens criptográficos JWT (*JSON Web Tokens*) firmados con algoritmo HMAC-SHA256, y las llamadas internas entre servicios (`realtime-service` $\to$ `core-service`) emplearán tokens S2S firmados con una sub-llave criptográfica derivada independiente de los tokens de cliente.
 * **RNF-SEG-03 (Protección contra Inyecciones):** Todas las consultas a la base de datos PostgreSQL deberán ejecutarse a través de consultas preparadas y parametrizadas compiladas estáticamente con `sqlc` sobre `pgxpool`, mitigando ataques de inyección SQL (SQLi).
 * **RNF-SEG-04 (Sanitización y Moderación Multimedia):** Las imágenes procesadas por el `image-service` deberán someterse a inspección de cabeceras binarias (eliminación de metadatos EXIF) y re-codificación forzosa en formato optimizado (*WebP* o *PNG*) para neutralizar archivos maliciosos.
 
@@ -787,8 +789,8 @@ Los requisitos no funcionales definen los estándares de calidad arquitectónica
 * **RNF-REN-03 (Tiempo de Arranque del Cliente):** La aplicación cliente de escritorio (Wails v2) deberá inicializarse y presentar la portada interactiva en un tiempo no mayor a **2.0 segundos** en equipos con hardware promedio.
 
 #### 2.6.3. Disponibilidad y Confiabilidad (RNF-DIS / RNF-CON)
-* **RNF-CON-01 (Transaccionalidad e Integridad ACID):** Toda operación que involucre el saldo de experiencia (`xp_transactions`), la asociación de tarjetas a barajas y la auto-aprobación por quórum deberá ejecutarse dentro de transacciones atómicas de PostgreSQL con nivel de aislamiento *Read Committed*.
-* **RNF-CON-02 (Tolerancia a Desconexión en Arena):** Si un jugador experimenta una micro-desconexión en la red WebSocket durante una partida, el sistema le permitirá reconectarse automáticamente a la sala dentro de un margen de 10 segundos sin perder su puntaje acumulado.
+* **RNF-CON-01 (Transaccionalidad e Integridad ACID):** Toda operación que involucre el saldo de experiencia (`xp_transactions`), la consolidación de partidas (`matches`, `match_participants`, `quiz_attempts`), la asociación de tarjetas a barajas y la auto-aprobación por quórum deberá ejecutarse dentro de transacciones atómicas de PostgreSQL con nivel de aislamiento *Read Committed*.
+* **RNF-CON-02 (Tolerancia a Desconexión y Sucesión de Host en Arena):** Si un jugador experimenta una micro-desconexión en la red WebSocket durante una partida, el sistema le permitirá reconectarse automáticamente a la sala dentro de un margen de 10 segundos sin perder su puntaje acumulado; si el Host abandona en estado de espera (`WAITING`) y no reconecta tras 10 segundos, el rol de Host se transferirá automáticamente al jugador conectado más antiguo.
 * **RNF-DIS-01 (Resiliencia de Servicios Satélite):** Una degradación o caída del servicio de imágenes (`image-service`) no deberá interrumpir ni degradar las operaciones del diccionario textual, las consultas de Studio ni el desarrollo de partidas multijugador.
 
 #### 2.6.4. Interoperabilidad y Portabilidad (RNF-INT)
@@ -824,4 +826,3 @@ Las restricciones delimitan las decisiones arquitectónicas, tecnológicas y nor
    - El alcance idiomático está estrictamente restringido a la **lengua española** y sus variantes dialectales panhispánicas.
    - La plataforma no admitirá pasarelas de pago monetarias directas; el acceso se gobernará mediante boletos de invitación institucionales o personales emitidos por el Administrador.
    - Las reglas pedagógicas del motor de estudio deben ceñirse rigurosamente al algoritmo matemático de repetición espaciada **SuperMemo SM-2**.
-
