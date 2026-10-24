@@ -856,6 +856,21 @@ type MatchParticipant struct {
 	XpEarned         int32     `json:"xp_earned"`
 }
 
+type MatchRound struct {
+	IDMatch       uuid.UUID    `json:"id_match"`
+	RoundNumber   int16        `json:"round_number"`
+	IDSense       int32        `json:"id_sense"`
+	IDQuestion    pgtype.Int4  `json:"id_question"`
+	Modality      QuestionType `json:"modality"`
+	Prompt        string       `json:"prompt"`
+	OptionA       string       `json:"option_a"`
+	OptionB       string       `json:"option_b"`
+	OptionC       string       `json:"option_c"`
+	OptionD       string       `json:"option_d"`
+	CorrectOption string       `json:"correct_option"`
+	Explanation   string       `json:"explanation"`
+}
+
 type Question struct {
 	IDQuestion        int32              `json:"id_question"`
 	IDSense           int32              `json:"id_sense"`
@@ -872,10 +887,13 @@ type QuizAttempt struct {
 	IDUser         uuid.UUID          `json:"id_user"`
 	IDSense        int32              `json:"id_sense"`
 	IDQuestion     pgtype.Int4        `json:"id_question"`
+	IDMatch        pgtype.UUID        `json:"id_match"`
+	RoundNumber    pgtype.Int2        `json:"round_number"`
 	SelectedOption string             `json:"selected_option"`
 	IsCorrect      bool               `json:"is_correct"`
 	QualityRating  pgtype.Int2        `json:"quality_rating"`
 	TimeSpentMs    int32              `json:"time_spent_ms"`
+	PointsEarned   int32              `json:"points_earned"`
 	AnsweredAt     pgtype.Timestamptz `json:"answered_at"`
 }
 

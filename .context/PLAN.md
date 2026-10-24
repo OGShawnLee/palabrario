@@ -5,7 +5,7 @@
 > **Stack Backend Unificado (100% Go):** `Go 1.24 + Chi v5 + sqlc + pgxpool/v5` (`core-service :8000`, `realtime-service :8001`, `image-service :8002`) + Puente IPC Nativo Wails (`local-app/app.go`) sobre `PostgreSQL 17 Alpine (:5432)`  
 > **Referencias Canónicas:** [`DOMAIN.md`](./DOMAIN.md) · [`INTERFACES.md`](./INTERFACES.md) · [`SCHEMA_FINAL.sql`](../SCHEMA_FINAL.sql) · [`.context/academic/1-PROJECT-SPECIFICATION.md`](./academic/1-PROJECT-SPECIFICATION.md)
 
----
+---\
 
 ## 0. Principio Rector de Ingeniería: Backend-First & Cadena Tipada End-to-End con Wails IPC
 
@@ -20,11 +20,11 @@
 > Por ello, **el desarrollo sigue estrictamente esta cadena de 6 eslabones sin alucinaciones:**
 > $$\text{1. SQL (`SCHEMA_FINAL.sql`)} \to \text{2. `sqlc`} \to \text{3. `pkg/models` + SOA Go} \to \text{4. Tests} \to \text{5. Métodos Go en `local-app/app.go` (`wails generate`)} \to \text{6. Vistas Vue 3}$$
 
----
+---\
 
 ## 1. Diagnóstico Ejecutivo: ¿Dónde Estamos Hoy?
 
-Al auditar el código real del repositorio frente a los **16 Casos de Uso (`CU01–CU16`)** y las **11 Reglas de Negocio (`RN01–RN11`)**, el proyecto ha cerrado con éxito la **Fase 3.3** (Diccionario y Curaduría por Quórum), la **Fase 3.4** (Studio Personal, Motor SM-2 y Ledger de XP) y la **Fase 3.5** (Módulo de Cuenta, Perfiles Sociales, Gobernanza y Moderación, más la refactorización de utilidades en `REFACTOR.md`), y cuenta con el esquema relacional en 3NF (`match_rounds` + `quiz_attempts`) y las consultas `sqlc` de Arena ya compiladas para ejecutar los pasos atómicos de la **Fase 4 (`realtime-service` en Go 1.24, `ArenaCatalogService` con Replay 3NF, Seguridad S2S y `image-service`)**:
+Al auditar el código real del repositorio frente a los **16 Casos de Uso (`CU01–CU16`)** y las **11 Reglas de Negocio (`RN01–RN11`)**, el proyecto ha cerrado con éxito la **Fase 3.3** (Diccionario y Curaduría por Quórum), la **Fase 3.4** (Studio Personal, Motor SM-2 y Ledger de XP), la **Fase 3.5** (Módulo de Cuenta, Perfiles Sociales, Gobernanza y Moderación) y las **Sub-fases 4.1 y 4.2** de la **Fase 4 (Seguridad S2S, DTOs de Arena, `ArenaCatalogService`, Replay 3NF y suite de pruebas en `core-service`)**:
 
 ```mermaid
 flowchart LR
@@ -33,8 +33,10 @@ flowchart LR
     F31 --> F33["✅ Fase 3.3\nDiccionario & Curaduría\n(100%)"]
     F33 --> F34["✅ Fase 3.4\nStudio & Motor SM-2\n(100%)"]
     F34 --> F35["✅ Fase 3.5\nGobernanza & Reportes\n(100%)"]
-    F35 --> F4["🚧 Fase 4 (ACTUAL)\nArena 3NF + S2S JWT +\nRealtime WS & ImageSvc\n(Sub-fases 4.1–4.4)"]
-    F4 --> F5["⏳ Fase 5\nPuente Wails (app.go)\n+ Bindings TS & UI\n(Auth & Search listos)"]
+    F35 --> F41["✅ Sub-fases 4.1 & 4.2\nS2S JWT + Arena 3NF\nReplay en core-service"]
+    F41 --> F43["🚧 Sub-fase 4.3 (ACTUAL)\nArenaHub + ActiveRoom\nWebSockets & Sucesión Host"]
+    F43 --> F44["⏳ Sub-fase 4.4\nimage-service EXIF\n(:8002)"]
+    F44 --> F5["⏳ Fase 5\nPuente Wails (app.go)\n+ Bindings TS & UI"]
     F5 --> F6["🌱 Fase 6 (Largo Plazo)\nEventos de Temporada"]
 ```
 
@@ -43,24 +45,24 @@ flowchart LR
 | Componente / Módulo | Estado Actual Real | Lo que YA existe y compila | Lo que FALTA por construir |
 | :--- | :---: | :--- | :--- |
 | **1. Base de Datos ([`SCHEMA_FINAL.sql`](../SCHEMA_FINAL.sql)) y `sqlc`** | **100% Completo** | 24 tablas en 3NF (incluyendo `match_rounds` y evolución de `quiz_attempts` para Replay ronda por ronda, más baraja semilla 1 con 8 sentidos aprobados), triggers `RN06` y `RN07`, y [`sql/queries/arena.sql`](../sql/queries/arena.sql) compilado a `core-service/internal/db/arena.sql.go`. | Nada en SQL ni `sqlc` (100% sellado y compilado). |
-| **2. Paquetes Compartidos ([`pkg/`](../pkg))** | **95% Completo** | `pkg/auth` (JWT de usuario + `bcrypt`), `pkg/response` (JSON/Error unificados), `pkg/utils` (`ToPtr[T]`), modelos de Diccionario, Curaduría, Studio, Gobernanza y Usuario completos. | **Sub-fase 4.1:** Añadir JWT S2S con sub-llave derivada en `pkg/auth/auth.go` y ampliar `pkg/models/arena.go` con los DTOs de la sección 2.7.2 de `INTERFACES.md`. |
-| **3. `core-service` — Auth & Cuentas (`CU01`)** | **100% Completo** | Capa SOA `IdentityService` (`SignUp`, `SignIn` con verificación de `is_active`, `GetMe`, `UpdateProfile`, `ChangePassword`, `GetPublicProfileByUsername` con vista dual **RN01**), handlers y middlewares base. | **Sub-fase 4.1:** Añadir middleware `RequireInternalService` en `auth_middleware.go`. |
-| **4. `core-service` — Diccionario (`CU05, CU06`)** | **100% Completo** | Capa SOA `DictionaryService` completa con FTS + trigramas, palabra del día, explorador paginado y autoría de lemas, sentidos, ejemplos y conceptos semánticos. | Nada en `core-service`. |
-| **5. `core-service` — Curaduría y Moderación (`CU07–CU09`)** | **100% Completo** | `CurationService` y endpoints para cola de quórum, votación (`RN06` y `RN07`), veto admin (`RN08`) y reportes comunitarios (`CU09`). | Nada en `core-service`. |
-| **6. `core-service` — Studio y SM-2 (`CU10–CU13`)** | **100% Completo** | `StudioService` (`RN03`, `RN04`, `RN05`), `MasteryService` (`CalculateSM2` puro, transacción ACID `pgx.Tx` con `xp_transactions` **RN11** y rachas en `users`). | Nada en `core-service`. |
-| **7. `core-service` — Gobernanza (`CU02–CU04`)** | **100% Completo** | `GovernanceService` (`RN02`, promoción atómica a `EDITOR`, protección del último `ADMIN`, boletos con `SELECT ... FOR UPDATE`). | Nada en `core-service`. |
-| **8. `core-service` — Arena & Replay (`CU14, CU16`)** | **25% Base SQL** | Tablas `matches`, `match_rounds`, `match_participants`, `quiz_attempts` y código `sqlc` en `core-service/internal/db/arena.sql.go`. | **Sub-fase 4.2:** Implementar `arena_catalog_service.go`, `arena_handler.go`, rutas `/api/v1/arena/matches/*` en `router.go` y pruebas en `arena_service_test.go`. |
+| **2. Paquetes Compartidos ([`pkg/`](../pkg))** | **100% Completo** | `pkg/auth` (JWT de usuario + sub-clave S2S derivada con `sha256` y TTL 30s), `pkg/response`, `pkg/utils`, modelos de Diccionario, Curaduría, Studio, Gobernanza, Usuario y Arena 3NF (`pkg/models/arena.go`). | Nada en paquetes compartidos. |
+| **3. `core-service` — Auth & Cuentas (`CU01`)** | **100% Completo** | Capa SOA `IdentityService`, middleware `RequireAuth`, `RequireRole`, `OptionalAuth` y `RequireInternalService` para S2S. | Nada en Auth. |
+| **4. `core-service` — Diccionario (`CU05, CU06`)** | **100% Completo** | Capa SOA `DictionaryService` completa con FTS + trigramas, palabra del día, explorador paginado y autoría de lemas, sentidos, ejemplos y conceptos semánticos. | Nada en Diccionario. |
+| **5. `core-service` — Curaduría y Moderación (`CU07–CU09`)** | **100% Completo** | `CurationService` y endpoints para cola de quórum, votación (`RN06` y `RN07`), veto admin (`RN08`) y reportes comunitarios (`CU09`). | Nada en Curaduría. |
+| **6. `core-service` — Studio y SM-2 (`CU10–CU13`)** | **100% Completo** | `StudioService` (`RN03`, `RN04`, `RN05`), `MasteryService` (`CalculateSM2` puro, transacción ACID `pgx.Tx` con `xp_transactions` **RN11** y rachas en `users`). | Nada en Studio. |
+| **7. `core-service` — Gobernanza (`CU02–CU04`)** | **100% Completo** | `GovernanceService` (`RN02`, promoción atómica a `EDITOR`, protección del último `ADMIN`, boletos con `SELECT ... FOR UPDATE`). | Nada en Gobernanza. |
+| **8. `core-service` — Arena & Replay (`CU14, CU16`)** | **100% Completo** | `ArenaCatalogService`, handlers en `/api/v1/arena/matches/*`, validación de 8 sentidos mínimos, generación de distractores fallback, consolidación Batch Flush ACID, desempate determinista, Replay 3NF con autorización y tests en `arena_service_test.go`. | Nada en `core-service`. |
 | **9. `realtime-service` (`CU15, CU16`)** | **25% Esqueleto Go** | Ya migrado a Go 1.24 + Chi v5 en puerto `8001` ([`realtime-service/main.go`](../realtime-service/main.go) y `Dockerfile` multi-stage). | **Sub-fase 4.3:** Implementar `ArenaHub` y `ActiveRoom` (`hub.go`, `room.go`, `client_core.go`), WebSockets con cupo 8, reloj monotónico `RN10`, reconexión 10s (`RNF-CON-02`), sucesión de Host al más antiguo, Batch Flush S2S y pruebas en `arena_test.go`. |
 | **10. `image-service` (Multimedia)** | **25% Esqueleto Go** | Ya migrado a Go 1.24 + Chi v5 en puerto `8002` con `/health`, graceful shutdown y `Dockerfile` multi-stage. | **Sub-fase 4.4:** Implementar `POST /api/v1/images/upload` con validación de magic bytes, limpieza EXIF (`RNF-SEG-04`) y pruebas. |
 | **11. Puente Wails Go (`local-app/app.go`) + UI** | **25% Puente / 100% UI Mock** | `local-app/app.go` implementa bóveda JWT en RAM y consultas iniciales (`SearchWords`, `GetWordDetail`). | En **Fase 5**, exponer métodos puente para todos los módulos, correr `wails generate module` y conectar vistas Vue 3. |
 
----
+---\
 
 ## 2. Plan de Implementación Paso a Paso (Checklist Operativo para Agentes)
 
 Cada fase y sub-fase de backend está diseñada como una unidad atómica de trabajo verificable mediante `sqlc generate && go build ./core-service/... ./realtime-service/... ./image-service/... ./pkg/...` y `.\scripts\test.ps1`.
 
----
+---\
 
 ### ✅ FASE 3.3 (COMPLETADA): Módulo de Diccionario y Curaduría por Quórum (`CU05, CU06, CU07, CU08`)
 
@@ -72,7 +74,7 @@ Cada fase y sub-fase de backend está diseñada como una unidad atómica de trab
 3. **[x] Servicios SOA (`core-service/internal/service/`):** Implementados `dictionary_service.go` y `curation_service.go` (`RN06`, `RN07`, `RN08`).
 4. **[x] Handlers, Router y Pruebas (`core-service/internal/`):** Actualizado `dictionary_handler.go`, creado `curation_handler.go`, rutas en `router.go` y pruebas en `service_test.go`.
 
----
+---\
 
 ### ✅ FASE 3.4 (COMPLETADA): Studio Personal, Motor Matemático SM-2 y Ledger de XP (`CU10, CU11, CU12, CU13`)
 
@@ -84,7 +86,7 @@ Cada fase y sub-fase de backend está diseñada como una unidad atómica de trab
 3. **[x] Servicios SOA (`core-service/internal/service/`):** Implementados `studio_service.go` (`RN03`, `RN04`, `RN05`) y `mastery_service.go` (`CalculateSM2`, `RN09`, `RN11`).
 4. **[x] Handlers, Router y Pruebas (`core-service/internal/`):** Creados `studio_handler.go`, `mastery_handler.go` y `studio_mastery_test.go`.
 
----
+---\
 
 ### ✅ FASE 3.5 (COMPLETADA + REFACTORIZADA): Módulo de Cuenta, Perfiles Sociales, Gobernanza y Moderación (`CU01, CU02, CU03, CU04, CU09`)
 
@@ -94,89 +96,56 @@ Cada fase y sub-fase de backend está diseñada como una unidad atómica de trab
 1. **[x] Modelos y Consultas:** Creado `pkg/models/governance.go`, ampliados `pkg/models/user.go`, `sql/queries/users.sql`, `sql/queries/curation.sql` y creado `sql/queries/governance.sql`.
 2. **[x] Servicios SOA, Handlers y Refactorización (`REFACTOR.md`):** Ampliados `identity_service.go`, `curation_service.go`, creado `governance_service.go`, handlers, helpers y pruebas en `governance_reports_test.go`.
 
----
+---\
 
-### 📍 FASE 4 (Prioridad Inmediata — Descompuesta en 4 Pasos Atómicos): Arena Multijugador 3NF, Seguridad S2S, `realtime-service` e `image-service` (`CU14, CU15, CU16`)
+### 📍 FASE 4: Arena Multijugador 3NF, Seguridad S2S, `realtime-service` e `image-service` (`CU14, CU15, CU16`)
 
 > **Objetivo:** Implementar la Arena Multijugador de principio a fin respetando estrictamente la sección **2.7** de [`INTERFACES.md`](./INTERFACES.md) y el apartado **3.5** de [`DOMAIN.md`](./DOMAIN.md).
-> **Trabajo Previo Ya Sellado por el Arquitecto:**
-> - [x] Migrado el esqueleto de `realtime-service` a Go 1.24 + Chi v5 (`realtime-service/main.go` y `Dockerfile`).
-> - [x] Actualizado [`SCHEMA_FINAL.sql`](../SCHEMA_FINAL.sql) con la tabla relacional 3NF `match_rounds`, la evolución de `quiz_attempts` para Replay ronda por ronda y la baraja semilla `id_deck = 1` con 8 sentidos aprobados.
-> - [x] Creado [`sql/queries/arena.sql`](../sql/queries/arena.sql) y generado `core-service/internal/db/arena.sql.go` con `sqlc generate`.
-
-Para garantizar cero desviaciones y ejecución limpia con **Gemini 3.8 Flash High**, la Fase 4 se divide en **4 Sub-Fases Atómicas Secuenciales**:
 
 ---
 
-#### 🔹 SUB-FASE 4.1: Seguridad JWT Servicio-a-Servicio (`S2S`) y Contratos de Datos de Arena (`pkg/auth`, `pkg/models/arena.go`, `auth_middleware.go`)
+#### ✅ SUB-FASE 4.1 (COMPLETADA): Seguridad JWT Servicio-a-Servicio (`S2S`) y Contratos de Datos de Arena (`pkg/auth`, `pkg/models/arena.go`, `auth_middleware.go`)
 
-1. **[ ] Sub-Llave Criptográfica S2S en [`pkg/auth/auth.go`](../pkg/auth/auth.go):**
-   - Añadir el campo `s2sSecretKey []byte` en `TokenService`, inicializado en `NewTokenService` como el hash `sha256.Sum256([]byte(secretKey + ":palabrario-s2s-internal"))`.
-   - Definir `const InternalServiceContextKey contextKey = "internal_service_claims"` y el struct:
-     ```go
-     type InternalServiceClaims struct {
-         ServiceName string `json:"service_name"`
-         MatchScope  string `json:"match_scope"`
-         jwt.RegisteredClaims
-     }
-     ```
-   - Implementar `(s *TokenService) GenerateInternalToken(serviceName string, matchScope string) (string, error)` que firme con `jwt.SigningMethodHS256` usando `s.s2sSecretKey`, `Issuer: "palabrario-internal-s2s"`, `Subject: serviceName`, `MatchScope: matchScope` y expiración de `30 * time.Second`.
-   - Implementar `(s *TokenService) VerifyInternalToken(tokenString string) (*InternalServiceClaims, error)` que verifique la firma exclusivamente con `s.s2sSecretKey` y valide que `claims.Issuer == "palabrario-internal-s2s"`.
-   - En `VerifyToken` (tokens de usuarios humanos), validar además que `claims.Issuer == "palabrario-core-service"` para impedir cualquier cruce de tokens.
-2. **[ ] Middleware `RequireInternalService` en [`core-service/internal/api/middleware/auth_middleware.go`](../core-service/internal/api/middleware/auth_middleware.go):**
-   - Añadir `(m *AuthMiddleware) RequireInternalService(next http.Handler) http.Handler` que extraiga el header `Authorization: Bearer <token>`, invoque `m.tokenService.VerifyInternalToken(token)` (respondiendo `403 Forbidden` si se envía un token inválido o de usuario humano, o `401 Unauthorized` si falta el header) e inyecte `InternalServiceClaims` en `auth.InternalServiceContextKey`.
-3. **[ ] Modelos Completos de Arena y Replay 3NF en [`pkg/models/arena.go`](../pkg/models/arena.go):**
-   - Añadir todas las estructuras de datos especificadas en la sección **2.7.2** de [`INTERFACES.md`](./INTERFACES.md): `CreateMatchRequest`, `InternalArenaQuestion`, `MatchPackage`, `SubmitAnswerPayload`, `RoundResultPayload`, `ParticipantRoundAttempt`, `ParticipantFinalResult`, `ConsolidateMatchRequest`, `MatchSummary`, `ParticipantRoundAnswer`, `MatchRoundReplay` y `MatchReplayDetail`.
+1. **[x] Sub-Llave Criptográfica S2S en [`pkg/auth/auth.go`](../pkg/auth/auth.go):**
+   - Campo `s2sSecretKey []byte` en `TokenService`, derivado en `NewTokenService` como `sha256.Sum256([]byte(secretKey + ":palabrario-s2s-internal"))`.
+   - `InternalServiceClaims` con `ServiceName`, `MatchScope` e `Issuer: "palabrario-internal-s2s"`.
+   - Implementados `GenerateInternalToken` (TTL 30s) y `VerifyInternalToken`.
+   - `VerifyToken` valida estrictamente `claims.Issuer == "palabrario-core-service"`.
+2. **[x] Middleware `RequireInternalService` en [`core-service/internal/api/middleware/auth_middleware.go`](../core-service/internal/api/middleware/auth_middleware.go):**
+   - Valida el token interno con `m.tokenService.VerifyInternalToken(token)` (`403 Forbidden` si es inválido o de usuario humano) e inyecta `claims` en `auth.InternalServiceContextKey`.
+3. **[x] Modelos Completos de Arena y Replay 3NF en [`pkg/models/arena.go`](../pkg/models/arena.go):**
+   - Incorporadas todas las estructuras de la sección **2.7.2** de [`INTERFACES.md`](./INTERFACES.md): `CreateMatchRequest`, `InternalArenaQuestion`, `MatchPackage`, `SubmitAnswerPayload`, `RoundResultPayload`, `ParticipantRoundAttempt`, `ParticipantFinalResult`, `ConsolidateMatchRequest`, `MatchSummary`, `ParticipantRoundAnswer`, `MatchRoundReplay` y `MatchReplayDetail`.
 
 ---
 
-#### 🔹 SUB-FASE 4.2: `ArenaCatalogService`, Generación de Rondas 3NF, Batch Flush ACID y Replay en `core-service` (`CU14, CU16`)
+#### ✅ SUB-FASE 4.2 (COMPLETADA): `ArenaCatalogService`, Generación de Rondas 3NF, Batch Flush ACID y Replay en `core-service` (`CU14, CU16`)
 
-1. **[ ] Implementar `ArenaCatalogService` en `core-service/internal/service/arena_catalog_service.go`:**
-   - Definir e implementar la interfaz `ArenaCatalogService` de la sección **2.7.3** de `INTERFACES.md`:
-     - **`PrepareMatch` (`CU14`):**
-       - Normalizar defaults: si `req.TotalRounds == 0` $\to$ `8`; validar `req.TotalRounds` entre `8` y `20` (`ErrInvalidInput` si fuera de rango). Si `req.RoundTimeSec == 0` $\to$ `15`; validar entre `10` y `30` (`ErrInvalidInput`). `isPublic = true` por defecto si `req.IsPublic == nil`.
-       - Obtener la baraja con `GetDeckByID` (`ErrNotFound` si no existe) y validar privacidad **RN04** (si `!deck.IsPublic` y el solicitante no es propietario ni `ADMIN`, devolver `ErrForbidden`).
-       - Consultar los sentidos aprobados de la baraja con `GetApprovedDeckSensesForArena`.
-       - **Regla de Límites de Arena (`CU14 1a`):** Si `len(senses) < 8` o `len(senses) < req.TotalRounds`, devolver `NewDomainError(ErrUnprocessable, "La baraja debe tener al menos 8 sentidos aprobados y al menos tantos sentidos como el número de rondas solicitadas")`.
-       - Seleccionar `req.TotalRounds` sentidos únicos barajados aleatoriamente (`math/rand/v2`), consultar si tienen pregunta curada en `GetCuratedQuestionsBySenseIDs` y, para cada sentido que no tenga fila en `questions`, generar dinámicamente un reactivo `WORD_TO_DEFINITION` (Prompt: `"¿Cuál es el significado de «" + lemma + "» (" + regionName + ")?"`, `CorrectOption = sense.ShortDefinition`, más 3 `ShortDefinition` distractoras tomadas de otros 3 sentidos distintos de la misma baraja, barajando las 4 opciones).
-       - Dentro de una transacción `pgx.Tx`, generar un `room_code` alfanumérico único de 6 caracteres en mayúsculas, insertar en `matches` (`CreateMatch`) e insertar cada una de las `TotalRounds` rondas en `match_rounds` (`InsertMatchRound`). Retornar `*models.MatchPackage`.
-     - **`GetMatchPackageByRoomCode` (`CU14/CU15`):**
-       - Consultar `GetMatchByRoomCode` y `ListMatchRoundsByMatchID`. Si no existe, devolver `ErrNotFound`; si `status == 'FINISHED'`, devolver `ErrConflict`. Construir y retornar `*models.MatchPackage`.
-     - **`ConsolidateMatch` (`CU16` — Batch Flush ACID + Replay + SM-2 + XP):**
-       - Validar `req.IDMatch` y `GetMatchByID` (`ErrNotFound` si no existe, `ErrConflict` si ya está en `'FINISHED'`).
-       - Ordenar una copia de `req.Participants` aplicando el criterio determinístico de desempate:
-         1. `FinalScore DESC`
-         2. `len(CorrectSenseIDs) DESC`
-         3. `TotalTimeSpentMs ASC`
-       - Asignar `FinalRank = i + 1` ($1 \dots N$) y determinar `winnerUserID` (el `IDUser` con `FinalRank == 1`).
-       - Abrir transacción `pgx.Tx`:
-         1. Ejecutar `MarkMatchFinished` actualizando `status = 'FINISHED'`, `winner_user_id` y `finished_at = now()`.
-         2. Por cada participante:
-            - Calcular `xpEarned` según la sección **2.7.4** de `INTERFACES.md`: Rank 1 $\to$ `150` (`reason = 'MATCH_WIN'`), Rank 2 $\to$ `100` (`reason = 'QUIZ_CORRECT'`), Rank 3 $\to$ `75` (`reason = 'QUIZ_CORRECT'`), Rank $\ge 4$ $\to$ `40` (`reason = 'QUIZ_CORRECT'`).
-            - Ejecutar `UpsertMatchParticipant` guardando `score`, `final_rank`, `correct_answers` (`len(CorrectSenseIDs)`), `total_time_spent_ms` y `xp_earned`.
-            - Por cada intento en `p.RoundAttempts`, ejecutar `UpsertMatchRoundQuizAttempt` guardando el desglose de esa ronda en `quiz_attempts` (`quality_rating = 3` si `is_correct` else `1`).
-            - Insertar el asiento de XP en `xp_transactions` (`InsertXPTransaction` con `metadata_id = req.IDMatch`) y actualizar el saldo/nivel/racha del jugador con `AddUserXPAndUpdateStreak` (**RN11**).
-            - Actualizar la maestría SM-2 (**RN09**) en `user_mastery` (`GetUserMasteryForSense` + `CalculateSM2` + `UpsertUserMastery`): para cada `senseID` en `p.CorrectSenseIDs` aplicar `qualityRating = 3`, y para cada `senseID` en `p.WrongSenseIDs` aplicar `qualityRating = 1`.
-         3. Confirmar `tx.Commit(ctx)` y retornar `*models.MatchSummary`.
-     - **`ListMatchHistory` y `GetMatchReplay` (`CU13 / CU16`):**
-       - `ListMatchHistory`: usa `ListUserMatchHistory` (default `limit = 20`) y `ListMatchParticipantsByMatchIDs` para poblar el `Podium` de cada partida.
-       - `GetMatchReplay`: obtiene la partida (`GetMatchByID`), los participantes (`ListMatchParticipantsByMatchIDs`), las rondas en 3NF (`ListMatchRoundsByMatchID`) y los intentos por ronda (`ListMatchQuizAttemptsByMatchID`), ensamblando `*models.MatchReplayDetail` con las respuestas de cada jugador anidadas en su `RoundNumber` correspondiente.
-2. **[ ] Implementar Handler y Rutas en `core-service/internal/api/`:**
-   - Crear `core-service/internal/api/handlers/arena_handler.go` exponiendo los 5 endpoints de la sección **2.7.5** de `INTERFACES.md`.
-   - Montar en [`core-service/internal/api/router.go`](../core-service/internal/api/router.go) el grupo `/api/v1/arena/matches`:
-     - `POST /prepare`, `GET /history` y `GET /{matchId}` protegidos con `authMiddleware.RequireAuth`.
-     - `GET /{roomCode}/package` y `POST /consolidate` protegidos exclusivamente con `authMiddleware.RequireInternalService`.
-3. **[ ] Pruebas de Integración en `core-service/internal/service/arena_service_test.go`:**
-   - Usando `testutil.SetupTestDB(t)`, verificar:
-     1. Rechazo `ErrUnprocessable` (`422`) cuando una baraja tiene $< 8$ sentidos aprobados o cuando `TotalRounds > ApprovedSenses`.
-     2. Éxito en `PrepareMatch` con la baraja semilla 1 (8 sentidos aprobados), verificando que las 8 rondas tienen sentidos únicos y quedan persistidas en `match_rounds`.
-     3. Rechazo `403 Forbidden` si un token JWT de usuario normal intenta llamar a `/package` o `/consolidate`, y éxito con token generado por `GenerateInternalToken`.
-     4. Ejecución de `ConsolidateMatch` verificando el desempate por `TotalTimeSpentMs ASC`, los premios de XP (`+150`, `+100`), la actualización de `user_mastery` (`RN09`) y la consulta completa de `GetMatchReplay` ronda por ronda.
+1. **[x] Implementar `ArenaCatalogService` en `core-service/internal/service/arena_catalog_service.go`:**
+   - **`PrepareMatch` (`CU14`):**
+     - Defaults (`TotalRounds: 8..20`, `RoundTimeSec: 10..30`, `IsPublic: true`).
+     - Verificación de privacidad **RN04** con `GetDeckByID`.
+     - **Regla de Límites de Arena (`CU14 1a`):** Rechazo con `ErrUnprocessable` si `len(senses) < 8` o `len(senses) < req.TotalRounds`.
+     - Selección de sentidos únicos, carga de preguntas curadas con fallback automático `WORD_TO_DEFINITION` (distractores de la misma baraja).
+     - Persistencia transaccional de partida y rondas en `matches` y `match_rounds` (3NF).
+   - **`GetMatchPackageByRoomCode` (`CU14/CU15`):**
+     - Consulta de cabecera y rondas 3NF. Retorna `ErrConflict` si `status == 'FINISHED'`.
+   - **`ConsolidateMatch` (`CU16` — Batch Flush ACID + Replay + SM-2 + XP):**
+     - Desempate determinista: `FinalScore DESC` $\to$ `len(CorrectSenseIDs) DESC` $\to$ `TotalTimeSpentMs ASC`.
+     - Transacción atómica: `MarkMatchFinished`, `UpsertMatchParticipant`, `UpsertMatchRoundQuizAttempt`, `InsertXPTransaction` (+150/+100/+75/+40), `AddUserXPAndUpdateStreak` (**RN11**) y actualización de `user_mastery` con SM-2 (**RN09**).
+   - **`ListMatchHistory` y `GetMatchReplay` (`CU13 / CU16`):**
+     - `ListMatchHistory`: historial con podio enriquecido.
+     - `GetMatchReplay`: detalle granular ronda por ronda en 3NF con autorización (partida pública, participante o rol `ADMIN`).
+2. **[x] Handler y Rutas en `core-service/internal/api/`:**
+   - Creado `arena_handler.go` con los 5 endpoints.
+   - Enrutado en `router.go`: `/prepare`, `/history` y `/{matchId}` bajo `RequireAuth`; `/{roomCode}/package` y `/consolidate` bajo `RequireInternalService`.
+3. **[x] Pruebas de Integración en `core-service/internal/service/arena_service_test.go`:**
+   - Separación criptográfica S2S verificada.
+   - Límites y rechazos `422 Unprocessable` validados.
+   - Flujo completo de 8 rondas, persistencia en `match_rounds`, desempate determinista por tiempo, libro mayor de XP, SM-2 y Replay ronda por ronda verificado al 100%.
 
 ---
 
-#### 🔹 SUB-FASE 4.3: Motor WebSocket en `realtime-service` (`ArenaHub`, `ActiveRoom`, `RN10`, `RNF-CON-02` y Sucesión de Host)
+#### 🔹 SUB-FASE 4.3 (Prioridad Inmediata): Motor WebSocket en `realtime-service` (`ArenaHub`, `ActiveRoom`, `RN10`, `RNF-CON-02` y Sucesión de Host)
 
 1. **[ ] Cliente HTTP Interno S2S (`realtime-service/internal/arena/core_client.go`):**
    - Implementar un cliente HTTP hacia `CORE_SERVICE_URL` (default `http://localhost:8000`) que utilice `tokenService.GenerateInternalToken("realtime-service", roomCode)` en el header `Authorization: Bearer <s2sToken>` para invocar `GET /api/v1/arena/matches/{roomCode}/package` y `POST /api/v1/arena/matches/consolidate`.

@@ -53,6 +53,7 @@ func (rt *Router) Setup() http.Handler {
 	curationService := service.NewCurationService(rt.db)
 	studioService := service.NewStudioService(rt.db)
 	masteryService := service.NewMasteryService(rt.db)
+	arenaCatalogService := service.NewArenaCatalogService(rt.db)
 
 	// 2. Capa de Middlewares y Handlers HTTP
 	authMiddleware := middleware.NewAuthMiddleware(tokenService)
@@ -63,6 +64,7 @@ func (rt *Router) Setup() http.Handler {
 	curationHandler := handlers.NewCurationHandler(curationService)
 	studioHandler := handlers.NewStudioHandler(studioService)
 	masteryHandler := handlers.NewMasteryHandler(masteryService)
+	arenaHandler := handlers.NewArenaHandler(arenaCatalogService)
 	healthHandler := handlers.NewHealthHandler(rt.db)
 
 	// Health check raíz
@@ -262,6 +264,24 @@ func (rt *Router) Setup() http.Handler {
 				r.Get("/mastery", masteryHandler.GetMasteryDashboard)
 				r.Get("/mastery/items", masteryHandler.ListMasteryItems)
 				r.Get("/xp-ledger", masteryHandler.ListXPLedger)
+			})
+		})
+
+		// Módulo 7: Arena Multijugador (CU14, CU15, CU16)
+		r.Route("/arena/matches", func(r chi.Router) {
+			// Rutas protegidas para usuarios humanos
+			r.Group(func(r chi.Router) {
+				r.Use(authMiddleware.RequireAuth)
+				r.Post("/prepare", arenaHandler.PrepareMatch)
+				r.Get("/history", arenaHandler.ListHistory)
+				r.Get("/{matchId}", arenaHandler.GetReplay)
+			})
+
+			// Rutas S2S exclusivas para servicios internos (realtime-service)
+			r.Group(func(r chi.Router) {
+				r.Use(authMiddleware.RequireInternalService)
+				r.Get("/{roomCode}/package", arenaHandler.GetPackageByRoomCode)
+				r.Post("/consolidate", arenaHandler.ConsolidateMatch)
 			})
 		})
 	})

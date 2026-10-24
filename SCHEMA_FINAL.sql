@@ -408,8 +408,19 @@ CREATE TABLE user_achievements (
 );
 
 -- ------------------------------------------------------------------------------
--- 11. MULTIJUGADOR EN TIEMPO REAL: SALAS Y RESULTADOS EN LOTE (CU14, CU15, CU16)
+-- 11. BANCO DE PREGUNTAS CURADAS Y ARENA MULTIJUGADOR EN TIEMPO REAL (CU14, CU15, CU16)
 -- ------------------------------------------------------------------------------
+CREATE TABLE questions (
+  id_question SERIAL PRIMARY KEY,
+  id_sense INTEGER NOT NULL REFERENCES senses(id_sense) ON DELETE CASCADE,
+  id_editor UUID NOT NULL REFERENCES users(id_user) ON DELETE RESTRICT,
+  type question_type NOT NULL,
+  prompt TEXT NOT NULL,
+  custom_distractors JSONB NOT NULL,       -- Array JSON de 3 distractores: ["pitillo", "bombilla", "pajita"]
+  explanation TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE matches (
   id_match UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   id_deck INTEGER NOT NULL REFERENCES decks(id_deck) ON DELETE CASCADE,
@@ -418,10 +429,27 @@ CREATE TABLE matches (
   status match_status NOT NULL DEFAULT 'WAITING',
   winner_user_id UUID REFERENCES users(id_user) ON DELETE SET NULL,
   is_public BOOLEAN NOT NULL DEFAULT true,
-  total_rounds INTEGER NOT NULL DEFAULT 10,
-  round_time_sec INTEGER NOT NULL DEFAULT 15,
+  total_rounds INTEGER NOT NULL DEFAULT 8 CHECK (total_rounds BETWEEN 8 AND 20),
+  round_time_sec INTEGER NOT NULL DEFAULT 15 CHECK (round_time_sec BETWEEN 10 AND 30),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   finished_at TIMESTAMPTZ
+);
+
+-- Registro relacional en 3NF de las rondas generadas al abrir una partida (CU14 / CU16 Replay)
+CREATE TABLE match_rounds (
+  id_match UUID NOT NULL REFERENCES matches(id_match) ON DELETE CASCADE,
+  round_number SMALLINT NOT NULL CHECK (round_number >= 1),
+  id_sense INTEGER NOT NULL REFERENCES senses(id_sense) ON DELETE CASCADE,
+  id_question INTEGER REFERENCES questions(id_question) ON DELETE SET NULL,
+  modality question_type NOT NULL DEFAULT 'WORD_TO_DEFINITION',
+  prompt TEXT NOT NULL,
+  option_a TEXT NOT NULL,
+  option_b TEXT NOT NULL,
+  option_c TEXT NOT NULL,
+  option_d TEXT NOT NULL,
+  correct_option TEXT NOT NULL,
+  explanation TEXT NOT NULL,
+  PRIMARY KEY (id_match, round_number)
 );
 
 CREATE TABLE match_participants (
@@ -435,31 +463,25 @@ CREATE TABLE match_participants (
   PRIMARY KEY (id_match, id_user)
 );
 
--- ------------------------------------------------------------------------------
--- 12. BANCO DE PREGUNTAS CURADAS E INTENTOS INDIVIDUALES
--- ------------------------------------------------------------------------------
-CREATE TABLE questions (
-  id_question SERIAL PRIMARY KEY,
-  id_sense INTEGER NOT NULL REFERENCES senses(id_sense) ON DELETE CASCADE,
-  id_editor UUID NOT NULL REFERENCES users(id_user) ON DELETE RESTRICT,
-  type question_type NOT NULL,
-  prompt TEXT NOT NULL,
-  custom_distractors JSONB NOT NULL,       -- Array JSON de 3 distractores: ["pitillo", "bombilla", "pajita"]
-  explanation TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
+-- Registro de intentos individuales (CU12) y desglose por ronda en partidas de Arena (CU16 Replay)
 CREATE TABLE quiz_attempts (
   id_attempt UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   id_user UUID NOT NULL REFERENCES users(id_user) ON DELETE CASCADE,
   id_sense INTEGER NOT NULL REFERENCES senses(id_sense) ON DELETE CASCADE,
   id_question INTEGER REFERENCES questions(id_question) ON DELETE SET NULL,
+  id_match UUID REFERENCES matches(id_match) ON DELETE CASCADE,
+  round_number SMALLINT,
   selected_option VARCHAR(255) NOT NULL,
   is_correct BOOLEAN NOT NULL,
   quality_rating SMALLINT CHECK (quality_rating BETWEEN 0 AND 5),
   time_spent_ms INTEGER NOT NULL,
-  answered_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  points_earned INTEGER NOT NULL DEFAULT 0,
+  answered_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  FOREIGN KEY (id_match, round_number) REFERENCES match_rounds(id_match, round_number) ON DELETE CASCADE,
+  CONSTRAINT uq_match_round_user_attempt UNIQUE (id_match, round_number, id_user)
 );
+
+CREATE INDEX idx_quiz_attempts_match_round ON quiz_attempts(id_match, round_number);
 
 -- ==============================================================================
 -- 13. VISTA Y FUNCIÓN OPTIMIZADA DE BÚSQUEDA (ESTILO VOCABULARY.COM)
@@ -584,6 +606,18 @@ INSERT INTO words (id_word, lemma, normalized_lemma, part_of_speech, gender, ety
 
 (7, 'chamba', 'chamba', 'sustantivo', 'FEMALE', 'Probablemente de "chamber" (cámara de comercio) en el contexto de braceros mexicanos.',
  'Término informal por excelencia para referirse al empleo o al trabajo arduo. Si un amigo te dice "ando en la chamba", significa que está ocupado ganándose el pan.',
+ 'a1111111-0000-0000-0000-000000000001'),
+
+(8, 'papalote', 'papalote', 'sustantivo', 'MALE', 'Del náhuatl papalotl (mariposa).',
+ 'Cometa de papel o tela ligera que los niños vuelan en días de viento. Para los antiguos mexicas, su vaivén en el cielo evocaba el vuelo de una mariposa.',
+ 'a1111111-0000-0000-0000-000000000001'),
+
+(9, 'itacate', 'itacate', 'sustantivo', 'MALE', 'Del náhuatl itacatl (provisión de comida para el camino).',
+ 'La bendición gastronómica de toda fiesta mexicana: el paquete de comida sobrante que el anfitrión te envuelve con cariño para que recalentado al día siguiente sepa aún mejor.',
+ 'a1111111-0000-0000-0000-000000000001'),
+
+(10, 'escuincle', 'escuincle', 'sustantivo', 'MALE', 'Del náhuatl itzcuintli (perro sin pelo mexica).',
+ 'Voz coloquial mexicana para referirse a un niño pequeño e inquieto que no para de correr ni un segundo.',
  'a1111111-0000-0000-0000-000000000001')
 ON CONFLICT (id_word) DO NOTHING;
 
@@ -632,7 +666,22 @@ INSERT INTO senses (id_sense, id_word, id_region, id_editor, short_definition, d
 (109, 7, 'a1111111-0000-0000-0000-000000000001', 'b1111111-0000-0000-0000-000000000002',
  'Empleo, trabajo u ocupación remunerada.',
  'Actividad laboral cotidiana que genera sustento económico.',
- true, false, 'Expresión muy arraigada de orgullo por el esfuerzo honesto.', 'A2', 'EVERYDAY', 'APPROVED')
+ true, false, 'Expresión muy arraigada de orgullo por el esfuerzo honesto.', 'A2', 'EVERYDAY', 'APPROVED'),
+
+(110, 8, 'a1111111-0000-0000-0000-000000000001', 'b1111111-0000-0000-0000-000000000002',
+ 'Armazón ligero cubierto de papel o tela que se vuela con el viento sujeto a un hilo.',
+ 'Juguete volador tradicional atado a una cuerda que se eleva aprovechando las corrientes de aire.',
+ true, false, 'En otros países se le conoce como cometa, barrilete, volantín o papalote.', 'A2', 'COMMON', 'APPROVED'),
+
+(111, 9, 'a1111111-0000-0000-0000-000000000001', 'b1111111-0000-0000-0000-000000000002',
+ 'Porción de comida para llevar a casa después de una fiesta o reunión.',
+ 'Provisión de alimentos que se entrega a los invitados o viajeros para consumir posteriormente.',
+ true, false, 'Costumbre hospitalaria fundamental en celebraciones familiares de México.', 'B1', 'COMMON', 'APPROVED'),
+
+(112, 10, 'a1111111-0000-0000-0000-000000000001', 'b1111111-0000-0000-0000-000000000002',
+ 'Niño pequeño, travieso o chiquillo inquieto.',
+ 'Infante de corta edad, empleado frecuentemente con matiz humorístico o familiar.',
+ true, false, 'Deriva del perro xoloitzcuintle por la analogía con los niños juguetones.', 'B2', 'SLANG', 'APPROVED')
 ON CONFLICT (id_sense) DO NOTHING;
 
 -- 5. Ejemplos de uso
@@ -643,7 +692,10 @@ INSERT INTO examples (id_example, id_sense, id_editor, sentence, source) VALUES
 (4, 104, 'b1111111-0000-0000-0000-000000000002', 'Abrigaron a la guagüita con una mantita de lana para sacarla al jardín.', 'Literatura chilena'),
 (5, 106, 'b1111111-0000-0000-0000-000000000002', 'Voy a coger el metro de la línea 1 para llegar a tiempo a Sol.', 'Madrid cotidiano'),
 (6, 108, 'b1111111-0000-0000-0000-000000000002', 'Los domingos vamos al tianguis a comer barbacoa y comprar verdura fresca.', 'Tradición mexicana'),
-(7, 109, 'b1111111-0000-0000-0000-000000000002', 'Apenas salí de la chamba y ya hay tráfico en periférico.', 'Habla urbana')
+(7, 109, 'b1111111-0000-0000-0000-000000000002', 'Apenas salí de la chamba y ya hay tráfico en periférico.', 'Habla urbana'),
+(8, 110, 'b1111111-0000-0000-0000-000000000002', 'En octubre el viento de la tarde es perfecto para empinar el papalote en el cerro.', 'Crónica popular'),
+(9, 111, 'b1111111-0000-0000-0000-000000000002', 'No te vayas sin tu itacate de mole y arroz que preparó la tía.', 'Sobremesa familiar'),
+(10, 112, 'b1111111-0000-0000-0000-000000000002', 'Esos escuincles llevan toda la tarde jugando fútbol en el patio.', 'Habla coloquial')
 ON CONFLICT (id_example) DO NOTHING;
 
 -- 6. Conceptos Semánticos y Heteronimia
@@ -659,7 +711,7 @@ INSERT INTO concept_mappings (id_concept, id_sense) VALUES
 (3, 103)  -- guagua (CU)
 ON CONFLICT (id_concept, id_sense) DO NOTHING;
 
--- 7. Decks Oficiales Iniciales
+-- 7. Decks Oficiales Iniciales (8 sentidos aprobados para cumplir el mínimo de apertura de Arena CU14)
 INSERT INTO decks (id_deck, id_user, title, description, is_public, is_official) VALUES
 (1, 'b1111111-0000-0000-0000-000000000001', 'Mexicanismos Indispensables', 'Vocabulario esencial y modismos de México que todo viajero o estudiante debe dominar.', true, true)
 ON CONFLICT (id_deck) DO NOTHING;
@@ -669,7 +721,10 @@ INSERT INTO deck_items (id_deck, id_sense, sort_order) VALUES
 (1, 102, 2), -- apapachar
 (1, 105, 3), -- chamaco
 (1, 108, 4), -- tianguis
-(1, 109, 5)  -- chamba
+(1, 109, 5), -- chamba
+(1, 110, 6), -- papalote
+(1, 111, 7), -- itacate
+(1, 112, 8)  -- escuincle
 ON CONFLICT (id_deck, id_sense) DO NOTHING;
 
 -- 8. Catálogo de Logros (Achievements)

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"time"
@@ -13,7 +14,10 @@ import (
 
 type contextKey string
 
-const UserContextKey contextKey = "user_claims"
+const (
+	UserContextKey            contextKey = "user_claims"
+	InternalServiceContextKey contextKey = "internal_service_claims"
+)
 
 type Claims struct {
 	UserID        string             `json:"user_id"`
@@ -24,18 +28,27 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
+type InternalServiceClaims struct {
+	ServiceName string `json:"service_name"`
+	MatchScope  string `json:"match_scope"`
+	jwt.RegisteredClaims
+}
+
 type TokenService struct {
-	secretKey []byte
-	duration  time.Duration
+	secretKey    []byte
+	s2sSecretKey []byte
+	duration     time.Duration
 }
 
 func NewTokenService(secretKey string, duration time.Duration) *TokenService {
 	if duration <= 0 {
 		duration = 72 * time.Hour
 	}
+	sum := sha256.Sum256([]byte(secretKey + ":palabrario-s2s-internal"))
 	return &TokenService{
-		secretKey: []byte(secretKey),
-		duration:  duration,
+		secretKey:    []byte(secretKey),
+		s2sSecretKey: sum[:],
+		duration:     duration,
 	}
 }
 
@@ -85,6 +98,58 @@ func (s *TokenService) VerifyToken(tokenString string) (*Claims, error) {
 	claims, ok := token.Claims.(*Claims)
 	if !ok || !token.Valid {
 		return nil, errors.New("reclamaciones de token inválidas")
+	}
+
+	if claims.Issuer != "palabrario-core-service" {
+		return nil, errors.New("emisor de token de usuario inválido")
+	}
+
+	return claims, nil
+}
+
+func (s *TokenService) GenerateInternalToken(serviceName string, matchScope string) (string, error) {
+	now := time.Now().UTC()
+
+	claims := InternalServiceClaims{
+		ServiceName: serviceName,
+		MatchScope:  matchScope,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(now.Add(30 * time.Second)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+			Issuer:    "palabrario-internal-s2s",
+			Subject:   serviceName,
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString(s.s2sSecretKey)
+	if err != nil {
+		return "", fmt.Errorf("error firmando token interno S2S: %w", err)
+	}
+
+	return tokenString, nil
+}
+
+func (s *TokenService) VerifyInternalToken(tokenString string) (*InternalServiceClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &InternalServiceClaims{}, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("método de firma no válido: %v", t.Header["alg"])
+		}
+		return s.s2sSecretKey, nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("token interno inválido o expirado: %w", err)
+	}
+
+	claims, ok := token.Claims.(*InternalServiceClaims)
+	if !ok || !token.Valid {
+		return nil, errors.New("reclamaciones de token interno inválidas")
+	}
+
+	if claims.Issuer != "palabrario-internal-s2s" {
+		return nil, errors.New("emisor de token interno inválido")
 	}
 
 	return claims, nil

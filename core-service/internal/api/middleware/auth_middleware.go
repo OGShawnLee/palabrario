@@ -80,3 +80,30 @@ func (m *AuthMiddleware) RequireRole(roles ...models.AccountRole) func(http.Hand
 		})
 	}
 }
+
+// RequireInternalService valida que la petición contenga un JWT firmado con la sub-llave S2S
+// emitido para comunicación interna entre servicios de Palabrario.
+func (m *AuthMiddleware) RequireInternalService(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			response.Error(w, http.StatusUnauthorized, "Encabezado de autorización ausente")
+			return
+		}
+
+		parts := strings.SplitN(authHeader, " ", 2)
+		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+			response.Error(w, http.StatusUnauthorized, "Formato de token inválido. Use Bearer <token>")
+			return
+		}
+
+		claims, err := m.tokenService.VerifyInternalToken(parts[1])
+		if err != nil {
+			response.Error(w, http.StatusForbidden, "Acceso restringido exclusivamente a servicios internos autorizados")
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), auth.InternalServiceContextKey, claims)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
