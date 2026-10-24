@@ -50,17 +50,13 @@ services:
 
   realtime-service:
     build:
-      context: ./realtime-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./realtime-service/Dockerfile
     restart: unless-stopped
     ports:
       - "8001:8001"
     env_file:
       - ./realtime-service/.env
-    volumes:
-      - ./realtime-service:/app
-      - /app/node_modules
-    command: bun --watch run index.ts
 
   image-service:
     build:
