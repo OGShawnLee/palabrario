@@ -7,7 +7,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // Errores canónicos de dominio según la sección 1.2 de .context/INTERFACES.md.
@@ -88,13 +87,4 @@ func HTTPStatusAndMessage(err error, fallbackMsg string) (int, string) {
 	default:
 		return http.StatusInternalServerError, fallbackMsg
 	}
-}
-
-// TextToPtr convierte un pgtype.Text anulable a *string para los DTOs de pkg/models.
-func TextToPtr(t pgtype.Text) *string {
-	if !t.Valid {
-		return nil
-	}
-	s := t.String
-	return &s
 }

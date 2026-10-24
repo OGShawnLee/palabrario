@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"palabrario/core-service/internal/service"
 	"palabrario/pkg/auth"
@@ -36,12 +35,7 @@ func (h *MasteryHandler) GetStudySession(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	limit := 15
-	if lStr := r.URL.Query().Get("limit"); lStr != "" {
-		if l, err := strconv.Atoi(lStr); err == nil && l > 0 {
-			limit = l
-		}
-	}
+	limit := queryIntOrDefault(r, "limit", 15, 1, 0)
 
 	session, err := h.masteryService.GetStudySession(r.Context(), claims.UserID, claims.Role, deckID, limit)
 	if err != nil {
@@ -100,10 +94,7 @@ func (h *MasteryHandler) ListMasteryItems(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var stage *string
-	if st := strings.TrimSpace(r.URL.Query().Get("stage")); st != "" {
-		stage = &st
-	}
+	stage := optionalQueryString(r, "stage")
 
 	items, err := h.masteryService.ListMasteryItems(r.Context(), claims.UserID, stage)
 	if err != nil {
@@ -122,12 +113,7 @@ func (h *MasteryHandler) ListXPLedger(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	limit := 50
-	if lStr := r.URL.Query().Get("limit"); lStr != "" {
-		if l, err := strconv.Atoi(lStr); err == nil && l > 0 {
-			limit = l
-		}
-	}
+	limit := queryIntOrDefault(r, "limit", 50, 1, 0)
 
 	ledger, err := h.masteryService.ListXPLedger(r.Context(), claims.UserID, limit)
 	if err != nil {

@@ -79,6 +79,170 @@ func (q *Queries) AdminUpdateSenseState(ctx context.Context, arg AdminUpdateSens
 	return i, err
 }
 
+const createContentReport = `-- name: CreateContentReport :one
+INSERT INTO content_reports (
+  id_reporter,
+  target_type,
+  id_word,
+  id_sense,
+  id_example,
+  reason,
+  details
+) VALUES (
+  $1,
+  $2::report_target_type,
+  $3,
+  $4,
+  $5,
+  $6::report_reason,
+  $7
+) RETURNING 
+  id_report,
+  id_reporter,
+  target_type::TEXT AS target_type,
+  id_word,
+  id_sense,
+  id_example,
+  reason::TEXT AS reason,
+  details,
+  status::TEXT AS status,
+  resolved_by,
+  resolution_notes,
+  created_at,
+  resolved_at
+`
+
+type CreateContentReportParams struct {
+	IDReporter uuid.UUID        `json:"id_reporter"`
+	TargetType ReportTargetType `json:"target_type"`
+	IDWord     pgtype.Int4      `json:"id_word"`
+	IDSense    pgtype.Int4      `json:"id_sense"`
+	IDExample  pgtype.Int4      `json:"id_example"`
+	Reason     ReportReason     `json:"reason"`
+	Details    string           `json:"details"`
+}
+
+type CreateContentReportRow struct {
+	IDReport        uuid.UUID          `json:"id_report"`
+	IDReporter      uuid.UUID          `json:"id_reporter"`
+	TargetType      string             `json:"target_type"`
+	IDWord          pgtype.Int4        `json:"id_word"`
+	IDSense         pgtype.Int4        `json:"id_sense"`
+	IDExample       pgtype.Int4        `json:"id_example"`
+	Reason          string             `json:"reason"`
+	Details         string             `json:"details"`
+	Status          string             `json:"status"`
+	ResolvedBy      pgtype.UUID        `json:"resolved_by"`
+	ResolutionNotes pgtype.Text        `json:"resolution_notes"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	ResolvedAt      pgtype.Timestamptz `json:"resolved_at"`
+}
+
+// 7. Crear Reporte de Contenido (CU09)
+func (q *Queries) CreateContentReport(ctx context.Context, arg CreateContentReportParams) (CreateContentReportRow, error) {
+	row := q.db.QueryRow(ctx, createContentReport,
+		arg.IDReporter,
+		arg.TargetType,
+		arg.IDWord,
+		arg.IDSense,
+		arg.IDExample,
+		arg.Reason,
+		arg.Details,
+	)
+	var i CreateContentReportRow
+	err := row.Scan(
+		&i.IDReport,
+		&i.IDReporter,
+		&i.TargetType,
+		&i.IDWord,
+		&i.IDSense,
+		&i.IDExample,
+		&i.Reason,
+		&i.Details,
+		&i.Status,
+		&i.ResolvedBy,
+		&i.ResolutionNotes,
+		&i.CreatedAt,
+		&i.ResolvedAt,
+	)
+	return i, err
+}
+
+const getContentReportByID = `-- name: GetContentReportByID :one
+SELECT 
+    cr.id_report,
+    cr.id_reporter,
+    u.user_name AS reporter_user_name,
+    cr.target_type::TEXT AS target_type,
+    cr.id_word,
+    cr.id_sense,
+    cr.id_example,
+    COALESCE(
+      CASE cr.target_type
+        WHEN 'WORD' THEN w.lemma
+        WHEN 'SENSE' THEN COALESCE(ws.lemma || ': ' || s.short_definition, s.short_definition)
+        WHEN 'EXAMPLE' THEN e.sentence
+      END,
+      ''
+    ) AS target_preview,
+    cr.reason::TEXT AS reason,
+    cr.details,
+    cr.status::TEXT AS status,
+    coalesce(cr.resolved_by::TEXT, '')::TEXT AS resolved_by,
+    cr.resolution_notes,
+    cr.created_at,
+    cr.resolved_at
+FROM content_reports cr
+JOIN users u ON u.id_user = cr.id_reporter
+LEFT JOIN words w ON w.id_word = cr.id_word
+LEFT JOIN senses s ON s.id_sense = cr.id_sense
+LEFT JOIN words ws ON ws.id_word = s.id_word
+LEFT JOIN examples e ON e.id_example = cr.id_example
+WHERE cr.id_report = $1
+`
+
+type GetContentReportByIDRow struct {
+	IDReport         uuid.UUID          `json:"id_report"`
+	IDReporter       uuid.UUID          `json:"id_reporter"`
+	ReporterUserName string             `json:"reporter_user_name"`
+	TargetType       string             `json:"target_type"`
+	IDWord           pgtype.Int4        `json:"id_word"`
+	IDSense          pgtype.Int4        `json:"id_sense"`
+	IDExample        pgtype.Int4        `json:"id_example"`
+	TargetPreview    interface{}        `json:"target_preview"`
+	Reason           string             `json:"reason"`
+	Details          string             `json:"details"`
+	Status           string             `json:"status"`
+	ResolvedBy       string             `json:"resolved_by"`
+	ResolutionNotes  pgtype.Text        `json:"resolution_notes"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	ResolvedAt       pgtype.Timestamptz `json:"resolved_at"`
+}
+
+// 8. Obtener Reporte por ID (CU09)
+func (q *Queries) GetContentReportByID(ctx context.Context, idReport uuid.UUID) (GetContentReportByIDRow, error) {
+	row := q.db.QueryRow(ctx, getContentReportByID, idReport)
+	var i GetContentReportByIDRow
+	err := row.Scan(
+		&i.IDReport,
+		&i.IDReporter,
+		&i.ReporterUserName,
+		&i.TargetType,
+		&i.IDWord,
+		&i.IDSense,
+		&i.IDExample,
+		&i.TargetPreview,
+		&i.Reason,
+		&i.Details,
+		&i.Status,
+		&i.ResolvedBy,
+		&i.ResolutionNotes,
+		&i.CreatedAt,
+		&i.ResolvedAt,
+	)
+	return i, err
+}
+
 const getSenseQuorumItemByID = `-- name: GetSenseQuorumItemByID :one
 SELECT 
     s.id_sense,
@@ -158,6 +322,95 @@ func (q *Queries) GetSenseQuorumItemByID(ctx context.Context, idSense int32) (Ge
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const listContentReports = `-- name: ListContentReports :many
+SELECT 
+    cr.id_report,
+    cr.id_reporter,
+    u.user_name AS reporter_user_name,
+    cr.target_type::TEXT AS target_type,
+    cr.id_word,
+    cr.id_sense,
+    cr.id_example,
+    COALESCE(
+      CASE cr.target_type
+        WHEN 'WORD' THEN w.lemma
+        WHEN 'SENSE' THEN COALESCE(ws.lemma || ': ' || s.short_definition, s.short_definition)
+        WHEN 'EXAMPLE' THEN e.sentence
+      END,
+      ''
+    ) AS target_preview,
+    cr.reason::TEXT AS reason,
+    cr.details,
+    cr.status::TEXT AS status,
+    coalesce(cr.resolved_by::TEXT, '')::TEXT AS resolved_by,
+    cr.resolution_notes,
+    cr.created_at,
+    cr.resolved_at
+FROM content_reports cr
+JOIN users u ON u.id_user = cr.id_reporter
+LEFT JOIN words w ON w.id_word = cr.id_word
+LEFT JOIN senses s ON s.id_sense = cr.id_sense
+LEFT JOIN words ws ON ws.id_word = s.id_word
+LEFT JOIN examples e ON e.id_example = cr.id_example
+WHERE ($1::VARCHAR IS NULL OR $1::VARCHAR = '' OR cr.status::TEXT = $1::VARCHAR)
+ORDER BY cr.created_at DESC
+`
+
+type ListContentReportsRow struct {
+	IDReport         uuid.UUID          `json:"id_report"`
+	IDReporter       uuid.UUID          `json:"id_reporter"`
+	ReporterUserName string             `json:"reporter_user_name"`
+	TargetType       string             `json:"target_type"`
+	IDWord           pgtype.Int4        `json:"id_word"`
+	IDSense          pgtype.Int4        `json:"id_sense"`
+	IDExample        pgtype.Int4        `json:"id_example"`
+	TargetPreview    interface{}        `json:"target_preview"`
+	Reason           string             `json:"reason"`
+	Details          string             `json:"details"`
+	Status           string             `json:"status"`
+	ResolvedBy       string             `json:"resolved_by"`
+	ResolutionNotes  pgtype.Text        `json:"resolution_notes"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	ResolvedAt       pgtype.Timestamptz `json:"resolved_at"`
+}
+
+// 9. Listar Reportes de Contenido (CU09)
+func (q *Queries) ListContentReports(ctx context.Context, status pgtype.Text) ([]ListContentReportsRow, error) {
+	rows, err := q.db.Query(ctx, listContentReports, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListContentReportsRow{}
+	for rows.Next() {
+		var i ListContentReportsRow
+		if err := rows.Scan(
+			&i.IDReport,
+			&i.IDReporter,
+			&i.ReporterUserName,
+			&i.TargetType,
+			&i.IDWord,
+			&i.IDSense,
+			&i.IDExample,
+			&i.TargetPreview,
+			&i.Reason,
+			&i.Details,
+			&i.Status,
+			&i.ResolvedBy,
+			&i.ResolutionNotes,
+			&i.CreatedAt,
+			&i.ResolvedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listEditorProposals = `-- name: ListEditorProposals :many
@@ -416,6 +669,80 @@ func (q *Queries) ListVotesBySenseID(ctx context.Context, idSense int32) ([]List
 		return nil, err
 	}
 	return items, nil
+}
+
+const resolveContentReport = `-- name: ResolveContentReport :one
+UPDATE content_reports
+SET 
+  status = $1::report_status,
+  resolved_by = $2,
+  resolution_notes = $3,
+  resolved_at = now()
+WHERE id_report = $4
+RETURNING 
+  id_report,
+  id_reporter,
+  target_type::TEXT AS target_type,
+  id_word,
+  id_sense,
+  id_example,
+  reason::TEXT AS reason,
+  details,
+  status::TEXT AS status,
+  resolved_by,
+  resolution_notes,
+  created_at,
+  resolved_at
+`
+
+type ResolveContentReportParams struct {
+	Status          ReportStatus `json:"status"`
+	ResolvedBy      pgtype.UUID  `json:"resolved_by"`
+	ResolutionNotes pgtype.Text  `json:"resolution_notes"`
+	IDReport        uuid.UUID    `json:"id_report"`
+}
+
+type ResolveContentReportRow struct {
+	IDReport        uuid.UUID          `json:"id_report"`
+	IDReporter      uuid.UUID          `json:"id_reporter"`
+	TargetType      string             `json:"target_type"`
+	IDWord          pgtype.Int4        `json:"id_word"`
+	IDSense         pgtype.Int4        `json:"id_sense"`
+	IDExample       pgtype.Int4        `json:"id_example"`
+	Reason          string             `json:"reason"`
+	Details         string             `json:"details"`
+	Status          string             `json:"status"`
+	ResolvedBy      pgtype.UUID        `json:"resolved_by"`
+	ResolutionNotes pgtype.Text        `json:"resolution_notes"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	ResolvedAt      pgtype.Timestamptz `json:"resolved_at"`
+}
+
+// 10. Resolver Reporte de Contenido (CU09)
+func (q *Queries) ResolveContentReport(ctx context.Context, arg ResolveContentReportParams) (ResolveContentReportRow, error) {
+	row := q.db.QueryRow(ctx, resolveContentReport,
+		arg.Status,
+		arg.ResolvedBy,
+		arg.ResolutionNotes,
+		arg.IDReport,
+	)
+	var i ResolveContentReportRow
+	err := row.Scan(
+		&i.IDReport,
+		&i.IDReporter,
+		&i.TargetType,
+		&i.IDWord,
+		&i.IDSense,
+		&i.IDExample,
+		&i.Reason,
+		&i.Details,
+		&i.Status,
+		&i.ResolvedBy,
+		&i.ResolutionNotes,
+		&i.CreatedAt,
+		&i.ResolvedAt,
+	)
+	return i, err
 }
 
 const upsertSenseApproval = `-- name: UpsertSenseApproval :one

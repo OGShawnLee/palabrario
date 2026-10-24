@@ -10,6 +10,7 @@ import (
 	"palabrario/core-service/internal/service"
 	"palabrario/core-service/internal/testutil"
 	"palabrario/pkg/models"
+	"palabrario/pkg/utils"
 )
 
 // ==============================================================================
@@ -32,7 +33,7 @@ func TestStudioService_RN03_PropertyAndPermissions(t *testing.T) {
 	// 1. Gael crea una baraja
 	deck, err := studioSvc.CreateDeck(ctx, gaelID, models.RoleLearner, models.CreateDeckRequest{
 		Title:       "Modismos de Gael",
-		Description: ptr("Baraja personal para pruebas"),
+		Description: utils.ToPtr("Baraja personal para pruebas"),
 		IsPublic:    true,
 		SenseIDs:    []int{101, 102},
 	})
@@ -98,8 +99,7 @@ func TestStudioService_RN04_ResourcePrivacy(t *testing.T) {
 	}
 
 	// 2. Silas intenta ver el detalle de la baraja privada -> Debe fallar con ErrForbidden (RN04)
-	roleEditor := models.RoleEditor
-	_, err = studioSvc.GetDeckDetail(ctx, &silasID, &roleEditor, privateDeck.IDDeck)
+	_, err = studioSvc.GetDeckDetail(ctx, &silasID, utils.ToPtr(models.RoleEditor), privateDeck.IDDeck)
 	if err == nil || !errors.Is(err, service.ErrForbidden) {
 		t.Fatalf("se esperaba ErrForbidden (RN04) al consultar baraja privada ajena, obtenido: %v", err)
 	}
@@ -117,7 +117,7 @@ func TestStudioService_RN04_ResourcePrivacy(t *testing.T) {
 	}
 
 	// 5. Gael (dueño) y Admin sí pueden verla
-	detailGael, err := studioSvc.GetDeckDetail(ctx, &gaelID, ptrRole(models.RoleLearner), privateDeck.IDDeck)
+	detailGael, err := studioSvc.GetDeckDetail(ctx, &gaelID, utils.ToPtr(models.RoleLearner), privateDeck.IDDeck)
 	if err != nil {
 		t.Fatalf("dueño debería ver su baraja privada: %v", err)
 	}
@@ -125,7 +125,7 @@ func TestStudioService_RN04_ResourcePrivacy(t *testing.T) {
 		t.Errorf("título incorrecto: %s", detailGael.Title)
 	}
 
-	detailAdmin, err := studioSvc.GetDeckDetail(ctx, &adminID, ptrRole(models.RoleAdmin), privateDeck.IDDeck)
+	detailAdmin, err := studioSvc.GetDeckDetail(ctx, &adminID, utils.ToPtr(models.RoleAdmin), privateDeck.IDDeck)
 	if err != nil {
 		t.Fatalf("admin debería ver baraja privada por RN08: %v", err)
 	}
@@ -331,8 +331,7 @@ func TestMasteryService_StudySessionAndReview_Transaction(t *testing.T) {
 	gaelID := "b1111111-0000-0000-0000-000000000003" // LEARNER
 
 	// 1. Obtener sesión de estudio de la baraja oficial sembrada (Deck 1: Mexicanismos Indispensables)
-	deckID := 1
-	session, err := masterySvc.GetStudySession(ctx, gaelID, models.RoleLearner, &deckID, 10)
+	session, err := masterySvc.GetStudySession(ctx, gaelID, models.RoleLearner, utils.ToPtr(1), 10)
 	if err != nil {
 		t.Fatalf("GetStudySession falló: %v", err)
 	}
@@ -397,7 +396,7 @@ func TestMasteryService_StudySessionAndReview_Transaction(t *testing.T) {
 	}
 
 	// 5. Consultar ítems de maestría por etapa
-	items, err := masterySvc.ListMasteryItems(ctx, gaelID, ptr("LEARNING"))
+	items, err := masterySvc.ListMasteryItems(ctx, gaelID, utils.ToPtr("LEARNING"))
 	if err != nil {
 		t.Fatalf("ListMasteryItems falló: %v", err)
 	}
@@ -407,12 +406,4 @@ func TestMasteryService_StudySessionAndReview_Transaction(t *testing.T) {
 	if items[0].IDSense != firstCard.IDSense {
 		t.Errorf("se esperaba sense %d en LEARNING, obtenido %d", firstCard.IDSense, items[0].IDSense)
 	}
-}
-
-func ptr(s string) *string {
-	return &s
-}
-
-func ptrRole(r models.AccountRole) *models.AccountRole {
-	return &r
 }

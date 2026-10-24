@@ -12,6 +12,19 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countUserPrivateDecks = `-- name: CountUserPrivateDecks :one
+SELECT count(*)::INT
+FROM decks
+WHERE id_user = $1 AND is_public = false
+`
+
+func (q *Queries) CountUserPrivateDecks(ctx context.Context, idUser uuid.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, countUserPrivateDecks, idUser)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createAccount = `-- name: CreateAccount :one
 INSERT INTO accounts (email, password_hash, role)
 VALUES ($1, $2, 'LEARNER')
@@ -97,6 +110,45 @@ func (q *Queries) GetAccountByEmail(ctx context.Context, email string) (Account,
 	return i, err
 }
 
+const getAccountByID = `-- name: GetAccountByID :one
+SELECT id_account, email, password_hash, role, is_active, created_at, updated_at
+FROM accounts
+WHERE id_account = $1
+`
+
+func (q *Queries) GetAccountByID(ctx context.Context, idAccount uuid.UUID) (Account, error) {
+	row := q.db.QueryRow(ctx, getAccountByID, idAccount)
+	var i Account
+	err := row.Scan(
+		&i.IDAccount,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Role,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserArenaStats = `-- name: GetUserArenaStats :one
+SELECT
+    (SELECT count(*)::INT FROM matches WHERE winner_user_id = $1 AND status = 'FINISHED') AS matches_won,
+    (SELECT count(*)::INT FROM match_participants WHERE id_user = $1 AND final_rank BETWEEN 1 AND 3) AS podium_count
+`
+
+type GetUserArenaStatsRow struct {
+	MatchesWon  int32 `json:"matches_won"`
+	PodiumCount int32 `json:"podium_count"`
+}
+
+func (q *Queries) GetUserArenaStats(ctx context.Context, winnerUserID pgtype.UUID) (GetUserArenaStatsRow, error) {
+	row := q.db.QueryRow(ctx, getUserArenaStats, winnerUserID)
+	var i GetUserArenaStatsRow
+	err := row.Scan(&i.MatchesWon, &i.PodiumCount)
+	return i, err
+}
+
 const getUserProfileByID = `-- name: GetUserProfileByID :one
 SELECT 
     u.id_user,
@@ -136,6 +188,276 @@ type GetUserProfileByIDRow struct {
 func (q *Queries) GetUserProfileByID(ctx context.Context, idUser uuid.UUID) (GetUserProfileByIDRow, error) {
 	row := q.db.QueryRow(ctx, getUserProfileByID, idUser)
 	var i GetUserProfileByIDRow
+	err := row.Scan(
+		&i.IDUser,
+		&i.Email,
+		&i.Name,
+		&i.UserName,
+		&i.AvatarUrl,
+		&i.AnchorDialect,
+		&i.TotalXp,
+		&i.CurrentLevel,
+		&i.CurrentStreak,
+		&i.LongestStreak,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserProfileByUsername = `-- name: GetUserProfileByUsername :one
+SELECT 
+    u.id_user,
+    a.email,
+    u.name,
+    u.user_name,
+    u.avatar_url,
+    u.anchor_dialect,
+    u.total_xp,
+    u.current_level,
+    u.current_streak,
+    u.longest_streak,
+    a.role,
+    u.created_at,
+    u.updated_at
+FROM users u
+JOIN accounts a ON a.id_account = u.id_user
+WHERE LOWER(u.user_name) = LOWER($1)
+`
+
+type GetUserProfileByUsernameRow struct {
+	IDUser        uuid.UUID          `json:"id_user"`
+	Email         string             `json:"email"`
+	Name          string             `json:"name"`
+	UserName      string             `json:"user_name"`
+	AvatarUrl     pgtype.Text        `json:"avatar_url"`
+	AnchorDialect string             `json:"anchor_dialect"`
+	TotalXp       int32              `json:"total_xp"`
+	CurrentLevel  int32              `json:"current_level"`
+	CurrentStreak int32              `json:"current_streak"`
+	LongestStreak int32              `json:"longest_streak"`
+	Role          AccountRole        `json:"role"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) GetUserProfileByUsername(ctx context.Context, lower string) (GetUserProfileByUsernameRow, error) {
+	row := q.db.QueryRow(ctx, getUserProfileByUsername, lower)
+	var i GetUserProfileByUsernameRow
+	err := row.Scan(
+		&i.IDUser,
+		&i.Email,
+		&i.Name,
+		&i.UserName,
+		&i.AvatarUrl,
+		&i.AnchorDialect,
+		&i.TotalXp,
+		&i.CurrentLevel,
+		&i.CurrentStreak,
+		&i.LongestStreak,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const listUserPublicCollections = `-- name: ListUserPublicCollections :many
+SELECT 
+    c.id_collection,
+    c.id_user,
+    c.title,
+    c.description,
+    c.is_public,
+    c.is_featured,
+    c.is_official,
+    c.created_at,
+    c.updated_at,
+    (SELECT count(*)::INT FROM collection_decks cd WHERE cd.id_collection = c.id_collection) AS deck_count
+FROM collections c
+WHERE c.id_user = $1 AND c.is_public = true
+ORDER BY c.created_at DESC
+`
+
+type ListUserPublicCollectionsRow struct {
+	IDCollection int32              `json:"id_collection"`
+	IDUser       uuid.UUID          `json:"id_user"`
+	Title        string             `json:"title"`
+	Description  pgtype.Text        `json:"description"`
+	IsPublic     bool               `json:"is_public"`
+	IsFeatured   bool               `json:"is_featured"`
+	IsOfficial   bool               `json:"is_official"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeckCount    int32              `json:"deck_count"`
+}
+
+func (q *Queries) ListUserPublicCollections(ctx context.Context, idUser uuid.UUID) ([]ListUserPublicCollectionsRow, error) {
+	rows, err := q.db.Query(ctx, listUserPublicCollections, idUser)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListUserPublicCollectionsRow{}
+	for rows.Next() {
+		var i ListUserPublicCollectionsRow
+		if err := rows.Scan(
+			&i.IDCollection,
+			&i.IDUser,
+			&i.Title,
+			&i.Description,
+			&i.IsPublic,
+			&i.IsFeatured,
+			&i.IsOfficial,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeckCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUserPublicDecks = `-- name: ListUserPublicDecks :many
+SELECT 
+    d.id_deck,
+    d.id_user,
+    d.title,
+    d.description,
+    d.is_public,
+    d.is_official,
+    d.created_at,
+    d.updated_at,
+    (SELECT count(*)::INT FROM deck_items di WHERE di.id_deck = d.id_deck) AS item_count
+FROM decks d
+WHERE d.id_user = $1 AND d.is_public = true
+ORDER BY d.created_at DESC
+`
+
+type ListUserPublicDecksRow struct {
+	IDDeck      int32              `json:"id_deck"`
+	IDUser      uuid.UUID          `json:"id_user"`
+	Title       string             `json:"title"`
+	Description pgtype.Text        `json:"description"`
+	IsPublic    bool               `json:"is_public"`
+	IsOfficial  bool               `json:"is_official"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	ItemCount   int32              `json:"item_count"`
+}
+
+func (q *Queries) ListUserPublicDecks(ctx context.Context, idUser uuid.UUID) ([]ListUserPublicDecksRow, error) {
+	rows, err := q.db.Query(ctx, listUserPublicDecks, idUser)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListUserPublicDecksRow{}
+	for rows.Next() {
+		var i ListUserPublicDecksRow
+		if err := rows.Scan(
+			&i.IDDeck,
+			&i.IDUser,
+			&i.Title,
+			&i.Description,
+			&i.IsPublic,
+			&i.IsOfficial,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ItemCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateAccountPassword = `-- name: UpdateAccountPassword :exec
+UPDATE accounts
+SET password_hash = $2, updated_at = now()
+WHERE id_account = $1
+`
+
+type UpdateAccountPasswordParams struct {
+	IDAccount    uuid.UUID `json:"id_account"`
+	PasswordHash string    `json:"password_hash"`
+}
+
+func (q *Queries) UpdateAccountPassword(ctx context.Context, arg UpdateAccountPasswordParams) error {
+	_, err := q.db.Exec(ctx, updateAccountPassword, arg.IDAccount, arg.PasswordHash)
+	return err
+}
+
+const updateUserProfile = `-- name: UpdateUserProfile :one
+WITH updated AS (
+  UPDATE users
+  SET 
+    name = $2,
+    anchor_dialect = $3,
+    avatar_url = $4,
+    updated_at = now()
+  WHERE id_user = $1
+  RETURNING id_user, name, user_name, avatar_url, anchor_dialect, total_xp, current_level, current_streak, longest_streak, last_activity_at, created_at, updated_at
+)
+SELECT 
+    u.id_user,
+    a.email,
+    u.name,
+    u.user_name,
+    u.avatar_url,
+    u.anchor_dialect,
+    u.total_xp,
+    u.current_level,
+    u.current_streak,
+    u.longest_streak,
+    a.role,
+    u.created_at,
+    u.updated_at
+FROM updated u
+JOIN accounts a ON a.id_account = u.id_user
+`
+
+type UpdateUserProfileParams struct {
+	IDUser        uuid.UUID   `json:"id_user"`
+	Name          string      `json:"name"`
+	AnchorDialect string      `json:"anchor_dialect"`
+	AvatarUrl     pgtype.Text `json:"avatar_url"`
+}
+
+type UpdateUserProfileRow struct {
+	IDUser        uuid.UUID          `json:"id_user"`
+	Email         string             `json:"email"`
+	Name          string             `json:"name"`
+	UserName      string             `json:"user_name"`
+	AvatarUrl     pgtype.Text        `json:"avatar_url"`
+	AnchorDialect string             `json:"anchor_dialect"`
+	TotalXp       int32              `json:"total_xp"`
+	CurrentLevel  int32              `json:"current_level"`
+	CurrentStreak int32              `json:"current_streak"`
+	LongestStreak int32              `json:"longest_streak"`
+	Role          AccountRole        `json:"role"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (UpdateUserProfileRow, error) {
+	row := q.db.QueryRow(ctx, updateUserProfile,
+		arg.IDUser,
+		arg.Name,
+		arg.AnchorDialect,
+		arg.AvatarUrl,
+	)
+	var i UpdateUserProfileRow
 	err := row.Scan(
 		&i.IDUser,
 		&i.Email,

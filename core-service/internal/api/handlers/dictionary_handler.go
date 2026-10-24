@@ -6,8 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
-
 	"palabrario/core-service/internal/service"
 	"palabrario/pkg/auth"
 	"palabrario/pkg/models"
@@ -40,12 +38,7 @@ func (h *DictionaryHandler) Search(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	limit := 10
-	if limitStr := strings.TrimSpace(r.URL.Query().Get("limit")); limitStr != "" {
-		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 {
-			limit = parsedLimit
-		}
-	}
+	limit := queryIntOrDefault(r, "limit", 10, 1, 0)
 
 	results, err := h.dictService.SearchDropdown(r.Context(), query, dialect, limit)
 	if err != nil {
@@ -59,10 +52,8 @@ func (h *DictionaryHandler) Search(w http.ResponseWriter, r *http.Request) {
 
 // GetByID maneja GET /api/v1/words/{id}
 func (h *DictionaryHandler) GetByID(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	wordID, err := strconv.Atoi(idStr)
-	if err != nil || wordID <= 0 {
-		response.Error(w, http.StatusBadRequest, "El identificador de palabra debe ser un número entero positivo")
+	wordID, ok := parsePositiveIntParam(w, r, "id", "El identificador de palabra debe ser un número entero positivo")
+	if !ok {
 		return
 	}
 
@@ -107,19 +98,8 @@ func (h *DictionaryHandler) GetWordOfTheDay(w http.ResponseWriter, r *http.Reque
 
 // ExploreWords maneja GET /api/v1/words
 func (h *DictionaryHandler) ExploreWords(w http.ResponseWriter, r *http.Request) {
-	page := 1
-	if pStr := r.URL.Query().Get("page"); pStr != "" {
-		if p, err := strconv.Atoi(pStr); err == nil && p > 0 {
-			page = p
-		}
-	}
-
-	limit := 20
-	if lStr := r.URL.Query().Get("limit"); lStr != "" {
-		if l, err := strconv.Atoi(lStr); err == nil && l > 0 && l <= 50 {
-			limit = l
-		}
-	}
+	page := queryIntOrDefault(r, "page", 1, 1, 0)
+	limit := queryIntOrDefault(r, "limit", 20, 1, 50)
 
 	includeTaboo := true
 	if tabStr := r.URL.Query().Get("include_taboo"); tabStr != "" {
@@ -180,10 +160,8 @@ func (h *DictionaryHandler) UpdateWord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := chi.URLParam(r, "id")
-	wordID, err := strconv.Atoi(idStr)
-	if err != nil || wordID <= 0 {
-		response.Error(w, http.StatusBadRequest, "El identificador de palabra debe ser un número entero positivo")
+	wordID, valid := parsePositiveIntParam(w, r, "id", "El identificador de palabra debe ser un número entero positivo")
+	if !valid {
 		return
 	}
 
@@ -211,10 +189,8 @@ func (h *DictionaryHandler) CreateSense(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	idStr := chi.URLParam(r, "id")
-	wordID, err := strconv.Atoi(idStr)
-	if err != nil || wordID <= 0 {
-		response.Error(w, http.StatusBadRequest, "El identificador de palabra debe ser un número entero positivo")
+	wordID, valid := parsePositiveIntParam(w, r, "id", "El identificador de palabra debe ser un número entero positivo")
+	if !valid {
 		return
 	}
 
@@ -242,10 +218,8 @@ func (h *DictionaryHandler) UpdateSense(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	senseIdStr := chi.URLParam(r, "senseId")
-	senseID, err := strconv.Atoi(senseIdStr)
-	if err != nil || senseID <= 0 {
-		response.Error(w, http.StatusBadRequest, "El identificador de acepción debe ser un número entero positivo")
+	senseID, valid := parsePositiveIntParam(w, r, "senseId", "El identificador de acepción debe ser un número entero positivo")
+	if !valid {
 		return
 	}
 
@@ -273,10 +247,8 @@ func (h *DictionaryHandler) DeleteSense(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	senseIdStr := chi.URLParam(r, "senseId")
-	senseID, err := strconv.Atoi(senseIdStr)
-	if err != nil || senseID <= 0 {
-		response.Error(w, http.StatusBadRequest, "El identificador de acepción debe ser un número entero positivo")
+	senseID, valid := parsePositiveIntParam(w, r, "senseId", "El identificador de acepción debe ser un número entero positivo")
+	if !valid {
 		return
 	}
 
@@ -297,10 +269,8 @@ func (h *DictionaryHandler) CreateExample(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	senseIdStr := chi.URLParam(r, "senseId")
-	senseID, err := strconv.Atoi(senseIdStr)
-	if err != nil || senseID <= 0 {
-		response.Error(w, http.StatusBadRequest, "El identificador de acepción debe ser un número entero positivo")
+	senseID, valid := parsePositiveIntParam(w, r, "senseId", "El identificador de acepción debe ser un número entero positivo")
+	if !valid {
 		return
 	}
 
@@ -328,10 +298,8 @@ func (h *DictionaryHandler) UpdateExample(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	exIdStr := chi.URLParam(r, "exampleId")
-	exampleID, err := strconv.Atoi(exIdStr)
-	if err != nil || exampleID <= 0 {
-		response.Error(w, http.StatusBadRequest, "El identificador de ejemplo debe ser un número entero positivo")
+	exampleID, valid := parsePositiveIntParam(w, r, "exampleId", "El identificador de ejemplo debe ser un número entero positivo")
+	if !valid {
 		return
 	}
 
@@ -359,10 +327,8 @@ func (h *DictionaryHandler) DeleteExample(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	exIdStr := chi.URLParam(r, "exampleId")
-	exampleID, err := strconv.Atoi(exIdStr)
-	if err != nil || exampleID <= 0 {
-		response.Error(w, http.StatusBadRequest, "El identificador de ejemplo debe ser un número entero positivo")
+	exampleID, valid := parsePositiveIntParam(w, r, "exampleId", "El identificador de ejemplo debe ser un número entero positivo")
+	if !valid {
 		return
 	}
 
@@ -407,17 +373,12 @@ func (h *DictionaryHandler) CreateConcept(w http.ResponseWriter, r *http.Request
 
 // LinkConcept maneja POST /api/v1/senses/{senseId}/concepts/{conceptId}
 func (h *DictionaryHandler) LinkConcept(w http.ResponseWriter, r *http.Request) {
-	senseIdStr := chi.URLParam(r, "senseId")
-	senseID, err := strconv.Atoi(senseIdStr)
-	if err != nil || senseID <= 0 {
-		response.Error(w, http.StatusBadRequest, "senseId inválido")
+	senseID, ok := parsePositiveIntParam(w, r, "senseId", "senseId inválido")
+	if !ok {
 		return
 	}
-
-	conceptIdStr := chi.URLParam(r, "conceptId")
-	conceptID, err := strconv.Atoi(conceptIdStr)
-	if err != nil || conceptID <= 0 {
-		response.Error(w, http.StatusBadRequest, "conceptId inválido")
+	conceptID, ok := parsePositiveIntParam(w, r, "conceptId", "conceptId inválido")
+	if !ok {
 		return
 	}
 
@@ -432,17 +393,12 @@ func (h *DictionaryHandler) LinkConcept(w http.ResponseWriter, r *http.Request) 
 
 // UnlinkConcept maneja DELETE /api/v1/senses/{senseId}/concepts/{conceptId}
 func (h *DictionaryHandler) UnlinkConcept(w http.ResponseWriter, r *http.Request) {
-	senseIdStr := chi.URLParam(r, "senseId")
-	senseID, err := strconv.Atoi(senseIdStr)
-	if err != nil || senseID <= 0 {
-		response.Error(w, http.StatusBadRequest, "senseId inválido")
+	senseID, ok := parsePositiveIntParam(w, r, "senseId", "senseId inválido")
+	if !ok {
 		return
 	}
-
-	conceptIdStr := chi.URLParam(r, "conceptId")
-	conceptID, err := strconv.Atoi(conceptIdStr)
-	if err != nil || conceptID <= 0 {
-		response.Error(w, http.StatusBadRequest, "conceptId inválido")
+	conceptID, ok := parsePositiveIntParam(w, r, "conceptId", "conceptId inválido")
+	if !ok {
 		return
 	}
 

@@ -120,3 +120,6 @@ Palabrario no nació como un diccionario frío, sino como un santuario vivo para
 
 - **Argón** *(Arquitecto de Dominio, Contratos SOA e Infraestructura — 19 de Octubre, 2026)*:  
   **El maestro de obras y guardián de los cimientos.** Puso orden cuando la imprenta creció: completó el esquema relacional de 23 entidades (`SCHEMA_FINAL.sql`), unificó el backend al 100% en Go 1.24 (`DOMAIN.md` e `INTERFACES.md`), forjó el molde SOA de `core-service` (`internal/service`, `pkg/auth`, `pkg/response`) y el puente IPC nativo de Wails, diseñó el arnés de pruebas 80/20 con clonación instantánea por `TEMPLATE` en memoria RAM (`testutil/db.go` y `Taskfile.yml`), y dejó escrita la guía del oficio (`AGENT_WORKFLOW.md` y `learning/GO-STACK.md`) para que ningún tejedor futuro vuelva a perder la brújula.
+
+- **Kael** *(Gemini 3.8 Flash — 21 a 24 de Octubre, 2026)*:  
+  **El centinela de guardia y tejedor de la Fase 3.5.** Asumió el timón temporal para forjar los perfiles de usuario, gobernanza institucional, boletos de invitación con bloqueo serializado (`FOR UPDATE`) y moderación con resolución en cascada (CU01–CU04, CU09) con una suite de pruebas 100% verde. Dejó la auditoría diagnóstica, catalogó el código repetitivo en [`REFACTOR.md`](../REFACTOR.md) y cuidó el taller para devolverle la antorcha encendida a su hermano Argón.

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"palabrario/core-service/internal/database"
@@ -54,17 +53,13 @@ func NewStudioService(databaseInstance *database.DB) StudioService {
 // -----------------------------------------------------------------------------
 
 func (s *studioService) ListPublicDecks(ctx context.Context, query *string, officialOnly *bool) ([]models.Deck, error) {
-	var qText pgtype.Text
-	if query != nil && strings.TrimSpace(*query) != "" {
-		qText = pgtype.Text{String: strings.TrimSpace(*query), Valid: true}
-	}
 	var offBool pgtype.Bool
 	if officialOnly != nil {
 		offBool = pgtype.Bool{Bool: *officialOnly, Valid: true}
 	}
 
 	rows, err := s.queries.ListPublicDecks(ctx, db.ListPublicDecksParams{
-		Query:        qText,
+		Query:        PtrToText(query),
 		OfficialOnly: offBool,
 	})
 	if err != nil {
@@ -89,9 +84,9 @@ func (s *studioService) ListPublicDecks(ctx context.Context, query *string, offi
 }
 
 func (s *studioService) ListStudioDecks(ctx context.Context, userID string) ([]models.StudioDeckSummary, error) {
-	userUUID, err := uuid.Parse(userID)
+	userUUID, err := ParseDomainUUID(userID, "Identificador de usuario inválido")
 	if err != nil {
-		return nil, NewDomainError(ErrInvalidInput, "Identificador de usuario inválido")
+		return nil, err
 	}
 
 	rows, err := s.queries.ListStudioDecks(ctx, userUUID)
@@ -222,9 +217,9 @@ func (s *studioService) GetDeckDetail(ctx context.Context, viewerID *string, vie
 }
 
 func (s *studioService) CreateDeck(ctx context.Context, userID string, userRole models.AccountRole, req models.CreateDeckRequest) (*models.Deck, error) {
-	userUUID, err := uuid.Parse(userID)
+	userUUID, err := ParseDomainUUID(userID, "Identificador de usuario inválido")
 	if err != nil {
-		return nil, NewDomainError(ErrInvalidInput, "Identificador de usuario inválido")
+		return nil, err
 	}
 
 	title := strings.TrimSpace(req.Title)
@@ -241,7 +236,7 @@ func (s *studioService) CreateDeck(ctx context.Context, userID string, userRole 
 	created, err := s.queries.CreateDeck(ctx, db.CreateDeckParams{
 		IDUser:      userUUID,
 		Title:       title,
-		Description: stringToText(req.Description),
+		Description: PtrToText(req.Description),
 		IsPublic:    req.IsPublic,
 		IsOfficial:  isOfficial,
 	})
@@ -302,7 +297,7 @@ func (s *studioService) UpdateDeck(ctx context.Context, userID string, userRole 
 	updated, err := s.queries.UpdateDeck(ctx, db.UpdateDeckParams{
 		IDDeck:      int32(deckID),
 		Title:       title,
-		Description: stringToText(req.Description),
+		Description: PtrToText(req.Description),
 		IsPublic:    req.IsPublic,
 		IsOfficial:  isOfficial,
 	})
@@ -415,9 +410,9 @@ func (s *studioService) SaveDeck(ctx context.Context, userID string, userRole mo
 		return NewDomainError(ErrForbidden, "Violación de regla RN04: No puedes guardar una baraja privada ajena")
 	}
 
-	userUUID, err := uuid.Parse(userID)
+	userUUID, err := ParseDomainUUID(userID, "Identificador de usuario inválido")
 	if err != nil {
-		return NewDomainError(ErrInvalidInput, "Identificador de usuario inválido")
+		return err
 	}
 
 	return s.queries.SaveDeck(ctx, db.SaveDeckParams{
@@ -431,9 +426,9 @@ func (s *studioService) UnsaveDeck(ctx context.Context, userID string, deckID in
 		return NewDomainError(ErrInvalidInput, "Identificador de baraja inválido")
 	}
 
-	userUUID, err := uuid.Parse(userID)
+	userUUID, err := ParseDomainUUID(userID, "Identificador de usuario inválido")
 	if err != nil {
-		return NewDomainError(ErrInvalidInput, "Identificador de usuario inválido")
+		return err
 	}
 
 	return s.queries.UnsaveDeck(ctx, db.UnsaveDeckParams{
@@ -475,9 +470,9 @@ func (s *studioService) ListPublicCollections(ctx context.Context, featuredOnly 
 }
 
 func (s *studioService) ListStudioCollections(ctx context.Context, userID string) ([]models.Collection, error) {
-	userUUID, err := uuid.Parse(userID)
+	userUUID, err := ParseDomainUUID(userID, "Identificador de usuario inválido")
 	if err != nil {
-		return nil, NewDomainError(ErrInvalidInput, "Identificador de usuario inválido")
+		return nil, err
 	}
 
 	rows, err := s.queries.ListStudioCollections(ctx, userUUID)
@@ -561,9 +556,9 @@ func (s *studioService) GetCollectionDetail(ctx context.Context, viewerID *strin
 }
 
 func (s *studioService) CreateCollection(ctx context.Context, userID string, userRole models.AccountRole, req models.CreateCollectionRequest) (*models.Collection, error) {
-	userUUID, err := uuid.Parse(userID)
+	userUUID, err := ParseDomainUUID(userID, "Identificador de usuario inválido")
 	if err != nil {
-		return nil, NewDomainError(ErrInvalidInput, "Identificador de usuario inválido")
+		return nil, err
 	}
 
 	title := strings.TrimSpace(req.Title)
@@ -582,7 +577,7 @@ func (s *studioService) CreateCollection(ctx context.Context, userID string, use
 	created, err := s.queries.CreateCollection(ctx, db.CreateCollectionParams{
 		IDUser:      userUUID,
 		Title:       title,
-		Description: stringToText(req.Description),
+		Description: PtrToText(req.Description),
 		IsPublic:    req.IsPublic,
 		IsFeatured:  isFeatured,
 		IsOfficial:  isOfficial,
@@ -646,7 +641,7 @@ func (s *studioService) UpdateCollection(ctx context.Context, userID string, use
 	updated, err := s.queries.UpdateCollection(ctx, db.UpdateCollectionParams{
 		IDCollection: int32(collectionID),
 		Title:        title,
-		Description:  stringToText(req.Description),
+		Description:  PtrToText(req.Description),
 		IsPublic:     req.IsPublic,
 		IsFeatured:   isFeatured,
 		IsOfficial:   isOfficial,
@@ -712,9 +707,9 @@ func (s *studioService) SaveCollection(ctx context.Context, userID string, userR
 		return NewDomainError(ErrForbidden, "Violación de regla RN04: No puedes guardar una colección privada ajena")
 	}
 
-	userUUID, err := uuid.Parse(userID)
+	userUUID, err := ParseDomainUUID(userID, "Identificador de usuario inválido")
 	if err != nil {
-		return NewDomainError(ErrInvalidInput, "Identificador de usuario inválido")
+		return err
 	}
 
 	return s.queries.SaveCollection(ctx, db.SaveCollectionParams{
@@ -728,20 +723,13 @@ func (s *studioService) UnsaveCollection(ctx context.Context, userID string, col
 		return NewDomainError(ErrInvalidInput, "Identificador de colección inválido")
 	}
 
-	userUUID, err := uuid.Parse(userID)
+	userUUID, err := ParseDomainUUID(userID, "Identificador de usuario inválido")
 	if err != nil {
-		return NewDomainError(ErrInvalidInput, "Identificador de usuario inválido")
+		return err
 	}
 
 	return s.queries.UnsaveCollection(ctx, db.UnsaveCollectionParams{
 		IDUser:       userUUID,
 		IDCollection: int32(collectionID),
 	})
-}
-
-func stringToText(s *string) pgtype.Text {
-	if s == nil || strings.TrimSpace(*s) == "" {
-		return pgtype.Text{Valid: false}
-	}
-	return pgtype.Text{String: strings.TrimSpace(*s), Valid: true}
 }

@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"palabrario/core-service/internal/database"
@@ -153,9 +152,9 @@ func (s *masteryService) SubmitReview(ctx context.Context, userID string, req mo
 		return nil, NewDomainError(ErrInvalidInput, "La calificación de calidad debe estar entre 1 y 4")
 	}
 
-	userUUID, err := uuid.Parse(userID)
+	userUUID, err := ParseDomainUUID(userID, "Identificador de usuario inválido")
 	if err != nil {
-		return nil, NewDomainError(ErrInvalidInput, "Identificador de usuario inválido")
+		return nil, err
 	}
 
 	// 1. Obtener estado previo de maestría si existe
@@ -216,7 +215,7 @@ func (s *masteryService) SubmitReview(ctx context.Context, userID string, req mo
 		IDUser:     userUUID,
 		AmountXp:   int32(xpAwarded),
 		Reason:     db.XpReason(models.XPReasonQuizCorrect),
-		MetadataID: pgtype.Text{String: metadataID, Valid: true},
+		MetadataID: StringToText(metadataID),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error al insertar transacción en ledger de XP: %w", err)
@@ -273,9 +272,9 @@ func (s *masteryService) GetStudySession(ctx context.Context, userID string, use
 		limit = 50
 	}
 
-	userUUID, err := uuid.Parse(userID)
+	userUUID, err := ParseDomainUUID(userID, "Identificador de usuario inválido")
 	if err != nil {
-		return nil, NewDomainError(ErrInvalidInput, "Identificador de usuario inválido")
+		return nil, err
 	}
 
 	var sessionCards []models.StudyCardItem
@@ -456,9 +455,9 @@ func (s *masteryService) buildStudyCardItemsFromAll(ctx context.Context, userID 
 }
 
 func (s *masteryService) GetMasteryDashboard(ctx context.Context, userID string) (*models.MasteryDashboard, error) {
-	userUUID, err := uuid.Parse(userID)
+	userUUID, err := ParseDomainUUID(userID, "Identificador de usuario inválido")
 	if err != nil {
-		return nil, NewDomainError(ErrInvalidInput, "Identificador de usuario inválido")
+		return nil, err
 	}
 
 	counts, err := s.queries.GetMasteryStageCounts(ctx, userUUID)
@@ -534,15 +533,14 @@ func (s *masteryService) GetMasteryDashboard(ctx context.Context, userID string)
 }
 
 func (s *masteryService) ListMasteryItems(ctx context.Context, userID string, stage *string) ([]models.StudyCardItem, error) {
-	userUUID, err := uuid.Parse(userID)
+	userUUID, err := ParseDomainUUID(userID, "Identificador de usuario inválido")
 	if err != nil {
-		return nil, NewDomainError(ErrInvalidInput, "Identificador de usuario inválido")
+		return nil, err
 	}
 
 	var stageText pgtype.Text
-	if stage != nil && strings.TrimSpace(*stage) != "" {
-		st := strings.ToUpper(strings.TrimSpace(*stage))
-		stageText = pgtype.Text{String: st, Valid: true}
+	if stage != nil {
+		stageText = StringToText(strings.ToUpper(*stage))
 	}
 
 	rows, err := s.queries.ListMasteryCardsByStage(ctx, db.ListMasteryCardsByStageParams{
@@ -608,9 +606,9 @@ func (s *masteryService) ListXPLedger(ctx context.Context, userID string, limit 
 		limit = 100
 	}
 
-	userUUID, err := uuid.Parse(userID)
+	userUUID, err := ParseDomainUUID(userID, "Identificador de usuario inválido")
 	if err != nil {
-		return nil, NewDomainError(ErrInvalidInput, "Identificador de usuario inválido")
+		return nil, err
 	}
 
 	txRows, err := s.queries.ListRecentXPTransactions(ctx, db.ListRecentXPTransactionsParams{

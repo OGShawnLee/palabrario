@@ -3,10 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
-	"strings"
-
-	"github.com/go-chi/chi/v5"
 
 	"palabrario/core-service/internal/service"
 	"palabrario/pkg/auth"
@@ -28,10 +24,7 @@ func NewStudioHandler(studioService service.StudioService) *StudioHandler {
 
 // ListDecks maneja GET /api/v1/decks?q=&official_only=false
 func (h *StudioHandler) ListDecks(w http.ResponseWriter, r *http.Request) {
-	var query *string
-	if q := strings.TrimSpace(r.URL.Query().Get("q")); q != "" {
-		query = &q
-	}
+	query := optionalQueryString(r, "q")
 	var officialOnly *bool
 	if off := r.URL.Query().Get("official_only"); off != "" {
 		val := off == "true" || off == "1"
@@ -66,10 +59,8 @@ func (h *StudioHandler) ListStudioDecks(w http.ResponseWriter, r *http.Request) 
 
 // GetDeck maneja GET /api/v1/decks/{id} (OptionalAuth)
 func (h *StudioHandler) GetDeck(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	deckID, err := strconv.Atoi(idStr)
-	if err != nil || deckID <= 0 {
-		response.Error(w, http.StatusBadRequest, "Identificador de baraja inválido")
+	deckID, ok := parsePositiveIntParam(w, r, "id", "Identificador de baraja inválido")
+	if !ok {
 		return
 	}
 
@@ -120,10 +111,8 @@ func (h *StudioHandler) UpdateDeck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := chi.URLParam(r, "id")
-	deckID, err := strconv.Atoi(idStr)
-	if err != nil || deckID <= 0 {
-		response.Error(w, http.StatusBadRequest, "Identificador de baraja inválido")
+	deckID, valid := parsePositiveIntParam(w, r, "id", "Identificador de baraja inválido")
+	if !valid {
 		return
 	}
 
@@ -150,10 +139,8 @@ func (h *StudioHandler) DeleteDeck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := chi.URLParam(r, "id")
-	deckID, err := strconv.Atoi(idStr)
-	if err != nil || deckID <= 0 {
-		response.Error(w, http.StatusBadRequest, "Identificador de baraja inválido")
+	deckID, valid := parsePositiveIntParam(w, r, "id", "Identificador de baraja inválido")
+	if !valid {
 		return
 	}
 
@@ -173,10 +160,8 @@ func (h *StudioHandler) AddDeckItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := chi.URLParam(r, "id")
-	deckID, err := strconv.Atoi(idStr)
-	if err != nil || deckID <= 0 {
-		response.Error(w, http.StatusBadRequest, "Identificador de baraja inválido")
+	deckID, valid := parsePositiveIntParam(w, r, "id", "Identificador de baraja inválido")
+	if !valid {
 		return
 	}
 
@@ -203,17 +188,13 @@ func (h *StudioHandler) RemoveDeckItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := chi.URLParam(r, "id")
-	deckID, err := strconv.Atoi(idStr)
-	if err != nil || deckID <= 0 {
-		response.Error(w, http.StatusBadRequest, "Identificador de baraja inválido")
+	deckID, valid := parsePositiveIntParam(w, r, "id", "Identificador de baraja inválido")
+	if !valid {
 		return
 	}
 
-	senseStr := chi.URLParam(r, "senseId")
-	senseID, err := strconv.Atoi(senseStr)
-	if err != nil || senseID <= 0 {
-		response.Error(w, http.StatusBadRequest, "Identificador de sentido inválido")
+	senseID, valid := parsePositiveIntParam(w, r, "senseId", "Identificador de sentido inválido")
+	if !valid {
 		return
 	}
 
@@ -233,10 +214,8 @@ func (h *StudioHandler) SaveDeck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := chi.URLParam(r, "id")
-	deckID, err := strconv.Atoi(idStr)
-	if err != nil || deckID <= 0 {
-		response.Error(w, http.StatusBadRequest, "Identificador de baraja inválido")
+	deckID, valid := parsePositiveIntParam(w, r, "id", "Identificador de baraja inválido")
+	if !valid {
 		return
 	}
 
@@ -256,10 +235,8 @@ func (h *StudioHandler) UnsaveDeck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := chi.URLParam(r, "id")
-	deckID, err := strconv.Atoi(idStr)
-	if err != nil || deckID <= 0 {
-		response.Error(w, http.StatusBadRequest, "Identificador de baraja inválido")
+	deckID, valid := parsePositiveIntParam(w, r, "id", "Identificador de baraja inválido")
+	if !valid {
 		return
 	}
 
@@ -311,10 +288,8 @@ func (h *StudioHandler) ListStudioCollections(w http.ResponseWriter, r *http.Req
 
 // GetCollection maneja GET /api/v1/collections/{id} (OptionalAuth)
 func (h *StudioHandler) GetCollection(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	colID, err := strconv.Atoi(idStr)
-	if err != nil || colID <= 0 {
-		response.Error(w, http.StatusBadRequest, "Identificador de colección inválido")
+	colID, ok := parsePositiveIntParam(w, r, "id", "Identificador de colección inválido")
+	if !ok {
 		return
 	}
 
@@ -365,10 +340,8 @@ func (h *StudioHandler) UpdateCollection(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	idStr := chi.URLParam(r, "id")
-	colID, err := strconv.Atoi(idStr)
-	if err != nil || colID <= 0 {
-		response.Error(w, http.StatusBadRequest, "Identificador de colección inválido")
+	colID, valid := parsePositiveIntParam(w, r, "id", "Identificador de colección inválido")
+	if !valid {
 		return
 	}
 
@@ -395,10 +368,8 @@ func (h *StudioHandler) DeleteCollection(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	idStr := chi.URLParam(r, "id")
-	colID, err := strconv.Atoi(idStr)
-	if err != nil || colID <= 0 {
-		response.Error(w, http.StatusBadRequest, "Identificador de colección inválido")
+	colID, valid := parsePositiveIntParam(w, r, "id", "Identificador de colección inválido")
+	if !valid {
 		return
 	}
 
@@ -418,10 +389,8 @@ func (h *StudioHandler) SaveCollection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := chi.URLParam(r, "id")
-	colID, err := strconv.Atoi(idStr)
-	if err != nil || colID <= 0 {
-		response.Error(w, http.StatusBadRequest, "Identificador de colección inválido")
+	colID, valid := parsePositiveIntParam(w, r, "id", "Identificador de colección inválido")
+	if !valid {
 		return
 	}
 
@@ -441,10 +410,8 @@ func (h *StudioHandler) UnsaveCollection(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	idStr := chi.URLParam(r, "id")
-	colID, err := strconv.Atoi(idStr)
-	if err != nil || colID <= 0 {
-		response.Error(w, http.StatusBadRequest, "Identificador de colección inválido")
+	colID, valid := parsePositiveIntParam(w, r, "id", "Identificador de colección inválido")
+	if !valid {
 		return
 	}
 

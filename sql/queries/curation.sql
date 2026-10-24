@@ -147,3 +147,127 @@ RETURNING
   state,
   created_at,
   updated_at;
+
+-- 7. Crear Reporte de Contenido (CU09)
+-- name: CreateContentReport :one
+INSERT INTO content_reports (
+  id_reporter,
+  target_type,
+  id_word,
+  id_sense,
+  id_example,
+  reason,
+  details
+) VALUES (
+  @id_reporter,
+  @target_type::report_target_type,
+  @id_word,
+  @id_sense,
+  @id_example,
+  @reason::report_reason,
+  @details
+) RETURNING 
+  id_report,
+  id_reporter,
+  target_type::TEXT AS target_type,
+  id_word,
+  id_sense,
+  id_example,
+  reason::TEXT AS reason,
+  details,
+  status::TEXT AS status,
+  resolved_by,
+  resolution_notes,
+  created_at,
+  resolved_at;
+
+-- 8. Obtener Reporte por ID (CU09)
+-- name: GetContentReportByID :one
+SELECT 
+    cr.id_report,
+    cr.id_reporter,
+    u.user_name AS reporter_user_name,
+    cr.target_type::TEXT AS target_type,
+    cr.id_word,
+    cr.id_sense,
+    cr.id_example,
+    COALESCE(
+      CASE cr.target_type
+        WHEN 'WORD' THEN w.lemma
+        WHEN 'SENSE' THEN COALESCE(ws.lemma || ': ' || s.short_definition, s.short_definition)
+        WHEN 'EXAMPLE' THEN e.sentence
+      END,
+      ''
+    ) AS target_preview,
+    cr.reason::TEXT AS reason,
+    cr.details,
+    cr.status::TEXT AS status,
+    coalesce(cr.resolved_by::TEXT, '')::TEXT AS resolved_by,
+    cr.resolution_notes,
+    cr.created_at,
+    cr.resolved_at
+FROM content_reports cr
+JOIN users u ON u.id_user = cr.id_reporter
+LEFT JOIN words w ON w.id_word = cr.id_word
+LEFT JOIN senses s ON s.id_sense = cr.id_sense
+LEFT JOIN words ws ON ws.id_word = s.id_word
+LEFT JOIN examples e ON e.id_example = cr.id_example
+WHERE cr.id_report = $1;
+
+-- 9. Listar Reportes de Contenido (CU09)
+-- name: ListContentReports :many
+SELECT 
+    cr.id_report,
+    cr.id_reporter,
+    u.user_name AS reporter_user_name,
+    cr.target_type::TEXT AS target_type,
+    cr.id_word,
+    cr.id_sense,
+    cr.id_example,
+    COALESCE(
+      CASE cr.target_type
+        WHEN 'WORD' THEN w.lemma
+        WHEN 'SENSE' THEN COALESCE(ws.lemma || ': ' || s.short_definition, s.short_definition)
+        WHEN 'EXAMPLE' THEN e.sentence
+      END,
+      ''
+    ) AS target_preview,
+    cr.reason::TEXT AS reason,
+    cr.details,
+    cr.status::TEXT AS status,
+    coalesce(cr.resolved_by::TEXT, '')::TEXT AS resolved_by,
+    cr.resolution_notes,
+    cr.created_at,
+    cr.resolved_at
+FROM content_reports cr
+JOIN users u ON u.id_user = cr.id_reporter
+LEFT JOIN words w ON w.id_word = cr.id_word
+LEFT JOIN senses s ON s.id_sense = cr.id_sense
+LEFT JOIN words ws ON ws.id_word = s.id_word
+LEFT JOIN examples e ON e.id_example = cr.id_example
+WHERE (sqlc.narg('status')::VARCHAR IS NULL OR sqlc.narg('status')::VARCHAR = '' OR cr.status::TEXT = sqlc.narg('status')::VARCHAR)
+ORDER BY cr.created_at DESC;
+
+-- 10. Resolver Reporte de Contenido (CU09)
+-- name: ResolveContentReport :one
+UPDATE content_reports
+SET 
+  status = @status::report_status,
+  resolved_by = @resolved_by,
+  resolution_notes = @resolution_notes,
+  resolved_at = now()
+WHERE id_report = @id_report
+RETURNING 
+  id_report,
+  id_reporter,
+  target_type::TEXT AS target_type,
+  id_word,
+  id_sense,
+  id_example,
+  reason::TEXT AS reason,
+  details,
+  status::TEXT AS status,
+  resolved_by,
+  resolution_notes,
+  created_at,
+  resolved_at;

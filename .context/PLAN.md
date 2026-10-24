@@ -1,4 +1,4 @@
-﻿﻿# 🗺️ Plan Maestro de Implementación y Estado Arquitectónico (`.context/PLAN.md`)
+﻿# 🗺️ Plan Maestro de Implementación y Estado Arquitectónico (`.context/PLAN.md`)
 
 > **Documento de Planificación Estratégica y Hoja de Ruta a Largo Plazo (Backend-First)**  
 > **Proyecto:** Palabrario — Plataforma Gamificada de Aprendizaje y Preservación del Léxico Dialectal Panhispánico  
@@ -24,7 +24,7 @@
 
 ## 1. Diagnóstico Ejecutivo: ¿Dónde Estamos Hoy?
 
-Al auditar el código real del repositorio frente a los **16 Casos de Uso (`CU01–CU16`)** y las **11 Reglas de Negocio (`RN01–RN11`)**, el proyecto ha cerrado con éxito la **Fase 3.3** (Diccionario y Curaduría por Quórum) y la **Fase 3.4** (Studio Personal, Motor SM-2 y Ledger de XP), y se encuentra listo para iniciar la **Fase 3.5 (Módulo de Cuenta, Perfiles Sociales, Gobernanza y Moderación)**:
+Al auditar el código real del repositorio frente a los **16 Casos de Uso (`CU01–CU16`)** y las **11 Reglas de Negocio (`RN01–RN11`)**, el proyecto ha cerrado con éxito la **Fase 3.3** (Diccionario y Curaduría por Quórum), la **Fase 3.4** (Studio Personal, Motor SM-2 y Ledger de XP) y la **Fase 3.5** (Módulo de Cuenta, Perfiles Sociales, Gobernanza y Moderación, más la refactorización de utilidades en `REFACTOR.md`), y se encuentra listo para iniciar la **Fase 4 (Migración de `realtime-service` a Go 1.24 y Arena Multijugador)**:
 
 ```mermaid
 flowchart LR
@@ -32,8 +32,8 @@ flowchart LR
     F2 --> F31["✅ Fase 3.1/3.2\nCore SOA Base + Auth JWT\n(100%)"]
     F31 --> F33["✅ Fase 3.3\nDiccionario & Curaduría\n(100%)"]
     F33 --> F34["✅ Fase 3.4\nStudio & Motor SM-2\n(100%)"]
-    F34 --> F35["🚧 Fase 3.5 (ACTUAL)\nGobernanza & Reportes\n(0% -> En Progreso)"]
-    F35 --> F4["⏳ Fase 4\nMigración Realtime a Go\n+ Arena WS & Flush\n(10% Esqueleto)"]
+    F34 --> F35["✅ Fase 3.5\nGobernanza & Reportes\n(100%)"]
+    F35 --> F4["🚧 Fase 4 (ACTUAL)\nMigración Realtime a Go\n+ Arena WS & Flush\n(10% Esqueleto)"]
     F4 --> F5["⏳ Fase 5\nPuente Wails (app.go)\n+ Bindings TS & UI\n(Auth & Search listos)"]
     F5 --> F6["🌱 Fase 6 (Largo Plazo)\nEventos de Temporada"]
 ```
@@ -42,13 +42,13 @@ flowchart LR
 
 | Componente / Módulo | Estado Actual Real | Lo que YA existe y compila | Lo que FALTA por construir |
 | :--- | :---: | :--- | :--- |
-| **1. Base de Datos ([`SCHEMA_FINAL.sql`](../SCHEMA_FINAL.sql))** | **100% Completo** | 23 tablas, extensiones `unaccent` + `pg_trgm`, vectores `tsvector` GIN, triggers `RN06` (auto-aprobación al 3er voto) y `RN07` (anti-autoaprobación), tablas de gobernanza (`editor_requests`, `invitation_tickets`, `ticket_redemptions`, `content_reports`) y guardados (`saved_decks`, `saved_collections`). | Únicamente escribir las consultas SQL en `sql/queries/*.sql` para los módulos pendientes (`governance.sql`, `arena.sql` y reportes en `curation.sql`) y ejecutar `sqlc generate`. |
-| **2. Paquetes Compartidos ([`pkg/`](../pkg))** | **90% Completo** | `pkg/auth` (JWT + `bcrypt`), `pkg/response` (JSON/Error unificados), estructuras completas en `pkg/models/dictionary.go`, `pkg/models/curation.go` y `pkg/models/studio.go`, y estructuras base en `auth.go`, `user.go`, `arena.go`. | Agregar los DTOs de entrada/salida especificados en la sección 2 de [`INTERFACES.md`](./INTERFACES.md) (`governance.go`, y ampliaciones en `user.go`, `arena.go`). |
-| **3. `core-service` — Auth & Cuentas (`CU01`)** | **75% Completo** | Capa SOA `IdentityService` (`SignUp`, `SignIn` con verificación de `is_active`, `GetMe`), middlewares `RequireAuth`, `OptionalAuth` y `RequireRole`. | `PUT /api/v1/users/me` (actualizar perfil y dialecto ancla `CU01`), `PUT /api/v1/users/me/password` y `GET /api/v1/users/u/{username}` (perfil público/dual). |
+| **1. Base de Datos ([`SCHEMA_FINAL.sql`](../SCHEMA_FINAL.sql))** | **100% Completo** | 23 tablas, extensiones `unaccent` + `pg_trgm`, vectores `tsvector` GIN, triggers `RN06` (auto-aprobación al 3er voto) y `RN07` (anti-autoaprobación), tablas de gobernanza (`editor_requests`, `invitation_tickets`, `ticket_redemptions`, `content_reports`) y guardados (`saved_decks`, `saved_collections`). | Únicamente escribir las consultas SQL en `sql/queries/arena.sql` y ejecutar `sqlc generate`. |
+| **2. Paquetes Compartidos ([`pkg/`](../pkg))** | **95% Completo** | `pkg/auth` (JWT + `bcrypt`), `pkg/response` (JSON/Error unificados), `pkg/utils` (`ToPtr[T]`), estructuras completas en `pkg/models/dictionary.go`, `pkg/models/curation.go`, `pkg/models/studio.go`, `pkg/models/governance.go`, `pkg/models/user.go`, `pkg/models/auth.go` y estructuras base en `pkg/models/arena.go`. | Ampliaciones de DTOs de Arena en `pkg/models/arena.go` si aplica en Fase 4. |
+| **3. `core-service` — Auth & Cuentas (`CU01`)** | **100% Completo** | Capa SOA `IdentityService` (`SignUp`, `SignIn` con verificación de `is_active`, `GetMe`, `UpdateProfile`, `ChangePassword`, `GetPublicProfileByUsername` con vista dual **RN01**), handlers en `auth_handler.go` y `user_handler.go`, middlewares `RequireAuth`, `OptionalAuth` y `RequireRole`. | Nada en `core-service` (Cerrado al 100% en Fase 3.5; pendiente solo exponer métodos puente en `local-app/app.go` en Fase 5). |
 | **4. `core-service` — Diccionario (`CU05, CU06`)** | **100% Completo** | Capa SOA `DictionaryService` con `GET /api/v1/words/search` (`OptionalAuth` + FTS + trigramas), `GET /api/v1/words/{id}` (detalle con sentidos `APPROVED`, ejemplos, heterónimos y `ParentZone`), `GET /api/v1/regions`, `GET /api/v1/words/word-of-the-day`, explorador paginado `GET /api/v1/words`, y todo el bloque de autoría de `CU06` (`POST/PUT /words`, `POST/PUT/DELETE /senses`, `examples` y `concepts` con helper `NormalizeLemma`). | Nada en `core-service` (Cerrado al 100% en Fase 3.3; pendiente solo exponer métodos puente en `local-app/app.go` en Fase 5). |
-| **5. `core-service` — Curaduría y Moderación (`CU07–CU09`)** | **85% Completo** | Los triggers PL/pgSQL (`trg_prevent_self_approval` y `trg_auto_approve_sense`), el traductor `MapDBError` (`P0001` $\to$ `403 Forbidden`), consultas en `sql/queries/curation.sql`, `CurationService` y endpoints para cola de quórum (`/curation/queue`, `/my-proposals`, `/senses/{id}`), votación (`/vote` con `RN06` y `RN07`) y veto admin (`RN08` en `/admin/senses/{id}/state`) ya están listos y probados. | Consultas SQL adicionales en `sql/queries/curation.sql` y endpoints para reportes comunitarios `content_reports` (`CU09`: `POST /reports`, `GET /admin/reports` y `PUT /admin/reports/{id}/resolve`, programados para Fase 3.5). |
+| **5. `core-service` — Curaduría y Moderación (`CU07–CU09`)** | **100% Completo** | Los triggers PL/pgSQL (`trg_prevent_self_approval` y `trg_auto_approve_sense`), el traductor `MapDBError` (`P0001` $\to$ `403 Forbidden`), consultas en `sql/queries/curation.sql`, `CurationService` y endpoints para cola de quórum (`/curation/queue`, `/my-proposals`, `/senses/{id}`), votación (`/vote` con `RN06` y `RN07`), veto admin (`RN08` en `/curation/senses/{id}/state`) y reportes comunitarios (`CU09`: `POST /reports`, `GET /reports` y `PUT /reports/{reportId}/resolve` con ocultamiento automático `RESOLVED_HIDDEN`). | Nada en `core-service` (Cerrado al 100% en Fase 3.5; pendiente solo exponer métodos puente en `local-app/app.go` en Fase 5). |
 | **6. `core-service` — Studio y SM-2 (`CU10–CU13`)** | **100% Completo** | Modelos completos en `pkg/models/studio.go`, consultas en `sql/queries/studio.sql` y `sql/queries/mastery.sql`, `StudioService` (CRUD de barajas/colecciones y guardado comunitario con validación estricta de **RN03**, **RN04** y **RN05**), `MasteryService` (función pura determinística `CalculateSM2`, transacción ACID `pgx.Tx` actualizando `user_mastery`, `xp_transactions` **RN11** y racha/nivel en `users`), handlers `studio_handler.go` y `mastery_handler.go`, rutas en `router.go` y pruebas de integración en `studio_mastery_test.go`. | Nada en `core-service` (Cerrado al 100% en Fase 3.4; pendiente solo exponer métodos puente en `local-app/app.go` en Fase 5). |
-| **7. `core-service` — Gobernanza (`CU02–CU04`)** | **0% en Backend** | Tablas `editor_requests`, `invitation_tickets` y `ticket_redemptions` en `SCHEMA_FINAL.sql`. | Consultas en `sql/queries/governance.sql`, `GovernanceService` y endpoints `/api/v1/governance/*`. |
+| **7. `core-service` — Gobernanza (`CU02–CU04`)** | **100% Completo** | Modelos en `pkg/models/governance.go`, consultas en `sql/queries/governance.sql`, `GovernanceService` (`CreateEditorRequest` con **RN02**, `ResolveEditorRequest` con promoción atómica, `UpdateUserRoleOrStatus` con protección del último `ADMIN`, `CreateInvitationTicket`, `RevokeInvitationTicket` y `RedeemInvitationTicket` con `SELECT ... FOR UPDATE`), `governance_handler.go` y pruebas en `governance_reports_test.go`. | Nada en `core-service` (Cerrado al 100% en Fase 3.5; pendiente solo exponer métodos puente en `local-app/app.go` en Fase 5). |
 | **8. `realtime-service` (`CU14–CU16`)** | **10% Esqueleto** | Actualmente tiene un placeholder de 9 líneas en TypeScript/Bun (`realtime-service/index.ts`). | **Migrar a Go 1.24 + Chi v5 + WebSockets**, implementar `ArenaHub` en RAM por PIN, tickers de ronda (`RN10`), reconexión `10s` (`RNF-CON-02`) y *Batch Flush* hacia `core-service`. |
 | **9. `image-service` (Multimedia)** | **25% Esqueleto** | Ya migrado a Go 1.24 + Chi v5 en puerto `8002` con `/health`, graceful shutdown y Dockerfile multi-stage. | Endpoint `POST /api/v1/images/upload` con validación de magic bytes, limpieza EXIF y compresión WebP. |
 | **10. Puente Wails Go (`local-app/app.go`) + UI** | **25% Puente / 100% UI Mock** | `local-app/app.go` ya implementa la bóveda de sesión JWT en RAM (`SignIn`, `SignUp`, `SignOut`, `GetCurrentUser`, `IsAuthenticated`) y las consultas iniciales (`SearchWords`, `GetWordDetail`). | En la **Fase 5**, exponer en `local-app/app.go` los métodos puente para el resto de módulos, correr `wails generate module` para regenerar `wailsjs/go/models.ts` y `App.js`, y conectar las vistas Vue. |
@@ -104,27 +104,29 @@ Cada fase de backend (3.3 a 4) está diseñada como una unidad atómica de traba
 
 ---
 
-### 📍 FASE 3.5 (Prioridad Inmediata): Módulo de Cuenta, Perfiles Sociales, Gobernanza y Moderación (`CU01, CU02, CU03, CU04, CU09`)
+### ✅ FASE 3.5 (COMPLETADA + REFACTORIZADA): Módulo de Cuenta, Perfiles Sociales, Gobernanza y Moderación (`CU01, CU02, CU03, CU04, CU09`)
 
-> **Objetivo:** Completar la gestión de perfil propio/público, el flujo de ascenso a Editor, los boletos de invitación y la resolución de reportes siguiendo las secciones **2.1**, **2.2** y **2.4** de [`INTERFACES.md`](./INTERFACES.md).
+> **Objetivo:** Completar la gestión de perfil propio/público, el flujo de ascenso a Editor, los boletos de invitación y la resolución de reportes siguiendo las secciones **2.1**, **2.2** y **2.4** de [`INTERFACES.md`](./INTERFACES.md), más la consolidación de utilidades reportadas en [`REFACTOR.md`](../REFACTOR.md).
 
 #### Tareas Exactas de Implementación:
-1. **Modelos y Consultas:**
-   - Crear `pkg/models/governance.go` y ampliar `pkg/models/user.go`.
-   - Ampliar `sql/queries/users.sql`, `sql/queries/curation.sql` (reportes `content_reports`) y crear `sql/queries/governance.sql`.
-   - Ejecutar `sqlc generate`.
-2. **Servicios SOA y Handlers:**
-   - Ampliar [`core-service/internal/service/identity_service.go`](../core-service/internal/service/identity_service.go), [`core-service/internal/service/curation_service.go`](../core-service/internal/service/curation_service.go) (`CreateReport`, `ListOpenReports`, `ResolveReport`) y crear `governance_service.go`.
-   - Crear `user_handler.go`, `governance_handler.go`, ampliar `curation_handler.go` y montar los endpoints `/api/v1/users/*`, `/api/v1/governance/*` y `/api/v1/reports/*` (`/api/v1/admin/reports*`).
+1. **[x] Modelos y Consultas:**
+   - Creado [`pkg/models/governance.go`](../pkg/models/governance.go) y ampliado [`pkg/models/user.go`](../pkg/models/user.go).
+   - Ampliado [`sql/queries/users.sql`](../sql/queries/users.sql), [`sql/queries/curation.sql`](../sql/queries/curation.sql) (reportes `content_reports`) y creado [`sql/queries/governance.sql`](../sql/queries/governance.sql).
+   - Ejecutado `sqlc generate`.
+2. **[x] Servicios SOA, Handlers y Refactorización (`REFACTOR.md`):**
+   - Ampliado [`core-service/internal/service/identity_service.go`](../core-service/internal/service/identity_service.go), [`core-service/internal/service/curation_service.go`](../core-service/internal/service/curation_service.go) (`CreateReport`, `ListOpenReports`, `ResolveReport`) y creado [`core-service/internal/service/governance_service.go`](../core-service/internal/service/governance_service.go).
+   - Creado [`user_handler.go`](../core-service/internal/api/handlers/user_handler.go), [`governance_handler.go`](../core-service/internal/api/handlers/governance_handler.go), ampliado [`curation_handler.go`](../core-service/internal/api/handlers/curation_handler.go) y montados los endpoints `/api/v1/users/*`, `/api/v1/governance/*` y `/api/v1/reports/*` en [`router.go`](../core-service/internal/api/router.go).
+   - Consolidados helpers atómicos en [`pkg/utils/ptr.go`](../pkg/utils/ptr.go), [`core-service/internal/service/helpers.go`](../core-service/internal/service/helpers.go) y [`core-service/internal/api/handlers/helpers.go`](../core-service/internal/api/handlers/helpers.go).
+   - Añadidas pruebas de integración en [`governance_reports_test.go`](../core-service/internal/service/governance_reports_test.go).
 
 ---
 
-### 📍 FASE 4: Migración de `realtime-service` a Go 1.24 y Arena Multijugador (`CU14, CU15, CU16`)
+### 📍 FASE 4 (Prioridad Inmediata): Migración de `realtime-service` a Go 1.24 y Arena Multijugador (`CU14, CU15, CU16`)
 
 > **Objetivo:** Unificar el 100% del backend en Go 1.24 migrando `realtime-service` (`:8001`) de Bun a Go e implementando el motor de salas por PIN en RAM y el *Batch Flush* transaccional hacia `core-service` según la sección **2.7** de [`INTERFACES.md`](./INTERFACES.md).
 
 #### Tareas Exactas de Implementación:
-1. **Migración de Infraestructura de `realtime-service` a Go 1.24:**
+1. **Migración de Infraestructura de `realtime-service` a Go 1.24 (COMPLETADA):**
    - Eliminar los artefactos de Bun/Node en `realtime-service/` (`index.ts`, `package.json`, `bun.lock`, `tsconfig.json`, `node_modules`).
    - Crear `realtime-service/main.go` y `realtime-service/Dockerfile` (multi-stage build con `context: .` en [`docker-compose.yml`](../docker-compose.yml), idéntico en patrón a `core-service` e `image-service`).
 2. **Coordinación en `core-service` (`ArenaCatalogService`):**

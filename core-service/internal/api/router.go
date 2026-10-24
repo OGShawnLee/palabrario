@@ -40,7 +40,7 @@ func (rt *Router) Setup() http.Handler {
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-		ExposedHeaders:   []string{"Link"},
+		ExposedHeaders:   []string{"Link", "X-Total-Count"},
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
@@ -48,6 +48,7 @@ func (rt *Router) Setup() http.Handler {
 	// 1. Capa de Servicios SOA (Contratos de .context/INTERFACES.md)
 	tokenService := auth.NewTokenService(rt.cfg.JWTSecret, rt.cfg.JWTExpirationHours)
 	identityService := service.NewIdentityService(rt.db, tokenService)
+	governanceService := service.NewGovernanceService(rt.db)
 	dictionaryService := service.NewDictionaryService(rt.db)
 	curationService := service.NewCurationService(rt.db)
 	studioService := service.NewStudioService(rt.db)
@@ -56,6 +57,8 @@ func (rt *Router) Setup() http.Handler {
 	// 2. Capa de Middlewares y Handlers HTTP
 	authMiddleware := middleware.NewAuthMiddleware(tokenService)
 	authHandler := handlers.NewAuthHandler(identityService)
+	userHandler := handlers.NewUserHandler(identityService)
+	governanceHandler := handlers.NewGovernanceHandler(governanceService)
 	dictionaryHandler := handlers.NewDictionaryHandler(dictionaryService)
 	curationHandler := handlers.NewCurationHandler(curationService)
 	studioHandler := handlers.NewStudioHandler(studioService)
@@ -81,6 +84,46 @@ func (rt *Router) Setup() http.Handler {
 			r.Group(func(r chi.Router) {
 				r.Use(authMiddleware.RequireAuth)
 				r.Get("/me", authHandler.GetMe)
+			})
+		})
+
+		// Módulo 1: Perfiles de Usuario (CU01)
+		r.Route("/users", func(r chi.Router) {
+			r.With(authMiddleware.OptionalAuth).Get("/u/{username}", userHandler.GetPublicProfile)
+
+			r.Group(func(r chi.Router) {
+				r.Use(authMiddleware.RequireAuth)
+				r.Put("/me", userHandler.UpdateProfile)
+				r.Put("/me/password", userHandler.ChangePassword)
+			})
+		})
+
+		// Módulo 2: Gobernanza Institucional, Roles y Boletos (CU02, CU03, CU04)
+		r.Route("/governance", func(r chi.Router) {
+			r.Group(func(r chi.Router) {
+				r.Use(authMiddleware.RequireAuth)
+
+				// CU02: Solicitudes de ascenso a Editor (Aprendiz)
+				r.Post("/editor-requests", governanceHandler.CreateEditorRequest)
+				r.Get("/editor-requests/me", governanceHandler.ListMyEditorRequests)
+
+				// CU04: Redención de boleto
+				r.Post("/tickets/redeem", governanceHandler.RedeemInvitationTicket)
+
+				// CU03 & CU04: Administración Institucional (Admin)
+				r.Group(func(r chi.Router) {
+					r.Use(authMiddleware.RequireRole(models.RoleAdmin))
+
+					r.Get("/editor-requests", governanceHandler.ListEditorRequests)
+					r.Put("/editor-requests/{id}/resolve", governanceHandler.ResolveEditorRequest)
+
+					r.Get("/users", governanceHandler.ListUsers)
+					r.Put("/users/{id}/access", governanceHandler.UpdateUserRoleOrStatus)
+
+					r.Post("/tickets", governanceHandler.CreateInvitationTicket)
+					r.Get("/tickets", governanceHandler.ListInvitationTickets)
+					r.Delete("/tickets/{id}", governanceHandler.RevokeInvitationTicket)
+				})
 			})
 		})
 
@@ -153,6 +196,20 @@ func (rt *Router) Setup() http.Handler {
 				r.Use(authMiddleware.RequireAuth)
 				r.Use(authMiddleware.RequireRole(models.RoleAdmin))
 				r.Put("/senses/{senseId}/state", curationHandler.AdminOverrideState)
+			})
+		})
+
+		// Módulo 4: Moderación de Reportes Comunitarios (CU09)
+		r.Route("/reports", func(r chi.Router) {
+			r.Group(func(r chi.Router) {
+				r.Use(authMiddleware.RequireAuth)
+				r.Post("/", curationHandler.CreateReport)
+
+				r.Group(func(r chi.Router) {
+					r.Use(authMiddleware.RequireRole(models.RoleAdmin))
+					r.Get("/", curationHandler.ListReports)
+					r.Put("/{reportId}/resolve", curationHandler.ResolveReport)
+				})
 			})
 		})
 

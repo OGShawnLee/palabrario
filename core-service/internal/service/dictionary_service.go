@@ -262,11 +262,7 @@ func (s *dictionaryService) ListRegions(ctx context.Context) ([]models.Region, e
 }
 
 func (s *dictionaryService) GetWordOfTheDay(ctx context.Context, dialect string) (*models.WordDetail, error) {
-	dialect = strings.TrimSpace(strings.ToUpper(dialect))
-	var regText pgtype.Text
-	if dialect != "" {
-		regText = pgtype.Text{String: dialect, Valid: true}
-	}
+	regText := StringToText(strings.ToUpper(dialect))
 
 	wordID, err := s.queries.GetWordOfTheDayID(ctx, regText)
 	if err != nil {
@@ -293,22 +289,11 @@ func (s *dictionaryService) ExploreWords(ctx context.Context, filter models.Word
 	}
 	offset := (page - 1) * limit
 
-	var qText, regText, posText, cefrText, freqText pgtype.Text
-	if strings.TrimSpace(filter.Query) != "" {
-		qText = pgtype.Text{String: strings.TrimSpace(filter.Query), Valid: true}
-	}
-	if strings.TrimSpace(filter.RegionCode) != "" {
-		regText = pgtype.Text{String: strings.TrimSpace(strings.ToUpper(filter.RegionCode)), Valid: true}
-	}
-	if strings.TrimSpace(filter.PartOfSpeech) != "" {
-		posText = pgtype.Text{String: strings.TrimSpace(strings.ToLower(filter.PartOfSpeech)), Valid: true}
-	}
-	if strings.TrimSpace(filter.CEFRLevel) != "" {
-		cefrText = pgtype.Text{String: strings.TrimSpace(strings.ToUpper(filter.CEFRLevel)), Valid: true}
-	}
-	if strings.TrimSpace(filter.UsageFrequency) != "" {
-		freqText = pgtype.Text{String: strings.TrimSpace(strings.ToUpper(filter.UsageFrequency)), Valid: true}
-	}
+	qText := StringToText(filter.Query)
+	regText := StringToText(strings.ToUpper(filter.RegionCode))
+	posText := StringToText(strings.ToLower(filter.PartOfSpeech))
+	cefrText := StringToText(strings.ToUpper(filter.CEFRLevel))
+	freqText := StringToText(strings.ToUpper(filter.UsageFrequency))
 
 	rows, err := s.queries.ExploreWordsPaginated(ctx, db.ExploreWordsPaginatedParams{
 		Limit:          int32(limit),
@@ -354,8 +339,8 @@ func (s *dictionaryService) ExploreWords(ctx context.Context, filter models.Word
 			RegionCode:      r.RegionCode,
 			RegionName:      r.RegionName,
 			FlagEmoji:       r.FlagEmoji,
-			CEFRLevel:       interfaceToString(r.CefrLevel, "B1"),
-			UsageFrequency:  interfaceToString(r.UsageFrequency, "COMMON"),
+			CEFRLevel:       InterfaceToString(r.CefrLevel, "B1"),
+			UsageFrequency:  InterfaceToString(r.UsageFrequency, "COMMON"),
 			IsTabooOrVulgar: r.IsTabooOrVulgar,
 			ApprovedSenses:  int(r.ApprovedSensesCount),
 		}
@@ -393,7 +378,7 @@ func (s *dictionaryService) CreateWordProposal(ctx context.Context, actorID stri
 		return nil, NewDomainError(ErrInvalidInput, "La definición detallada es obligatoria")
 	}
 
-	actorUUID, err := uuid.Parse(actorID)
+	actorUUID, err := uuid.Parse(strings.TrimSpace(actorID))
 	if err != nil {
 		return nil, NewDomainError(ErrUnauthorized, "Identificador de usuario no válido")
 	}
@@ -409,7 +394,7 @@ func (s *dictionaryService) CreateWordProposal(ctx context.Context, actorID stri
 	if req.OriginRegionCode != nil && strings.TrimSpace(*req.OriginRegionCode) != "" {
 		orRow, err := s.queries.GetRegionByCode(ctx, strings.ToUpper(strings.TrimSpace(*req.OriginRegionCode)))
 		if err == nil {
-			originRegionUUID = pgtype.UUID{Bytes: orRow.IDRegion, Valid: true}
+			originRegionUUID = UUIDToPgtype(orRow.IDRegion)
 		}
 	}
 
@@ -424,13 +409,6 @@ func (s *dictionaryService) CreateWordProposal(ctx context.Context, actorID stri
 	if err == nil {
 		wordID = existingWord.IDWord
 	} else if errors.Is(err, pgx.ErrNoRows) {
-		var etymText, blurbText pgtype.Text
-		if req.Etymology != nil && strings.TrimSpace(*req.Etymology) != "" {
-			etymText = pgtype.Text{String: strings.TrimSpace(*req.Etymology), Valid: true}
-		}
-		if req.FriendlyBlurb != nil && strings.TrimSpace(*req.FriendlyBlurb) != "" {
-			blurbText = pgtype.Text{String: strings.TrimSpace(*req.FriendlyBlurb), Valid: true}
-		}
 		genderVal := db.WordGenderNEUTRAL
 		if req.Gender != "" {
 			genderVal = db.WordGender(req.Gender)
@@ -441,8 +419,8 @@ func (s *dictionaryService) CreateWordProposal(ctx context.Context, actorID stri
 			NormalizedLemma: normalized,
 			PartOfSpeech:    pos,
 			Gender:          db.NullWordGender{WordGender: genderVal, Valid: true},
-			Etymology:       etymText,
-			FriendlyBlurb:   blurbText,
+			Etymology:       PtrToText(req.Etymology),
+			FriendlyBlurb:   PtrToText(req.FriendlyBlurb),
 			IDOriginRegion:  originRegionUUID,
 		})
 		if err != nil {
@@ -457,11 +435,6 @@ func (s *dictionaryService) CreateWordProposal(ctx context.Context, actorID stri
 	initialState := db.ReviewStateDRAFT
 	if actorRole == models.RoleAdmin {
 		initialState = db.ReviewStateAPPROVED
-	}
-
-	var cultNote pgtype.Text
-	if initSense.CulturalNote != nil && strings.TrimSpace(*initSense.CulturalNote) != "" {
-		cultNote = pgtype.Text{String: strings.TrimSpace(*initSense.CulturalNote), Valid: true}
 	}
 
 	cefrVal := db.CefrLevelB1
@@ -481,7 +454,7 @@ func (s *dictionaryService) CreateWordProposal(ctx context.Context, actorID stri
 		Definition:      strings.TrimSpace(initSense.Definition),
 		IsPrimary:       initSense.IsPrimary,
 		IsTabooOrVulgar: initSense.IsTabooOrVulgar,
-		CulturalNote:    cultNote,
+		CulturalNote:    PtrToText(initSense.CulturalNote),
 		CefrLevel:       db.NullCefrLevel{CefrLevel: cefrVal, Valid: true},
 		UsageFrequency:  db.NullUsageFrequency{UsageFrequency: freqVal, Valid: true},
 		State:           initialState,
@@ -494,15 +467,11 @@ func (s *dictionaryService) CreateWordProposal(ctx context.Context, actorID stri
 	for _, ex := range initSense.Examples {
 		sent := strings.TrimSpace(ex.Sentence)
 		if len(sent) >= 5 {
-			var src pgtype.Text
-			if ex.Source != nil && strings.TrimSpace(*ex.Source) != "" {
-				src = pgtype.Text{String: strings.TrimSpace(*ex.Source), Valid: true}
-			}
 			_, _ = s.queries.CreateExample(ctx, db.CreateExampleParams{
 				IDSense:  createdSense.IDSense,
 				IDEditor: actorUUID,
 				Sentence: sent,
-				Source:   src,
+				Source:   PtrToText(ex.Source),
 			})
 		}
 	}
@@ -532,17 +501,10 @@ func (s *dictionaryService) UpdateWord(ctx context.Context, actorID string, acto
 	if req.OriginRegionCode != nil && strings.TrimSpace(*req.OriginRegionCode) != "" {
 		orRow, err := s.queries.GetRegionByCode(ctx, strings.ToUpper(strings.TrimSpace(*req.OriginRegionCode)))
 		if err == nil {
-			originRegionUUID = pgtype.UUID{Bytes: orRow.IDRegion, Valid: true}
+			originRegionUUID = UUIDToPgtype(orRow.IDRegion)
 		}
 	}
 
-	var etymText, blurbText pgtype.Text
-	if req.Etymology != nil && strings.TrimSpace(*req.Etymology) != "" {
-		etymText = pgtype.Text{String: strings.TrimSpace(*req.Etymology), Valid: true}
-	}
-	if req.FriendlyBlurb != nil && strings.TrimSpace(*req.FriendlyBlurb) != "" {
-		blurbText = pgtype.Text{String: strings.TrimSpace(*req.FriendlyBlurb), Valid: true}
-	}
 	genderVal := db.WordGenderNEUTRAL
 	if req.Gender != "" {
 		genderVal = db.WordGender(req.Gender)
@@ -554,8 +516,8 @@ func (s *dictionaryService) UpdateWord(ctx context.Context, actorID string, acto
 		NormalizedLemma: NormalizeLemma(lemma),
 		PartOfSpeech:    pos,
 		Gender:          db.NullWordGender{WordGender: genderVal, Valid: true},
-		Etymology:       etymText,
-		FriendlyBlurb:   blurbText,
+		Etymology:       PtrToText(req.Etymology),
+		FriendlyBlurb:   PtrToText(req.FriendlyBlurb),
 		IDOriginRegion:  originRegionUUID,
 	})
 	if err != nil {
@@ -579,7 +541,7 @@ func (s *dictionaryService) CreateSense(ctx context.Context, actorID string, act
 		return nil, NewDomainError(ErrInvalidInput, "La definición detallada es obligatoria")
 	}
 
-	actorUUID, err := uuid.Parse(actorID)
+	actorUUID, err := uuid.Parse(strings.TrimSpace(actorID))
 	if err != nil {
 		return nil, NewDomainError(ErrUnauthorized, "Identificador de usuario no válido")
 	}
@@ -600,11 +562,6 @@ func (s *dictionaryService) CreateSense(ctx context.Context, actorID string, act
 		initialState = db.ReviewStateAPPROVED
 	}
 
-	var cultNote pgtype.Text
-	if req.CulturalNote != nil && strings.TrimSpace(*req.CulturalNote) != "" {
-		cultNote = pgtype.Text{String: strings.TrimSpace(*req.CulturalNote), Valid: true}
-	}
-
 	cefrVal := db.CefrLevelB1
 	if req.CEFRLevel != "" {
 		cefrVal = db.CefrLevel(req.CEFRLevel)
@@ -622,7 +579,7 @@ func (s *dictionaryService) CreateSense(ctx context.Context, actorID string, act
 		Definition:      strings.TrimSpace(req.Definition),
 		IsPrimary:       req.IsPrimary,
 		IsTabooOrVulgar: req.IsTabooOrVulgar,
-		CulturalNote:    cultNote,
+		CulturalNote:    PtrToText(req.CulturalNote),
 		CefrLevel:       db.NullCefrLevel{CefrLevel: cefrVal, Valid: true},
 		UsageFrequency:  db.NullUsageFrequency{UsageFrequency: freqVal, Valid: true},
 		State:           initialState,
@@ -635,15 +592,11 @@ func (s *dictionaryService) CreateSense(ctx context.Context, actorID string, act
 	for _, ex := range req.Examples {
 		sent := strings.TrimSpace(ex.Sentence)
 		if len(sent) >= 5 {
-			var src pgtype.Text
-			if ex.Source != nil && strings.TrimSpace(*ex.Source) != "" {
-				src = pgtype.Text{String: strings.TrimSpace(*ex.Source), Valid: true}
-			}
 			_, _ = s.queries.CreateExample(ctx, db.CreateExampleParams{
 				IDSense:  createdSense.IDSense,
 				IDEditor: actorUUID,
 				Sentence: sent,
-				Source:   src,
+				Source:   PtrToText(ex.Source),
 			})
 		}
 	}
@@ -664,7 +617,7 @@ func (s *dictionaryService) UpdateSense(ctx context.Context, actorID string, act
 		return nil, MapDBError(err, "Acepción no encontrada")
 	}
 
-	actorUUID, err := uuid.Parse(actorID)
+	actorUUID, err := uuid.Parse(strings.TrimSpace(actorID))
 	if err != nil {
 		return nil, NewDomainError(ErrUnauthorized, "Identificador de usuario no válido")
 	}
@@ -679,11 +632,6 @@ func (s *dictionaryService) UpdateSense(ctx context.Context, actorID string, act
 	senseRegion, err := s.queries.GetRegionByCode(ctx, strings.ToUpper(strings.TrimSpace(req.RegionCode)))
 	if err != nil {
 		return nil, NewDomainError(ErrInvalidInput, "Región dialectal no válida")
-	}
-
-	var cultNote pgtype.Text
-	if req.CulturalNote != nil && strings.TrimSpace(*req.CulturalNote) != "" {
-		cultNote = pgtype.Text{String: strings.TrimSpace(*req.CulturalNote), Valid: true}
 	}
 
 	cefrVal := db.CefrLevelB1
@@ -702,7 +650,7 @@ func (s *dictionaryService) UpdateSense(ctx context.Context, actorID string, act
 		Definition:      strings.TrimSpace(req.Definition),
 		IsPrimary:       req.IsPrimary,
 		IsTabooOrVulgar: req.IsTabooOrVulgar,
-		CulturalNote:    cultNote,
+		CulturalNote:    PtrToText(req.CulturalNote),
 		CefrLevel:       db.NullCefrLevel{CefrLevel: cefrVal, Valid: true},
 		UsageFrequency:  db.NullUsageFrequency{UsageFrequency: freqVal, Valid: true},
 	})
@@ -719,7 +667,7 @@ func (s *dictionaryService) DeleteSense(ctx context.Context, actorID string, act
 		return MapDBError(err, "Acepción no encontrada")
 	}
 
-	actorUUID, err := uuid.Parse(actorID)
+	actorUUID, err := uuid.Parse(strings.TrimSpace(actorID))
 	if err != nil {
 		return NewDomainError(ErrUnauthorized, "Identificador de usuario no válido")
 	}
@@ -742,7 +690,7 @@ func (s *dictionaryService) CreateExample(ctx context.Context, actorID string, a
 		return nil, NewDomainError(ErrInvalidInput, "La oración de ejemplo debe tener al menos 5 caracteres")
 	}
 
-	actorUUID, err := uuid.Parse(actorID)
+	actorUUID, err := uuid.Parse(strings.TrimSpace(actorID))
 	if err != nil {
 		return nil, NewDomainError(ErrUnauthorized, "Identificador de usuario no válido")
 	}
@@ -758,16 +706,11 @@ func (s *dictionaryService) CreateExample(ctx context.Context, actorID string, a
 		}
 	}
 
-	var src pgtype.Text
-	if req.Source != nil && strings.TrimSpace(*req.Source) != "" {
-		src = pgtype.Text{String: strings.TrimSpace(*req.Source), Valid: true}
-	}
-
 	exRow, err := s.queries.CreateExample(ctx, db.CreateExampleParams{
 		IDSense:  int32(senseID),
 		IDEditor: actorUUID,
 		Sentence: sent,
-		Source:   src,
+		Source:   PtrToText(req.Source),
 	})
 	if err != nil {
 		return nil, MapDBError(err, "Error al registrar ejemplo")
@@ -787,7 +730,7 @@ func (s *dictionaryService) UpdateExample(ctx context.Context, actorID string, a
 		return nil, NewDomainError(ErrInvalidInput, "La oración de ejemplo debe tener al menos 5 caracteres")
 	}
 
-	actorUUID, err := uuid.Parse(actorID)
+	actorUUID, err := uuid.Parse(strings.TrimSpace(actorID))
 	if err != nil {
 		return nil, NewDomainError(ErrUnauthorized, "Identificador de usuario no válido")
 	}
@@ -803,15 +746,10 @@ func (s *dictionaryService) UpdateExample(ctx context.Context, actorID string, a
 		}
 	}
 
-	var src pgtype.Text
-	if req.Source != nil && strings.TrimSpace(*req.Source) != "" {
-		src = pgtype.Text{String: strings.TrimSpace(*req.Source), Valid: true}
-	}
-
 	updated, err := s.queries.UpdateExample(ctx, db.UpdateExampleParams{
 		IDExample: int32(exampleID),
 		Sentence:  sent,
-		Source:    src,
+		Source:    PtrToText(req.Source),
 	})
 	if err != nil {
 		return nil, MapDBError(err, "Error al actualizar ejemplo")
@@ -826,7 +764,7 @@ func (s *dictionaryService) UpdateExample(ctx context.Context, actorID string, a
 }
 
 func (s *dictionaryService) DeleteExample(ctx context.Context, actorID string, actorRole models.AccountRole, exampleID int) error {
-	actorUUID, err := uuid.Parse(actorID)
+	actorUUID, err := uuid.Parse(strings.TrimSpace(actorID))
 	if err != nil {
 		return NewDomainError(ErrUnauthorized, "Identificador de usuario no válido")
 	}
@@ -849,12 +787,7 @@ func (s *dictionaryService) DeleteExample(ctx context.Context, actorID string, a
 }
 
 func (s *dictionaryService) ListSemanticConcepts(ctx context.Context, search string) ([]models.SemanticConcept, error) {
-	var qText pgtype.Text
-	if strings.TrimSpace(search) != "" {
-		qText = pgtype.Text{String: strings.TrimSpace(search), Valid: true}
-	}
-
-	rows, err := s.queries.ListSemanticConcepts(ctx, qText)
+	rows, err := s.queries.ListSemanticConcepts(ctx, StringToText(search))
 	if err != nil {
 		return nil, fmt.Errorf("error listando conceptos: %w", err)
 	}
@@ -970,18 +903,4 @@ func (s *dictionaryService) getSenseDetailByID(ctx context.Context, senseID int)
 		State:           string(sr.State),
 		Examples:        examples,
 	}, nil
-}
-
-func interfaceToString(val interface{}, defaultVal string) string {
-	if val == nil {
-		return defaultVal
-	}
-	switch v := val.(type) {
-	case string:
-		return v
-	case []byte:
-		return string(v)
-	default:
-		return fmt.Sprintf("%v", v)
-	}
 }
