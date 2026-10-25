@@ -41,18 +41,18 @@ El español cuenta con más de 500 millones de hablantes nativos distribuidos en
 Palabrario está diseñado bajo una arquitectura de **Monolito Modular Orientado a Servicios (SOA) con Servicios Satélite Especializados en un Monorepo 100% Go**, priorizando el consumo mínimo de recursos (`< 15 MiB` de RAM combinada en los 3 servicios Go), la rapidez de despliegue y la integridad de datos:
 
 ```mermaid
-graph TD
-    subgraph Cliente Nativo
+flowchart TD
+    subgraph Client["Cliente Nativo Desktop"]
         Desktop["🖥️ Palabrario Desktop (Wails v2 + Go + Vue 3)"]
     end
 
-    subgraph Backend Services (Monorepo Go 1.24)
+    subgraph Backend["Backend Services (Monorepo Go 1.24)"]
         Core["⚡ core-service (Go 1.24 + Chi + sqlc)<br/>Monolito Modular SOA :8000"]
         RT["📡 realtime-service (Go 1.24 + Chi + WebSockets)<br/>ArenaHub en RAM :8001"]
         Img["🖼️ image-service (Go 1.24 + Chi)<br/>Procesamiento WebP :8002"]
     end
 
-    subgraph Capa de Persistencia
+    subgraph Persistence["Capa de Persistencia"]
         PG[("🐘 PostgreSQL 17 Alpine<br/>pg_trgm · unaccent · Triggers RN06/RN07<br/>:5432")]
     end
 
