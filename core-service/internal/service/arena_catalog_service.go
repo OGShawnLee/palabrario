@@ -131,6 +131,21 @@ func (s *arenaCatalogService) PrepareMatch(ctx context.Context, hostUserID strin
 		}
 	}
 
+	// Construir visualPool con URLs de imagen únicas y no vacías de los sentidos aprobados del mazo
+	seenImages := make(map[string]struct{})
+	visualPool := make([]string, 0)
+	for _, s := range senses {
+		if s.ImageUrl.Valid {
+			img := strings.TrimSpace(s.ImageUrl.String)
+			if img != "" {
+				if _, exists := seenImages[img]; !exists {
+					seenImages[img] = struct{}{}
+					visualPool = append(visualPool, img)
+				}
+			}
+		}
+	}
+
 	questions := make([]models.InternalArenaQuestion, totalRounds)
 	for i, sense := range selectedSenses {
 		roundNum := i + 1
@@ -150,7 +165,97 @@ func (s *arenaCatalogService) PrepareMatch(ctx context.Context, hostUserID strin
 			_ = json.Unmarshal(q.CustomDistractors, &customDistractors)
 		}
 
-		if hasCurated && len(customDistractors) == 3 {
+		senseImageURL := ""
+		if sense.ImageUrl.Valid {
+			senseImageURL = strings.TrimSpace(sense.ImageUrl.String)
+		}
+
+		isCuratedVisual := hasCurated && q.Type == db.QuestionTypeWORDTOIMAGE
+		isCandidateVisual := isCuratedVisual || (!hasCurated && len(visualPool) >= 4 && senseImageURL != "")
+
+		if isCandidateVisual {
+			if len(visualPool) >= 4 && senseImageURL != "" {
+				modality = "WORD_TO_IMAGE"
+				prompt = fmt.Sprintf("¿Cuál de estas imágenes representa «%s»?", sense.Lemma)
+				correctOption = senseImageURL
+				explanation = fmt.Sprintf("«%s» se ilustra con la imagen seleccionada.", sense.Lemma)
+				if hasCurated {
+					qID := int(q.IDQuestion)
+					idQuestion = &qID
+					if strings.TrimSpace(q.Explanation) != "" {
+						explanation = q.Explanation
+					}
+				}
+
+				useCustomDistractors := false
+				if hasCurated && len(customDistractors) == 3 {
+					allValid := true
+					for _, cd := range customDistractors {
+						trimmedCD := strings.TrimSpace(cd)
+						if trimmedCD == "" || trimmedCD == correctOption {
+							allValid = false
+							break
+						}
+					}
+					if allValid {
+						useCustomDistractors = true
+					}
+				}
+
+				var distractors []string
+				if useCustomDistractors {
+					distractors = customDistractors
+				} else {
+					candidates := make([]string, 0, len(visualPool))
+					for _, img := range visualPool {
+						if img != correctOption {
+							candidates = append(candidates, img)
+						}
+					}
+					rand.Shuffle(len(candidates), func(a, b int) { candidates[a], candidates[b] = candidates[b], candidates[a] })
+					distractors = candidates[:3]
+				}
+
+				opts := append([]string{correctOption}, distractors...)
+			rand.Shuffle(len(opts), func(a, b int) { opts[a], opts[b] = opts[b], opts[a] })
+				options = opts
+			} else {
+				// Degradación Elegante (RN13): Si len(visualPool) < 4 o el sentido no tiene imagen,
+				// degrada automáticamente esa ronda a WORD_TO_DEFINITION usando sense.ShortDefinition y 3 distractores del mazo.
+				modality = "WORD_TO_DEFINITION"
+				prompt = fmt.Sprintf("¿Cuál es la definición correcta de «%s» (%s %s)?", sense.Lemma, sense.FlagEmoji, sense.RegionName)
+				correctOption = sense.ShortDefinition
+				explanation = fmt.Sprintf("En %s (%s), «%s» (%s) significa: %s", sense.RegionName, sense.RegionCode, sense.Lemma, sense.PartOfSpeech, sense.Definition)
+				if hasCurated {
+					qID := int(q.IDQuestion)
+					idQuestion = &qID
+				}
+
+				candidates := make([]string, 0, len(senses))
+				seenDefs := make(map[string]struct{})
+				seenDefs[correctOption] = struct{}{}
+
+				for _, s := range senses {
+					if s.IDSense == sense.IDSense {
+						continue
+					}
+					if _, seen := seenDefs[s.ShortDefinition]; !seen {
+						seenDefs[s.ShortDefinition] = struct{}{}
+						candidates = append(candidates, s.ShortDefinition)
+					}
+				}
+
+				rand.Shuffle(len(candidates), func(a, b int) { candidates[a], candidates[b] = candidates[b], candidates[a] })
+				distractors := candidates
+				if len(distractors) > 3 {
+					distractors = distractors[:3]
+				}
+
+				opts := append([]string{correctOption}, distractors...)
+			rand.Shuffle(len(opts), func(a, b int) { opts[a], opts[b] = opts[b], opts[a] })
+				options = opts
+			}
+		} else if hasCurated && len(customDistractors) == 3 {
 			modality = string(q.Type)
 			prompt = q.Prompt
 			if q.Type == db.QuestionTypeDEFINITIONTOWORD {

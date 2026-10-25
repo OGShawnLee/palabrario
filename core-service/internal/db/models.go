@@ -286,6 +286,7 @@ const (
 	QuestionTypeSENTENCECOMPLETION QuestionType = "SENTENCE_COMPLETION"
 	QuestionTypeREGIONALEQUIVALENT QuestionType = "REGIONAL_EQUIVALENT"
 	QuestionTypeTONEORREGISTER     QuestionType = "TONE_OR_REGISTER"
+	QuestionTypeWORDTOIMAGE        QuestionType = "WORD_TO_IMAGE"
 )
 
 func (e *QuestionType) Scan(src interface{}) error {
@@ -934,6 +935,7 @@ type Sense struct {
 	IsPrimary         bool               `json:"is_primary"`
 	IsTabooOrVulgar   bool               `json:"is_taboo_or_vulgar"`
 	CulturalNote      pgtype.Text        `json:"cultural_note"`
+	ImageUrl          pgtype.Text        `json:"image_url"`
 	CefrLevel         NullCefrLevel      `json:"cefr_level"`
 	UsageFrequency    NullUsageFrequency `json:"usage_frequency"`
 	State             ReviewState        `json:"state"`
@@ -998,6 +1000,7 @@ type Word struct {
 	Gender          NullWordGender     `json:"gender"`
 	Etymology       pgtype.Text        `json:"etymology"`
 	FriendlyBlurb   pgtype.Text        `json:"friendly_blurb"`
+	ImageUrl        pgtype.Text        `json:"image_url"`
 	IDOriginRegion  pgtype.UUID        `json:"id_origin_region"`
 	SearchVector    interface{}        `json:"search_vector"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`

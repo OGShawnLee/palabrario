@@ -11,6 +11,7 @@ SELECT
   s.short_definition,
   s.definition,
   s.cultural_note,
+  coalesce(s.image_url, w.image_url) AS image_url,
   r.code AS region_code,
   r.name AS region_name,
   r.flag_emoji

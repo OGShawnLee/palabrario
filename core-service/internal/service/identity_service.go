@@ -103,7 +103,7 @@ func (s *identityService) SignUp(ctx context.Context, req models.SignUpRequest) 
 
 	token, err := s.tokenService.GenerateToken(&profile)
 	if err != nil {
-		return nil, fmt.Errorf("error al emitir el token de sesión: %w", err)
+		return nil, fmt.Errorf("error emitiendo credenciales: %w", err)
 	}
 
 	return &models.AuthResponse{
@@ -193,6 +193,11 @@ func (s *identityService) UpdateProfile(ctx context.Context, userID string, req 
 	validDialects := map[string]bool{"MX": true, "ES": true, "AR": true, "CO": true, "CL": true, "CU": true, "CAM": true, "PAN": true}
 	if !validDialects[req.AnchorDialect] {
 		return nil, NewDomainError(ErrInvalidInput, "Dialecto ancla no válido (valores permitidos: 'MX', 'ES', 'AR', 'CO', 'CL', 'CU', 'CAM', 'PAN')")
+	}
+
+	// RN12: Validar formato seguro de URL de avatar
+	if err := ValidateInternalMediaURL(req.AvatarURL); err != nil {
+		return nil, err
 	}
 
 	row, err := s.queries.UpdateUserProfile(ctx, db.UpdateUserProfileParams{

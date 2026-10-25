@@ -12,6 +12,7 @@ import (
 // Errores canónicos de dominio según la sección 1.2 de .context/INTERFACES.md.
 var (
 	ErrInvalidInput  = errors.New("datos de entrada inválidos")
+	ErrValidation    = errors.New("error de validación")
 	ErrUnauthorized  = errors.New("no autorizado")
 	ErrForbidden     = errors.New("acceso denegado")
 	ErrNotFound      = errors.New("recurso no encontrado")
@@ -72,7 +73,7 @@ func HTTPStatusAndMessage(err error, fallbackMsg string) (int, string) {
 	}
 
 	switch {
-	case errors.Is(err, ErrInvalidInput):
+	case errors.Is(err, ErrInvalidInput), errors.Is(err, ErrValidation):
 		return http.StatusBadRequest, msg
 	case errors.Is(err, ErrUnauthorized):
 		return http.StatusUnauthorized, msg

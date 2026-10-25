@@ -127,11 +127,12 @@ INSERT INTO senses (
   is_primary,
   is_taboo_or_vulgar,
   cultural_note,
+  image_url,
   cefr_level,
   usage_frequency,
   state
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
 ) RETURNING 
   id_sense,
   id_word,
@@ -142,6 +143,7 @@ INSERT INTO senses (
   is_primary,
   is_taboo_or_vulgar,
   cultural_note,
+  image_url,
   cefr_level,
   usage_frequency,
   state,
@@ -158,6 +160,7 @@ type CreateSenseParams struct {
 	IsPrimary       bool               `json:"is_primary"`
 	IsTabooOrVulgar bool               `json:"is_taboo_or_vulgar"`
 	CulturalNote    pgtype.Text        `json:"cultural_note"`
+	ImageUrl        pgtype.Text        `json:"image_url"`
 	CefrLevel       NullCefrLevel      `json:"cefr_level"`
 	UsageFrequency  NullUsageFrequency `json:"usage_frequency"`
 	State           ReviewState        `json:"state"`
@@ -173,6 +176,7 @@ type CreateSenseRow struct {
 	IsPrimary       bool               `json:"is_primary"`
 	IsTabooOrVulgar bool               `json:"is_taboo_or_vulgar"`
 	CulturalNote    pgtype.Text        `json:"cultural_note"`
+	ImageUrl        pgtype.Text        `json:"image_url"`
 	CefrLevel       NullCefrLevel      `json:"cefr_level"`
 	UsageFrequency  NullUsageFrequency `json:"usage_frequency"`
 	State           ReviewState        `json:"state"`
@@ -191,6 +195,7 @@ func (q *Queries) CreateSense(ctx context.Context, arg CreateSenseParams) (Creat
 		arg.IsPrimary,
 		arg.IsTabooOrVulgar,
 		arg.CulturalNote,
+		arg.ImageUrl,
 		arg.CefrLevel,
 		arg.UsageFrequency,
 		arg.State,
@@ -206,6 +211,7 @@ func (q *Queries) CreateSense(ctx context.Context, arg CreateSenseParams) (Creat
 		&i.IsPrimary,
 		&i.IsTabooOrVulgar,
 		&i.CulturalNote,
+		&i.ImageUrl,
 		&i.CefrLevel,
 		&i.UsageFrequency,
 		&i.State,
@@ -223,9 +229,10 @@ INSERT INTO words (
   gender,
   etymology,
   friendly_blurb,
+  image_url,
   id_origin_region
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7
+  $1, $2, $3, $4, $5, $6, $7, $8
 ) RETURNING 
   id_word,
   lemma,
@@ -234,6 +241,7 @@ INSERT INTO words (
   gender,
   etymology,
   friendly_blurb,
+  image_url,
   id_origin_region,
   created_at,
   updated_at
@@ -246,6 +254,7 @@ type CreateWordParams struct {
 	Gender          NullWordGender `json:"gender"`
 	Etymology       pgtype.Text    `json:"etymology"`
 	FriendlyBlurb   pgtype.Text    `json:"friendly_blurb"`
+	ImageUrl        pgtype.Text    `json:"image_url"`
 	IDOriginRegion  pgtype.UUID    `json:"id_origin_region"`
 }
 
@@ -257,6 +266,7 @@ type CreateWordRow struct {
 	Gender          NullWordGender     `json:"gender"`
 	Etymology       pgtype.Text        `json:"etymology"`
 	FriendlyBlurb   pgtype.Text        `json:"friendly_blurb"`
+	ImageUrl        pgtype.Text        `json:"image_url"`
 	IDOriginRegion  pgtype.UUID        `json:"id_origin_region"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
@@ -271,6 +281,7 @@ func (q *Queries) CreateWord(ctx context.Context, arg CreateWordParams) (CreateW
 		arg.Gender,
 		arg.Etymology,
 		arg.FriendlyBlurb,
+		arg.ImageUrl,
 		arg.IDOriginRegion,
 	)
 	var i CreateWordRow
@@ -282,6 +293,7 @@ func (q *Queries) CreateWord(ctx context.Context, arg CreateWordParams) (CreateW
 		&i.Gender,
 		&i.Etymology,
 		&i.FriendlyBlurb,
+		&i.ImageUrl,
 		&i.IDOriginRegion,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -318,6 +330,7 @@ WITH filtered_words AS (
     w.part_of_speech,
     w.gender,
     w.friendly_blurb,
+    coalesce(s.image_url, w.image_url) AS image_url,
     s.id_sense AS primary_sense_id,
     s.short_definition,
     r.code AS region_code,
@@ -355,6 +368,7 @@ SELECT
   part_of_speech,
   gender,
   friendly_blurb,
+  image_url,
   primary_sense_id,
   short_definition,
   region_code,
@@ -387,6 +401,7 @@ type ExploreWordsPaginatedRow struct {
 	PartOfSpeech        string         `json:"part_of_speech"`
 	Gender              NullWordGender `json:"gender"`
 	FriendlyBlurb       pgtype.Text    `json:"friendly_blurb"`
+	ImageUrl            pgtype.Text    `json:"image_url"`
 	PrimarySenseID      int32          `json:"primary_sense_id"`
 	ShortDefinition     string         `json:"short_definition"`
 	RegionCode          string         `json:"region_code"`
@@ -423,6 +438,7 @@ func (q *Queries) ExploreWordsPaginated(ctx context.Context, arg ExploreWordsPag
 			&i.PartOfSpeech,
 			&i.Gender,
 			&i.FriendlyBlurb,
+			&i.ImageUrl,
 			&i.PrimarySenseID,
 			&i.ShortDefinition,
 			&i.RegionCode,
@@ -452,6 +468,7 @@ SELECT
     s.is_primary,
     s.is_taboo_or_vulgar,
     s.cultural_note,
+    s.image_url,
     s.cefr_level,
     s.usage_frequency,
     s.state,
@@ -473,6 +490,7 @@ type GetApprovedSensesByWordIDRow struct {
 	IsPrimary       bool               `json:"is_primary"`
 	IsTabooOrVulgar bool               `json:"is_taboo_or_vulgar"`
 	CulturalNote    pgtype.Text        `json:"cultural_note"`
+	ImageUrl        pgtype.Text        `json:"image_url"`
 	CefrLevel       NullCefrLevel      `json:"cefr_level"`
 	UsageFrequency  NullUsageFrequency `json:"usage_frequency"`
 	State           ReviewState        `json:"state"`
@@ -500,6 +518,7 @@ func (q *Queries) GetApprovedSensesByWordID(ctx context.Context, idWord int32) (
 			&i.IsPrimary,
 			&i.IsTabooOrVulgar,
 			&i.CulturalNote,
+			&i.ImageUrl,
 			&i.CefrLevel,
 			&i.UsageFrequency,
 			&i.State,
@@ -704,6 +723,7 @@ SELECT
     s.is_primary,
     s.is_taboo_or_vulgar,
     s.cultural_note,
+    s.image_url,
     s.cefr_level,
     s.usage_frequency,
     s.state,
@@ -728,6 +748,7 @@ type GetSenseByIDRow struct {
 	IsPrimary       bool               `json:"is_primary"`
 	IsTabooOrVulgar bool               `json:"is_taboo_or_vulgar"`
 	CulturalNote    pgtype.Text        `json:"cultural_note"`
+	ImageUrl        pgtype.Text        `json:"image_url"`
 	CefrLevel       NullCefrLevel      `json:"cefr_level"`
 	UsageFrequency  NullUsageFrequency `json:"usage_frequency"`
 	State           ReviewState        `json:"state"`
@@ -753,6 +774,7 @@ func (q *Queries) GetSenseByID(ctx context.Context, idSense int32) (GetSenseByID
 		&i.IsPrimary,
 		&i.IsTabooOrVulgar,
 		&i.CulturalNote,
+		&i.ImageUrl,
 		&i.CefrLevel,
 		&i.UsageFrequency,
 		&i.State,
@@ -775,6 +797,7 @@ SELECT
     gender,
     etymology,
     friendly_blurb,
+    image_url,
     id_origin_region,
     created_at,
     updated_at
@@ -795,6 +818,7 @@ type GetWordByNormalizedLemmaAndPOSRow struct {
 	Gender          NullWordGender     `json:"gender"`
 	Etymology       pgtype.Text        `json:"etymology"`
 	FriendlyBlurb   pgtype.Text        `json:"friendly_blurb"`
+	ImageUrl        pgtype.Text        `json:"image_url"`
 	IDOriginRegion  pgtype.UUID        `json:"id_origin_region"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
@@ -812,6 +836,7 @@ func (q *Queries) GetWordByNormalizedLemmaAndPOS(ctx context.Context, arg GetWor
 		&i.Gender,
 		&i.Etymology,
 		&i.FriendlyBlurb,
+		&i.ImageUrl,
 		&i.IDOriginRegion,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -828,6 +853,7 @@ SELECT
     w.gender,
     w.etymology,
     w.friendly_blurb,
+    w.image_url,
     w.created_at,
     w.updated_at,
     r.id_region AS origin_region_id,
@@ -849,6 +875,7 @@ type GetWordDetailByIDRow struct {
 	Gender                  NullWordGender     `json:"gender"`
 	Etymology               pgtype.Text        `json:"etymology"`
 	FriendlyBlurb           pgtype.Text        `json:"friendly_blurb"`
+	ImageUrl                pgtype.Text        `json:"image_url"`
 	CreatedAt               pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
 	OriginRegionID          pgtype.UUID        `json:"origin_region_id"`
@@ -871,6 +898,7 @@ func (q *Queries) GetWordDetailByID(ctx context.Context, idWord int32) (GetWordD
 		&i.Gender,
 		&i.Etymology,
 		&i.FriendlyBlurb,
+		&i.ImageUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.OriginRegionID,
@@ -1165,8 +1193,9 @@ UPDATE senses SET
   is_primary = $5,
   is_taboo_or_vulgar = $6,
   cultural_note = $7,
-  cefr_level = $8,
-  usage_frequency = $9,
+  image_url = $8,
+  cefr_level = $9,
+  usage_frequency = $10,
   updated_at = now()
 WHERE id_sense = $1
 RETURNING 
@@ -1179,6 +1208,7 @@ RETURNING
   is_primary,
   is_taboo_or_vulgar,
   cultural_note,
+  image_url,
   cefr_level,
   usage_frequency,
   state,
@@ -1194,6 +1224,7 @@ type UpdateSenseParams struct {
 	IsPrimary       bool               `json:"is_primary"`
 	IsTabooOrVulgar bool               `json:"is_taboo_or_vulgar"`
 	CulturalNote    pgtype.Text        `json:"cultural_note"`
+	ImageUrl        pgtype.Text        `json:"image_url"`
 	CefrLevel       NullCefrLevel      `json:"cefr_level"`
 	UsageFrequency  NullUsageFrequency `json:"usage_frequency"`
 }
@@ -1208,6 +1239,7 @@ type UpdateSenseRow struct {
 	IsPrimary       bool               `json:"is_primary"`
 	IsTabooOrVulgar bool               `json:"is_taboo_or_vulgar"`
 	CulturalNote    pgtype.Text        `json:"cultural_note"`
+	ImageUrl        pgtype.Text        `json:"image_url"`
 	CefrLevel       NullCefrLevel      `json:"cefr_level"`
 	UsageFrequency  NullUsageFrequency `json:"usage_frequency"`
 	State           ReviewState        `json:"state"`
@@ -1225,6 +1257,7 @@ func (q *Queries) UpdateSense(ctx context.Context, arg UpdateSenseParams) (Updat
 		arg.IsPrimary,
 		arg.IsTabooOrVulgar,
 		arg.CulturalNote,
+		arg.ImageUrl,
 		arg.CefrLevel,
 		arg.UsageFrequency,
 	)
@@ -1239,6 +1272,7 @@ func (q *Queries) UpdateSense(ctx context.Context, arg UpdateSenseParams) (Updat
 		&i.IsPrimary,
 		&i.IsTabooOrVulgar,
 		&i.CulturalNote,
+		&i.ImageUrl,
 		&i.CefrLevel,
 		&i.UsageFrequency,
 		&i.State,
@@ -1256,7 +1290,8 @@ UPDATE words SET
   gender = $5,
   etymology = $6,
   friendly_blurb = $7,
-  id_origin_region = $8,
+  image_url = $8,
+  id_origin_region = $9,
   updated_at = now()
 WHERE id_word = $1
 RETURNING 
@@ -1267,6 +1302,7 @@ RETURNING
   gender,
   etymology,
   friendly_blurb,
+  image_url,
   id_origin_region,
   created_at,
   updated_at
@@ -1280,6 +1316,7 @@ type UpdateWordMetadataParams struct {
 	Gender          NullWordGender `json:"gender"`
 	Etymology       pgtype.Text    `json:"etymology"`
 	FriendlyBlurb   pgtype.Text    `json:"friendly_blurb"`
+	ImageUrl        pgtype.Text    `json:"image_url"`
 	IDOriginRegion  pgtype.UUID    `json:"id_origin_region"`
 }
 
@@ -1291,6 +1328,7 @@ type UpdateWordMetadataRow struct {
 	Gender          NullWordGender     `json:"gender"`
 	Etymology       pgtype.Text        `json:"etymology"`
 	FriendlyBlurb   pgtype.Text        `json:"friendly_blurb"`
+	ImageUrl        pgtype.Text        `json:"image_url"`
 	IDOriginRegion  pgtype.UUID        `json:"id_origin_region"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
@@ -1306,6 +1344,7 @@ func (q *Queries) UpdateWordMetadata(ctx context.Context, arg UpdateWordMetadata
 		arg.Gender,
 		arg.Etymology,
 		arg.FriendlyBlurb,
+		arg.ImageUrl,
 		arg.IDOriginRegion,
 	)
 	var i UpdateWordMetadataRow
@@ -1317,6 +1356,7 @@ func (q *Queries) UpdateWordMetadata(ctx context.Context, arg UpdateWordMetadata
 		&i.Gender,
 		&i.Etymology,
 		&i.FriendlyBlurb,
+		&i.ImageUrl,
 		&i.IDOriginRegion,
 		&i.CreatedAt,
 		&i.UpdatedAt,

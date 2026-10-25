@@ -224,6 +224,7 @@ func (r *ActiveRoom) handleJoin(req *joinRequest) {
 				Type: "QUESTION",
 				Payload: models.ArenaQuestion{
 					RoundNumber:   r.currentQuestion.RoundNumber,
+					Modality:      r.currentQuestion.Modality,
 					Prompt:        r.currentQuestion.Prompt,
 					Options:       r.currentQuestion.Options,
 					Explanation:   r.currentQuestion.Explanation,
@@ -507,6 +508,7 @@ func (r *ActiveRoom) startRound(roundNum int) {
 		Type: "QUESTION",
 		Payload: models.ArenaQuestion{
 			RoundNumber:   currentQ.RoundNumber,
+			Modality:      currentQ.Modality,
 			Prompt:        currentQ.Prompt,
 			Options:       currentQ.Options,
 			Explanation:   currentQ.Explanation,

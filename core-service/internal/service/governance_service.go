@@ -14,8 +14,8 @@ import (
 	"palabrario/pkg/models"
 )
 
-// GovernanceService define el contrato SOA del Módulo 2 (Gobernanza Institucional, Roles y Boletos — CU02, CU03, CU04)
-// según la sección 2.2.2 de .context/INTERFACES.md.
+// GovernanceService define el contrato SOA del Módulo 2 (Gobernanza Institucional,
+// Roles y Boletos — CU02, CU03, CU04) según la sección 2.2 de .context/INTERFACES.md.
 type GovernanceService interface {
 	CreateEditorRequest(ctx context.Context, learnerID string, req models.CreateEditorRequestDTO) (*models.EditorRequest, error)
 	ListMyEditorRequests(ctx context.Context, learnerID string) ([]models.EditorRequest, error)
@@ -70,6 +70,11 @@ func (s *governanceService) CreateEditorRequest(ctx context.Context, learnerID s
 	}
 	if account.Role == db.AccountRoleEDITOR || account.Role == db.AccountRoleADMIN {
 		return nil, NewDomainError(ErrConflict, "El usuario ya cuenta con rol de Editor o Administrador")
+	}
+
+	// RN12: Validar formato seguro de credenciales multimedia si se suministró URL
+	if err := ValidateInternalMediaURL(req.CredentialsURL); err != nil {
+		return nil, err
 	}
 
 	credURL := ""

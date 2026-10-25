@@ -168,6 +168,7 @@ func (s *dictionaryService) GetWordDetail(ctx context.Context, wordID int) (*mod
 			IsPrimary:       sr.IsPrimary,
 			IsTabooOrVulgar: sr.IsTabooOrVulgar,
 			CulturalNote:    TextToPtr(sr.CulturalNote),
+			ImageURL:        TextToPtr(sr.ImageUrl),
 			CEFRLevel:       cefrStr,
 			UsageFrequency:  freqStr,
 			State:           string(sr.State),
@@ -228,6 +229,7 @@ func (s *dictionaryService) GetWordDetail(ctx context.Context, wordID int) (*mod
 		Gender:          genderStr,
 		Etymology:       TextToPtr(wordRow.Etymology),
 		FriendlyBlurb:   TextToPtr(wordRow.FriendlyBlurb),
+		ImageURL:        TextToPtr(wordRow.ImageUrl),
 		OriginRegion:    originRegion,
 		Senses:          senses,
 		Heteronyms:      heteronyms,
@@ -334,6 +336,7 @@ func (s *dictionaryService) ExploreWords(ctx context.Context, filter models.Word
 			PartOfSpeech:    r.PartOfSpeech,
 			Gender:          genderStr,
 			FriendlyBlurb:   TextToPtr(r.FriendlyBlurb),
+			ImageURL:        TextToPtr(r.ImageUrl),
 			PrimarySenseID:  int(r.PrimarySenseID),
 			ShortDefinition: r.ShortDefinition,
 			RegionCode:      r.RegionCode,
@@ -376,6 +379,14 @@ func (s *dictionaryService) CreateWordProposal(ctx context.Context, actorID stri
 	}
 	if strings.TrimSpace(initSense.Definition) == "" {
 		return nil, NewDomainError(ErrInvalidInput, "La definición detallada es obligatoria")
+	}
+
+	// RN12: Validar formato seguro de URL multimedia de la palabra y acepción inicial
+	if err := ValidateInternalMediaURL(req.ImageURL); err != nil {
+		return nil, err
+	}
+	if err := ValidateInternalMediaURL(initSense.ImageURL); err != nil {
+		return nil, err
 	}
 
 	actorUUID, err := uuid.Parse(strings.TrimSpace(actorID))
@@ -421,6 +432,7 @@ func (s *dictionaryService) CreateWordProposal(ctx context.Context, actorID stri
 			Gender:          db.NullWordGender{WordGender: genderVal, Valid: true},
 			Etymology:       PtrToText(req.Etymology),
 			FriendlyBlurb:   PtrToText(req.FriendlyBlurb),
+			ImageUrl:        PtrToText(req.ImageURL),
 			IDOriginRegion:  originRegionUUID,
 		})
 		if err != nil {
@@ -455,6 +467,7 @@ func (s *dictionaryService) CreateWordProposal(ctx context.Context, actorID stri
 		IsPrimary:       initSense.IsPrimary,
 		IsTabooOrVulgar: initSense.IsTabooOrVulgar,
 		CulturalNote:    PtrToText(initSense.CulturalNote),
+		ImageUrl:        PtrToText(initSense.ImageURL),
 		CefrLevel:       db.NullCefrLevel{CefrLevel: cefrVal, Valid: true},
 		UsageFrequency:  db.NullUsageFrequency{UsageFrequency: freqVal, Valid: true},
 		State:           initialState,
@@ -497,6 +510,11 @@ func (s *dictionaryService) UpdateWord(ctx context.Context, actorID string, acto
 		return nil, NewDomainError(ErrInvalidInput, "La categoría gramatical es obligatoria")
 	}
 
+	// RN12: Validar formato seguro de URL multimedia de la palabra
+	if err := ValidateInternalMediaURL(req.ImageURL); err != nil {
+		return nil, err
+	}
+
 	var originRegionUUID pgtype.UUID
 	if req.OriginRegionCode != nil && strings.TrimSpace(*req.OriginRegionCode) != "" {
 		orRow, err := s.queries.GetRegionByCode(ctx, strings.ToUpper(strings.TrimSpace(*req.OriginRegionCode)))
@@ -518,6 +536,7 @@ func (s *dictionaryService) UpdateWord(ctx context.Context, actorID string, acto
 		Gender:          db.NullWordGender{WordGender: genderVal, Valid: true},
 		Etymology:       PtrToText(req.Etymology),
 		FriendlyBlurb:   PtrToText(req.FriendlyBlurb),
+		ImageUrl:        PtrToText(req.ImageURL),
 		IDOriginRegion:  originRegionUUID,
 	})
 	if err != nil {
@@ -539,6 +558,11 @@ func (s *dictionaryService) CreateSense(ctx context.Context, actorID string, act
 	}
 	if strings.TrimSpace(req.Definition) == "" {
 		return nil, NewDomainError(ErrInvalidInput, "La definición detallada es obligatoria")
+	}
+
+	// RN12: Validar formato seguro de URL multimedia de la acepción
+	if err := ValidateInternalMediaURL(req.ImageURL); err != nil {
+		return nil, err
 	}
 
 	actorUUID, err := uuid.Parse(strings.TrimSpace(actorID))
@@ -580,6 +604,7 @@ func (s *dictionaryService) CreateSense(ctx context.Context, actorID string, act
 		IsPrimary:       req.IsPrimary,
 		IsTabooOrVulgar: req.IsTabooOrVulgar,
 		CulturalNote:    PtrToText(req.CulturalNote),
+		ImageUrl:        PtrToText(req.ImageURL),
 		CefrLevel:       db.NullCefrLevel{CefrLevel: cefrVal, Valid: true},
 		UsageFrequency:  db.NullUsageFrequency{UsageFrequency: freqVal, Valid: true},
 		State:           initialState,
@@ -634,6 +659,11 @@ func (s *dictionaryService) UpdateSense(ctx context.Context, actorID string, act
 		return nil, NewDomainError(ErrInvalidInput, "Región dialectal no válida")
 	}
 
+	// RN12: Validar formato seguro de URL multimedia de la acepción
+	if err := ValidateInternalMediaURL(req.ImageURL); err != nil {
+		return nil, err
+	}
+
 	cefrVal := db.CefrLevelB1
 	if req.CEFRLevel != "" {
 		cefrVal = db.CefrLevel(req.CEFRLevel)
@@ -651,6 +681,7 @@ func (s *dictionaryService) UpdateSense(ctx context.Context, actorID string, act
 		IsPrimary:       req.IsPrimary,
 		IsTabooOrVulgar: req.IsTabooOrVulgar,
 		CulturalNote:    PtrToText(req.CulturalNote),
+		ImageUrl:        PtrToText(req.ImageURL),
 		CefrLevel:       db.NullCefrLevel{CefrLevel: cefrVal, Valid: true},
 		UsageFrequency:  db.NullUsageFrequency{UsageFrequency: freqVal, Valid: true},
 	})
@@ -898,6 +929,7 @@ func (s *dictionaryService) getSenseDetailByID(ctx context.Context, senseID int)
 		IsPrimary:       sr.IsPrimary,
 		IsTabooOrVulgar: sr.IsTabooOrVulgar,
 		CulturalNote:    TextToPtr(sr.CulturalNote),
+		ImageURL:        TextToPtr(sr.ImageUrl),
 		CEFRLevel:       cefrStr,
 		UsageFrequency:  freqStr,
 		State:           string(sr.State),

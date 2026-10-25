@@ -83,6 +83,7 @@ SELECT
   s.short_definition,
   s.definition,
   s.cultural_note,
+  coalesce(s.image_url, w.image_url) AS image_url,
   r.code AS region_code,
   r.name AS region_name,
   r.flag_emoji
@@ -103,6 +104,7 @@ type GetApprovedDeckSensesForArenaRow struct {
 	ShortDefinition string      `json:"short_definition"`
 	Definition      string      `json:"definition"`
 	CulturalNote    pgtype.Text `json:"cultural_note"`
+	ImageUrl        pgtype.Text `json:"image_url"`
 	RegionCode      string      `json:"region_code"`
 	RegionName      string      `json:"region_name"`
 	FlagEmoji       string      `json:"flag_emoji"`
@@ -128,6 +130,7 @@ func (q *Queries) GetApprovedDeckSensesForArena(ctx context.Context, idDeck int3
 			&i.ShortDefinition,
 			&i.Definition,
 			&i.CulturalNote,
+			&i.ImageUrl,
 			&i.RegionCode,
 			&i.RegionName,
 			&i.FlagEmoji,

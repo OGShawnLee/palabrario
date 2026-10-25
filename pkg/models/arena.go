@@ -23,6 +23,7 @@ type ArenaParticipant struct {
 
 type ArenaQuestion struct {
 	RoundNumber   int      `json:"round_number"`
+	Modality      string   `json:"modality"` // 'DEFINITION_TO_WORD', 'WORD_TO_DEFINITION', 'WORD_TO_IMAGE', etc.
 	Prompt        string   `json:"prompt"`
 	Options       []string `json:"options"`
 	Explanation   string   `json:"explanation"`
@@ -61,7 +62,7 @@ type InternalArenaQuestion struct {
 	IDSense       int      `json:"id_sense"`
 	IDQuestion    *int     `json:"id_question,omitempty"`
 	Lemma         string   `json:"lemma,omitempty"`
-	Modality      string   `json:"modality"` // 'DEFINITION_TO_WORD', 'WORD_TO_DEFINITION', etc.
+	Modality      string   `json:"modality"` // 'DEFINITION_TO_WORD', 'WORD_TO_DEFINITION', 'WORD_TO_IMAGE', etc.
 	Prompt        string   `json:"prompt"`
 	Options       []string `json:"options"`        // 4 opciones barajadas (option_a..option_d: 1 correcta + 3 distractores)
 	CorrectOption string   `json:"correct_option"` // NUNCA enviado en el evento QUESTION, revelado en ROUND_RESULT

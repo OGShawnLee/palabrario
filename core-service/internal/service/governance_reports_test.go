@@ -30,7 +30,7 @@ func TestIdentityService_ProfileManagement_CU01(t *testing.T) {
 	ctx := context.Background()
 
 	// 1. Actualizar perfil propio de Gael
-	avatar := "https://img.palabrario.org/avatars/gael.webp"
+	avatar := "http://localhost:8002/uploads/avatars/gael.webp"
 	updated, err := identitySvc.UpdateProfile(ctx, gaelUUIDStr, models.UpdateProfileRequest{
 		Name:          "Gael Actualizado",
 		AnchorDialect: "ES",
@@ -134,7 +134,7 @@ func TestGovernanceService_EditorRequests_CU02_CU03(t *testing.T) {
 	req, err := govSvc.CreateEditorRequest(ctx, gaelUUIDStr, models.CreateEditorRequestDTO{
 		InstitutionName: "Universidad de Guadalajara",
 		Justification:   "Soy profesor de lingüística con 10 años de experiencia en dialectología.",
-		CredentialsURL:  utils.ToPtr("https://institucion.edu/credenciales_gael.pdf"),
+		CredentialsURL:  utils.ToPtr("http://localhost:8002/uploads/credentials/credenciales_gael.png"),
 	})
 	if err != nil {
 		t.Fatalf("CreateEditorRequest falló: %v", err)

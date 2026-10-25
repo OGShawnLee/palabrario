@@ -442,3 +442,110 @@ func TestCurationService_RN08_AdminOverrideState(t *testing.T) {
 		t.Errorf("se esperaba estado HIDDEN tras ocultación admin, obtenido: %s", hiddenDetail.State)
 	}
 }
+
+func TestDictionaryService_CreateWordProposal_MediaURLValidation_RN12(t *testing.T) {
+	testDB := testutil.SetupTestDB(t)
+	if testDB == nil {
+		return
+	}
+
+	dictSvc := service.NewDictionaryService(testDB)
+	ctx := context.Background()
+	silasID := "b1111111-0000-0000-0000-000000000002"
+
+	// 1. Debe rechazar URL externa arbitraria con ErrValidation (RN12)
+	maliciousURL := "https://malicious.site/hack.jpg"
+	_, err := dictSvc.CreateWordProposal(ctx, silasID, models.RoleEditor, models.CreateWordProposalRequest{
+		Lemma:        "palabratestmaliciosa",
+		PartOfSpeech: "sustantivo",
+		ImageURL:     &maliciousURL,
+		InitialSense: models.CreateSenseRequest{
+			RegionCode:      "MX",
+			ShortDefinition: "Definición de prueba para URL maliciosa.",
+			Definition:      "Definición extendida para prueba de rechazo de imagen externa.",
+			IsPrimary:       true,
+		},
+	})
+	if err == nil || !errors.Is(err, service.ErrValidation) {
+		t.Fatalf("se esperaba ErrValidation al enviar URL externa arbitraria, obtenido: %v", err)
+	}
+
+	// 2. Debe rechazar path traversal o esquemas inseguros (RN12)
+	traversalURL := "http://localhost:8002/uploads/../secret.env"
+	_, err = dictSvc.CreateWordProposal(ctx, silasID, models.RoleEditor, models.CreateWordProposalRequest{
+		Lemma:        "palabratesttraversal",
+		PartOfSpeech: "sustantivo",
+		ImageURL:     &traversalURL,
+		InitialSense: models.CreateSenseRequest{
+			RegionCode:      "MX",
+			ShortDefinition: "Definición de prueba para traversal.",
+			Definition:      "Definición extendida para prueba de rechazo de traversal.",
+			IsPrimary:       true,
+		},
+	})
+	if err == nil || !errors.Is(err, service.ErrValidation) {
+		t.Fatalf("se esperaba ErrValidation al enviar path traversal, obtenido: %v", err)
+	}
+
+	// 3. Debe aceptar URL emitida por image-service conteniendo /uploads/ (RN12)
+	validURL := "http://localhost:8002/uploads/word/test.png"
+	validSenseURL := "http://localhost:8002/uploads/sense/test_sense.png"
+	word, err := dictSvc.CreateWordProposal(ctx, silasID, models.RoleEditor, models.CreateWordProposalRequest{
+		Lemma:        "palabratestvalida",
+		PartOfSpeech: "sustantivo",
+		ImageURL:     &validURL,
+		InitialSense: models.CreateSenseRequest{
+			RegionCode:      "MX",
+			ShortDefinition: "Definición válida con imagen procesada.",
+			Definition:      "Definición detallada que incluye URL multimedia interna válida.",
+			ImageURL:        &validSenseURL,
+			IsPrimary:       true,
+		},
+	})
+	if err != nil {
+		t.Fatalf("se esperaba éxito con URL interna válida de image-service, falló: %v", err)
+	}
+	if word.ImageURL == nil || *word.ImageURL != validURL {
+		t.Errorf("se esperaba ImageURL %s en la palabra, obtenido: %v", validURL, word.ImageURL)
+	}
+
+	// Verificar que la acepción creada en DRAFT por Silas conserve su ImageURL en la cola de curaduría
+	curationSvc := service.NewCurationService(testDB)
+	proposals, err := curationSvc.ListMyProposals(ctx, silasID, nil)
+	if err != nil || len(proposals) == 0 {
+		t.Fatalf("error consultando propuestas del editor Silas: %v", err)
+	}
+	foundProposal := false
+	for _, p := range proposals {
+		if p.Lemma == "palabratestvalida" {
+			foundProposal = true
+			if p.ImageURL == nil || *p.ImageURL != validSenseURL {
+				t.Errorf("se esperaba ImageURL %s en la propuesta del sentido, obtenido: %v", validSenseURL, p.ImageURL)
+			}
+		}
+	}
+	if !foundProposal {
+		t.Errorf("no se encontró la propuesta 'palabratestvalida' en la lista de propuestas del editor")
+	}
+
+	// 4. Si un ADMIN crea la propuesta (RN08), el sentido pasa a APPROVED inmediatamente y GetWordDetail lo proyecta
+	adminID := "b1111111-0000-0000-0000-000000000001"
+	adminWord, err := dictSvc.CreateWordProposal(ctx, adminID, models.RoleAdmin, models.CreateWordProposalRequest{
+		Lemma:        "palabraadminvalida",
+		PartOfSpeech: "sustantivo",
+		ImageURL:     &validURL,
+		InitialSense: models.CreateSenseRequest{
+			RegionCode:      "MX",
+			ShortDefinition: "Definición aprobada directa por admin.",
+			Definition:      "Definición detallada aprobada directa con URL multimedia.",
+			ImageURL:        &validSenseURL,
+			IsPrimary:       true,
+		},
+	})
+	if err != nil {
+		t.Fatalf("CreateWordProposal con rol ADMIN falló: %v", err)
+	}
+	if len(adminWord.Senses) == 0 || adminWord.Senses[0].ImageURL == nil || *adminWord.Senses[0].ImageURL != validSenseURL {
+		t.Errorf("se esperaba ImageURL %s en el sentido aprobado, obtenido: %+v", validSenseURL, adminWord.Senses)
+	}
+}

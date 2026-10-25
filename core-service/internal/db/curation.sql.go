@@ -27,6 +27,7 @@ RETURNING
   is_primary,
   is_taboo_or_vulgar,
   cultural_note,
+  image_url,
   cefr_level,
   usage_frequency,
   state,
@@ -49,6 +50,7 @@ type AdminUpdateSenseStateRow struct {
 	IsPrimary       bool               `json:"is_primary"`
 	IsTabooOrVulgar bool               `json:"is_taboo_or_vulgar"`
 	CulturalNote    pgtype.Text        `json:"cultural_note"`
+	ImageUrl        pgtype.Text        `json:"image_url"`
 	CefrLevel       NullCefrLevel      `json:"cefr_level"`
 	UsageFrequency  NullUsageFrequency `json:"usage_frequency"`
 	State           ReviewState        `json:"state"`
@@ -70,6 +72,7 @@ func (q *Queries) AdminUpdateSenseState(ctx context.Context, arg AdminUpdateSens
 		&i.IsPrimary,
 		&i.IsTabooOrVulgar,
 		&i.CulturalNote,
+		&i.ImageUrl,
 		&i.CefrLevel,
 		&i.UsageFrequency,
 		&i.State,
@@ -255,6 +258,7 @@ SELECT
     s.short_definition,
     s.definition,
     s.cultural_note,
+    s.image_url,
     coalesce(s.cefr_level::TEXT, 'B1') AS cefr_level,
     coalesce(s.usage_frequency::TEXT, 'COMMON') AS usage_frequency,
     s.is_taboo_or_vulgar,
@@ -283,6 +287,7 @@ type GetSenseQuorumItemByIDRow struct {
 	ShortDefinition string             `json:"short_definition"`
 	Definition      string             `json:"definition"`
 	CulturalNote    pgtype.Text        `json:"cultural_note"`
+	ImageUrl        pgtype.Text        `json:"image_url"`
 	CefrLevel       interface{}        `json:"cefr_level"`
 	UsageFrequency  interface{}        `json:"usage_frequency"`
 	IsTabooOrVulgar bool               `json:"is_taboo_or_vulgar"`
@@ -310,6 +315,7 @@ func (q *Queries) GetSenseQuorumItemByID(ctx context.Context, idSense int32) (Ge
 		&i.ShortDefinition,
 		&i.Definition,
 		&i.CulturalNote,
+		&i.ImageUrl,
 		&i.CefrLevel,
 		&i.UsageFrequency,
 		&i.IsTabooOrVulgar,
@@ -425,6 +431,7 @@ SELECT
     s.short_definition,
     s.definition,
     s.cultural_note,
+    s.image_url,
     coalesce(s.cefr_level::TEXT, 'B1') AS cefr_level,
     coalesce(s.usage_frequency::TEXT, 'COMMON') AS usage_frequency,
     s.is_taboo_or_vulgar,
@@ -460,6 +467,7 @@ type ListEditorProposalsRow struct {
 	ShortDefinition string             `json:"short_definition"`
 	Definition      string             `json:"definition"`
 	CulturalNote    pgtype.Text        `json:"cultural_note"`
+	ImageUrl        pgtype.Text        `json:"image_url"`
 	CefrLevel       interface{}        `json:"cefr_level"`
 	UsageFrequency  interface{}        `json:"usage_frequency"`
 	IsTabooOrVulgar bool               `json:"is_taboo_or_vulgar"`
@@ -493,6 +501,7 @@ func (q *Queries) ListEditorProposals(ctx context.Context, arg ListEditorProposa
 			&i.ShortDefinition,
 			&i.Definition,
 			&i.CulturalNote,
+			&i.ImageUrl,
 			&i.CefrLevel,
 			&i.UsageFrequency,
 			&i.IsTabooOrVulgar,
@@ -527,6 +536,7 @@ SELECT
     s.short_definition,
     s.definition,
     s.cultural_note,
+    s.image_url,
     coalesce(s.cefr_level::TEXT, 'B1') AS cefr_level,
     coalesce(s.usage_frequency::TEXT, 'COMMON') AS usage_frequency,
     s.is_taboo_or_vulgar,
@@ -557,6 +567,7 @@ type ListPendingQuorumQueueRow struct {
 	ShortDefinition string             `json:"short_definition"`
 	Definition      string             `json:"definition"`
 	CulturalNote    pgtype.Text        `json:"cultural_note"`
+	ImageUrl        pgtype.Text        `json:"image_url"`
 	CefrLevel       interface{}        `json:"cefr_level"`
 	UsageFrequency  interface{}        `json:"usage_frequency"`
 	IsTabooOrVulgar bool               `json:"is_taboo_or_vulgar"`
@@ -593,6 +604,7 @@ func (q *Queries) ListPendingQuorumQueue(ctx context.Context, regionCode pgtype.
 			&i.ShortDefinition,
 			&i.Definition,
 			&i.CulturalNote,
+			&i.ImageUrl,
 			&i.CefrLevel,
 			&i.UsageFrequency,
 			&i.IsTabooOrVulgar,

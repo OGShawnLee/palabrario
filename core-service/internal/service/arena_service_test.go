@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -503,5 +504,145 @@ func TestArenaCatalogService_GetMatchReplay_PrivateMatchAuthorization(t *testing
 	}
 	if replayAdmin.IDMatch != pkg.IDMatch {
 		t.Fatalf("IDMatch no coincide: %s vs %s", replayAdmin.IDMatch, pkg.IDMatch)
+	}
+}
+
+func TestArenaCatalogService_PrepareMatch_GracefulDegradation_RN13(t *testing.T) {
+	testDB := testutil.SetupTestDB(t)
+	if testDB == nil {
+		return
+	}
+
+	arenaSvc := service.NewArenaCatalogService(testDB)
+	ctx := context.Background()
+	gaelID := "b1111111-0000-0000-0000-000000000003"
+	silasID := "b1111111-0000-0000-0000-000000000002"
+
+	// 1. Configurar solo 2 sentidos con imagen (< 4 imágenes en la baraja)
+	_, err := testDB.Pool.Exec(ctx, `
+		UPDATE senses SET image_url = 'http://localhost:8002/uploads/sense/img101.png' WHERE id_sense = 101;
+		UPDATE senses SET image_url = 'http://localhost:8002/uploads/sense/img102.png' WHERE id_sense = 102;
+	`)
+	if err != nil {
+		t.Fatalf("falló actualización de imágenes en sentidos: %v", err)
+	}
+
+	// 2. Insertar pregunta curada WORD_TO_IMAGE para el sentido 101
+	_, err = testDB.Pool.Exec(ctx, `
+		INSERT INTO questions (id_sense, id_editor, type, prompt, custom_distractors, explanation)
+		VALUES (101, $1, 'WORD_TO_IMAGE', '¿Cuál de estas imágenes representa popote?', '[]', 'Popote explicación')
+	`, silasID)
+	if err != nil {
+		t.Fatalf("falló inserción de pregunta curada WORD_TO_IMAGE: %v", err)
+	}
+
+	// 3. Preparar partida de 8 rondas con la baraja 1
+	pkg, err := arenaSvc.PrepareMatch(ctx, gaelID, models.RoleLearner, models.CreateMatchRequest{
+		IDDeck:       1,
+		TotalRounds:  8,
+		RoundTimeSec: 15,
+	})
+	if err != nil {
+		t.Fatalf("PrepareMatch falló: %v", err)
+	}
+
+	// 4. RN13: La pregunta del sentido 101 DEBE haberse degradado a WORD_TO_DEFINITION
+	foundSense101 := false
+	for _, q := range pkg.Questions {
+		if q.IDSense == 101 {
+			foundSense101 = true
+			if q.Modality != "WORD_TO_DEFINITION" {
+				t.Errorf("RN13 violada: se esperaba degradación a WORD_TO_DEFINITION con < 4 imágenes, obtenido: %s", q.Modality)
+			}
+			if len(q.Options) != 4 {
+				t.Errorf("se esperaban 4 opciones en la ronda degradada, obtenido: %d", len(q.Options))
+			}
+			if strings.HasPrefix(q.CorrectOption, "http") {
+				t.Errorf("la opción correcta no debería ser una URL de imagen tras degradarse, obtenido: %s", q.CorrectOption)
+			}
+		}
+		// Ninguna ronda debe ser WORD_TO_IMAGE en una baraja con < 4 imágenes
+		if q.Modality == "WORD_TO_IMAGE" {
+			t.Errorf("RN13 violada: ninguna ronda debe ser WORD_TO_IMAGE cuando la baraja tiene < 4 imágenes")
+		}
+	}
+	if !foundSense101 {
+		t.Fatalf("no se encontró el sentido 101 en las preguntas de la partida preparada")
+	}
+}
+
+func TestArenaCatalogService_PrepareMatch_WordToImage_RN13(t *testing.T) {
+	testDB := testutil.SetupTestDB(t)
+	if testDB == nil {
+		return
+	}
+
+	arenaSvc := service.NewArenaCatalogService(testDB)
+	ctx := context.Background()
+	gaelID := "b1111111-0000-0000-0000-000000000003"
+	silasID := "b1111111-0000-0000-0000-000000000002"
+
+	// 1. Configurar 4 sentidos con imagen única (>= 4 imágenes en la baraja)
+	_, err := testDB.Pool.Exec(ctx, `
+		UPDATE senses SET image_url = 'http://localhost:8002/uploads/sense/img101.png' WHERE id_sense = 101;
+		UPDATE senses SET image_url = 'http://localhost:8002/uploads/sense/img102.png' WHERE id_sense = 102;
+		UPDATE senses SET image_url = 'http://localhost:8002/uploads/sense/img105.png' WHERE id_sense = 105;
+		UPDATE senses SET image_url = 'http://localhost:8002/uploads/sense/img108.png' WHERE id_sense = 108;
+	`)
+	if err != nil {
+		t.Fatalf("falló actualización de imágenes en sentidos: %v", err)
+	}
+
+	// 2. Insertar pregunta curada WORD_TO_IMAGE para el sentido 101
+	_, err = testDB.Pool.Exec(ctx, `
+		INSERT INTO questions (id_sense, id_editor, type, prompt, custom_distractors, explanation)
+		VALUES (101, $1, 'WORD_TO_IMAGE', '¿Cuál de estas imágenes representa popote?', '[]', 'Popote explicación')
+	`, silasID)
+	if err != nil {
+		t.Fatalf("falló inserción de pregunta curada WORD_TO_IMAGE: %v", err)
+	}
+
+	// 3. Preparar partida de 8 rondas con la baraja 1
+	pkg, err := arenaSvc.PrepareMatch(ctx, gaelID, models.RoleLearner, models.CreateMatchRequest{
+		IDDeck:       1,
+		TotalRounds:  8,
+		RoundTimeSec: 15,
+	})
+	if err != nil {
+		t.Fatalf("PrepareMatch falló: %v", err)
+	}
+
+	visualRoundsCount := 0
+	for _, q := range pkg.Questions {
+		if q.Modality == "WORD_TO_IMAGE" {
+			visualRoundsCount++
+			if !strings.HasPrefix(q.CorrectOption, "http://localhost:8002/uploads/") {
+				t.Errorf("CorrectOption de WORD_TO_IMAGE debe ser una URL de imagen válida, obtenido: %s", q.CorrectOption)
+			}
+			if len(q.Options) != 4 {
+				t.Fatalf("se esperaban 4 opciones en ronda WORD_TO_IMAGE, obtenido: %d", len(q.Options))
+			}
+			seenOpts := make(map[string]bool)
+			foundCorrect := false
+			for _, opt := range q.Options {
+				if seenOpts[opt] {
+					t.Errorf("opción duplicada en ronda visual: %s", opt)
+				}
+				seenOpts[opt] = true
+				if !strings.HasPrefix(opt, "http://localhost:8002/uploads/") {
+					t.Errorf("la opción visual debe ser una URL de imagen, obtenido: %s", opt)
+				}
+				if opt == q.CorrectOption {
+					foundCorrect = true
+				}
+			}
+			if !foundCorrect {
+				t.Errorf("la opción correcta %s no se encontró en las opciones: %+v", q.CorrectOption, q.Options)
+			}
+		}
+	}
+
+	if visualRoundsCount == 0 {
+		t.Fatalf("se esperaban rondas con modalidad WORD_TO_IMAGE al tener >= 4 imágenes en la baraja")
 	}
 }

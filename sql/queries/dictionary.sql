@@ -66,6 +66,7 @@ SELECT
     w.gender,
     w.etymology,
     w.friendly_blurb,
+    w.image_url,
     w.created_at,
     w.updated_at,
     r.id_region AS origin_region_id,
@@ -88,6 +89,7 @@ SELECT
     s.is_primary,
     s.is_taboo_or_vulgar,
     s.cultural_note,
+    s.image_url,
     s.cefr_level,
     s.usage_frequency,
     s.state,
@@ -168,6 +170,7 @@ WITH filtered_words AS (
     w.part_of_speech,
     w.gender,
     w.friendly_blurb,
+    coalesce(s.image_url, w.image_url) AS image_url,
     s.id_sense AS primary_sense_id,
     s.short_definition,
     r.code AS region_code,
@@ -205,6 +208,7 @@ SELECT
   part_of_speech,
   gender,
   friendly_blurb,
+  image_url,
   primary_sense_id,
   short_definition,
   region_code,
@@ -247,6 +251,7 @@ SELECT
     gender,
     etymology,
     friendly_blurb,
+    image_url,
     id_origin_region,
     created_at,
     updated_at
@@ -262,9 +267,10 @@ INSERT INTO words (
   gender,
   etymology,
   friendly_blurb,
+  image_url,
   id_origin_region
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7
+  $1, $2, $3, $4, $5, $6, $7, $8
 ) RETURNING 
   id_word,
   lemma,
@@ -273,6 +279,7 @@ INSERT INTO words (
   gender,
   etymology,
   friendly_blurb,
+  image_url,
   id_origin_region,
   created_at,
   updated_at;
@@ -286,7 +293,8 @@ UPDATE words SET
   gender = $5,
   etymology = $6,
   friendly_blurb = $7,
-  id_origin_region = $8,
+  image_url = $8,
+  id_origin_region = $9,
   updated_at = now()
 WHERE id_word = $1
 RETURNING 
@@ -297,6 +305,7 @@ RETURNING
   gender,
   etymology,
   friendly_blurb,
+  image_url,
   id_origin_region,
   created_at,
   updated_at;
@@ -312,11 +321,12 @@ INSERT INTO senses (
   is_primary,
   is_taboo_or_vulgar,
   cultural_note,
+  image_url,
   cefr_level,
   usage_frequency,
   state
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
 ) RETURNING 
   id_sense,
   id_word,
@@ -327,6 +337,7 @@ INSERT INTO senses (
   is_primary,
   is_taboo_or_vulgar,
   cultural_note,
+  image_url,
   cefr_level,
   usage_frequency,
   state,
@@ -345,6 +356,7 @@ SELECT
     s.is_primary,
     s.is_taboo_or_vulgar,
     s.cultural_note,
+    s.image_url,
     s.cefr_level,
     s.usage_frequency,
     s.state,
@@ -367,8 +379,9 @@ UPDATE senses SET
   is_primary = $5,
   is_taboo_or_vulgar = $6,
   cultural_note = $7,
-  cefr_level = $8,
-  usage_frequency = $9,
+  image_url = $8,
+  cefr_level = $9,
+  usage_frequency = $10,
   updated_at = now()
 WHERE id_sense = $1
 RETURNING 
@@ -381,6 +394,7 @@ RETURNING
   is_primary,
   is_taboo_or_vulgar,
   cultural_note,
+  image_url,
   cefr_level,
   usage_frequency,
   state,

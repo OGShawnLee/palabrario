@@ -47,6 +47,7 @@ type SenseDetail struct {
 	IsPrimary       bool      `json:"is_primary"`
 	IsTabooOrVulgar bool      `json:"is_taboo_or_vulgar"`
 	CulturalNote    *string   `json:"cultural_note,omitempty"`
+	ImageURL        *string   `json:"image_url,omitempty"`
 	CEFRLevel       string    `json:"cefr_level"`
 	UsageFrequency  string    `json:"usage_frequency"`
 	State           string    `json:"state"`
@@ -61,6 +62,7 @@ type WordDetail struct {
 	Gender          WordGender      `json:"gender"`
 	Etymology       *string         `json:"etymology,omitempty"`
 	FriendlyBlurb   *string         `json:"friendly_blurb,omitempty"`
+	ImageURL        *string         `json:"image_url,omitempty"`
 	OriginRegion    *Region         `json:"origin_region,omitempty"`
 	Senses          []SenseDetail   `json:"senses"`
 	Heteronyms      []HeteronymItem `json:"heteronyms"`
@@ -71,30 +73,31 @@ type WordDetail struct {
 // Filtro de exploración paginada (GET /api/v1/words)
 type WordExploreFilter struct {
 	Query          string `json:"q"`
-	RegionCode     string `json:"region"`          // Ej. 'MX', 'AR', 'ES'
-	PartOfSpeech   string `json:"pos"`             // Ej. 'sustantivo', 'verbo', 'adjetivo', 'modismo'
-	CEFRLevel      string `json:"cefr"`            // 'A1'..'C2', 'NATIVO'
-	UsageFrequency string `json:"frequency"`       // 'EVERYDAY', 'COMMON', 'RARE', 'SLANG', 'ARCHAIC'
-	IncludeTaboo   bool   `json:"include_taboo"`   // Default true
-	Page           int    `json:"page"`            // Default 1
-	Limit          int    `json:"limit"`           // Default 20, máx 50
+	RegionCode     string `json:"region"`        // Ej. 'MX', 'AR', 'ES'
+	PartOfSpeech   string `json:"pos"`           // Ej. 'sustantivo', 'verbo', 'adjetivo', 'modismo'
+	CEFRLevel      string `json:"cefr"`          // 'A1'..'C2', 'NATIVO'
+	UsageFrequency string `json:"frequency"`     // 'EVERYDAY', 'COMMON', 'RARE', 'SLANG', 'ARCHAIC'
+	IncludeTaboo   bool   `json:"include_taboo"` // Default true
+	Page           int    `json:"page"`          // Default 1
+	Limit          int    `json:"limit"`         // Default 20, máx 50
 }
 
 type WordSummaryCard struct {
-	IDWord           int        `json:"id_word"`
-	Lemma            string     `json:"lemma"`
-	PartOfSpeech     string     `json:"part_of_speech"`
-	Gender           WordGender `json:"gender"`
-	FriendlyBlurb    *string    `json:"friendly_blurb,omitempty"`
-	PrimarySenseID   int        `json:"primary_sense_id"`
-	ShortDefinition  string     `json:"short_definition"`
-	RegionCode       string     `json:"region_code"`
-	RegionName       string     `json:"region_name"`
-	FlagEmoji        string     `json:"flag_emoji"`
-	CEFRLevel        string     `json:"cefr_level"`
-	UsageFrequency   string     `json:"usage_frequency"`
-	IsTabooOrVulgar  bool       `json:"is_taboo_or_vulgar"`
-	ApprovedSenses   int        `json:"approved_senses_count"`
+	IDWord          int        `json:"id_word"`
+	Lemma           string     `json:"lemma"`
+	PartOfSpeech    string     `json:"part_of_speech"`
+	Gender          WordGender `json:"gender"`
+	FriendlyBlurb   *string    `json:"friendly_blurb,omitempty"`
+	ImageURL        *string    `json:"image_url,omitempty"`
+	PrimarySenseID  int        `json:"primary_sense_id"`
+	ShortDefinition string     `json:"short_definition"`
+	RegionCode      string     `json:"region_code"`
+	RegionName      string     `json:"region_name"`
+	FlagEmoji       string     `json:"flag_emoji"`
+	CEFRLevel       string     `json:"cefr_level"`
+	UsageFrequency  string     `json:"usage_frequency"`
+	IsTabooOrVulgar bool       `json:"is_taboo_or_vulgar"`
+	ApprovedSenses  int        `json:"approved_senses_count"`
 }
 
 type PaginatedWords struct {
@@ -107,31 +110,33 @@ type PaginatedWords struct {
 // --- DTOs DE AUTORÍA EDITORIAL (CU06) ---
 
 type CreateExampleInput struct {
-	Sentence string  `json:"sentence"`          // Obligatorio, mín. 5 chars
-	Source   *string `json:"source,omitempty"`  // Opcional
+	Sentence string  `json:"sentence"`         // Obligatorio, mín. 5 chars
+	Source   *string `json:"source,omitempty"` // Opcional
 }
 
 type CreateSenseRequest struct {
-	RegionCode      string               `json:"region_code"`               // Obligatorio ('MX', 'AR', etc.)
-	ShortDefinition string               `json:"short_definition"`          // Obligatorio, <= 255 chars
-	Definition      string               `json:"definition"`                // Obligatorio
+	RegionCode      string               `json:"region_code"`      // Obligatorio ('MX', 'AR', etc.)
+	ShortDefinition string               `json:"short_definition"` // Obligatorio, <= 255 chars
+	Definition      string               `json:"definition"`       // Obligatorio
 	IsPrimary       bool                 `json:"is_primary"`
 	IsTabooOrVulgar bool                 `json:"is_taboo_or_vulgar"`
 	CulturalNote    *string              `json:"cultural_note,omitempty"`
-	CEFRLevel       string               `json:"cefr_level"`                // Default 'B1'
-	UsageFrequency  string               `json:"usage_frequency"`           // Default 'COMMON'
-	ConceptIDs      []int                `json:"concept_ids,omitempty"`     // Opcional: vincular heterónimos
-	Examples        []CreateExampleInput `json:"examples,omitempty"`        // Ejemplos iniciales
+	ImageURL        *string              `json:"image_url,omitempty"`   // Opcional, URL procesada por image-service (RN12)
+	CEFRLevel       string               `json:"cefr_level"`            // Default 'B1'
+	UsageFrequency  string               `json:"usage_frequency"`       // Default 'COMMON'
+	ConceptIDs      []int                `json:"concept_ids,omitempty"` // Opcional: vincular heterónimos
+	Examples        []CreateExampleInput `json:"examples,omitempty"`    // Ejemplos iniciales
 }
 
 type CreateWordProposalRequest struct {
-	Lemma            string             `json:"lemma"`                      // Obligatorio
-	PartOfSpeech     string             `json:"part_of_speech"`             // Obligatorio
-	Gender           WordGender         `json:"gender"`                     // Default 'NEUTRAL'
+	Lemma            string             `json:"lemma"`          // Obligatorio
+	PartOfSpeech     string             `json:"part_of_speech"` // Obligatorio
+	Gender           WordGender         `json:"gender"`         // Default 'NEUTRAL'
 	Etymology        *string            `json:"etymology,omitempty"`
 	FriendlyBlurb    *string            `json:"friendly_blurb,omitempty"`
+	ImageURL         *string            `json:"image_url,omitempty"` // Opcional, URL procesada por image-service (RN12)
 	OriginRegionCode *string            `json:"origin_region_code,omitempty"`
-	InitialSense     CreateSenseRequest `json:"initial_sense"`              // Obligatorio
+	InitialSense     CreateSenseRequest `json:"initial_sense"` // Obligatorio
 }
 
 type UpdateWordRequest struct {
@@ -140,6 +145,7 @@ type UpdateWordRequest struct {
 	Gender           WordGender `json:"gender"`
 	Etymology        *string    `json:"etymology,omitempty"`
 	FriendlyBlurb    *string    `json:"friendly_blurb,omitempty"`
+	ImageURL         *string    `json:"image_url,omitempty"`
 	OriginRegionCode *string    `json:"origin_region_code,omitempty"`
 }
 
@@ -150,6 +156,7 @@ type UpdateSenseRequest struct {
 	IsPrimary       bool    `json:"is_primary"`
 	IsTabooOrVulgar bool    `json:"is_taboo_or_vulgar"`
 	CulturalNote    *string `json:"cultural_note,omitempty"`
+	ImageURL        *string `json:"image_url,omitempty"`
 	CEFRLevel       string  `json:"cefr_level"`
 	UsageFrequency  string  `json:"usage_frequency"`
 }

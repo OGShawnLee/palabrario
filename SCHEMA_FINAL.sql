@@ -49,7 +49,8 @@ CREATE TYPE question_type AS ENUM (
   'WORD_TO_DEFINITION',
   'SENTENCE_COMPLETION',
   'REGIONAL_EQUIVALENT',
-  'TONE_OR_REGISTER'
+  'TONE_OR_REGISTER',
+  'WORD_TO_IMAGE'
 );
 
 -- ------------------------------------------------------------------------------
@@ -148,6 +149,7 @@ CREATE TABLE words (
 
   -- El blurb estilo Vocabulary.com a nivel de palabra
   friendly_blurb TEXT,
+  image_url TEXT,
 
   -- Región de origen endémica (null si es español panhispánico/general)
   id_origin_region UUID REFERENCES regions(id_region) ON DELETE SET NULL,
@@ -179,6 +181,7 @@ CREATE TABLE senses (
 
   is_taboo_or_vulgar BOOLEAN NOT NULL DEFAULT false,
   cultural_note TEXT,
+  image_url TEXT,
 
   cefr_level cefr_level DEFAULT 'B1',
   usage_frequency usage_frequency DEFAULT 'COMMON',
@@ -471,7 +474,7 @@ CREATE TABLE quiz_attempts (
   id_question INTEGER REFERENCES questions(id_question) ON DELETE SET NULL,
   id_match UUID REFERENCES matches(id_match) ON DELETE CASCADE,
   round_number SMALLINT,
-  selected_option VARCHAR(255) NOT NULL,
+  selected_option TEXT NOT NULL,
   is_correct BOOLEAN NOT NULL,
   quality_rating SMALLINT CHECK (quality_rating BETWEEN 0 AND 5),
   time_spent_ms INTEGER NOT NULL,
