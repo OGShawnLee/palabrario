@@ -67,6 +67,9 @@ services:
       - "8002:8002"
     env_file:
       - ./image-service/.env
+    volumes:
+      - image_uploads:/app/uploads
 
 volumes:
   postgres_data:
+  image_uploads:

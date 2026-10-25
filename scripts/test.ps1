@@ -22,7 +22,7 @@
 param (
     [switch]$KeepAlive,
     [switch]$Down,
-    [string]$Target = "./pkg/... ./core-service/..."
+    [string]$Target = "./pkg/... ./core-service/... ./realtime-service/... ./image-service/..."
 )
 
 $ErrorActionPreference = "Continue"

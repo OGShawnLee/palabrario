@@ -24,7 +24,10 @@ WORKDIR /app
 
 RUN apk --no-cache add ca-certificates tzdata
 
-RUN adduser -D -g '' appuser
+RUN adduser -D -g '' appuser && \
+    mkdir -p /app/uploads && \
+    chown -R appuser:appuser /app/uploads
+
 USER appuser
 
 COPY --from=builder /bin/image-service /app/image-service

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -12,73 +11,55 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
+	"palabrario/image-service/internal/api"
+	"palabrario/image-service/internal/config"
 )
 
-type HealthResponse struct {
-	Status    string    `json:"status"`
-	Service   string    `json:"service"`
-	Timestamp time.Time `json:"timestamp"`
+// NewServer construye el handler HTTP a partir de parámetros explícitos para facilitar pruebas unitarias y de integración.
+func NewServer(jwtSecret, uploadDir, publicBaseURL string, maxFileSizeMB int64) http.Handler {
+	cfg := &config.Config{
+		JWTSecret:          jwtSecret,
+		JWTExpirationHours: 72 * time.Hour,
+		UploadDir:          uploadDir,
+		PublicBaseURL:      publicBaseURL,
+		MaxFileSizeMB:      maxFileSizeMB,
+	}
+	router := api.NewRouter(cfg)
+	return router.Setup()
 }
 
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8002"
+	// 1. Carga y validación estricta de variables de entorno (Fail-Fast)
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("🚨 ERROR FATAL DE INICIALIZACIÓN: %v", err)
 	}
 
-	r := chi.NewRouter()
-
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
-		AllowCredentials: true,
-		MaxAge:           300,
-	}))
-
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		resp := HealthResponse{
-			Status:    "ok",
-			Service:   "image-service",
-			Timestamp: time.Now().UTC(),
-		}
-		_ = json.NewEncoder(w).Encode(resp)
-	})
-
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"message":"Bienvenido a Palabrario Image Service (Golang)"}`))
-	})
+	// 2. Inicialización de enrutador y dependencias
+	router := api.NewRouter(cfg)
+	handler := router.Setup()
 
 	server := &http.Server{
-		Addr:         fmt.Sprintf(":%s", port),
-		Handler:      r,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		Addr:         fmt.Sprintf(":%s", cfg.Port),
+		Handler:      handler,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 20 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
+	// 3. Manejo de apagado gracioso (Graceful Shutdown)
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("🖼️ [image-service] corriendo en http://localhost:%s", port)
+		log.Printf("🖼️ [image-service] [%s] corriendo en http://localhost:%s", cfg.Environment, cfg.Port)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("❌ Error en image-service: %v", err)
 		}
 	}()
 
 	<-stop
-	log.Println("🛑 Apagando image-service...")
+	log.Println("🛑 Apagando image-service limpiamente...")
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer shutdownCancel()
