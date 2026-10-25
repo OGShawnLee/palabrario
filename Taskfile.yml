@@ -116,10 +116,18 @@ tasks:
   build:
     desc: 'Compila estáticamente todos los paquetes y servicios Go validando 0 errores'
     cmds:
-      - go build ./core-service/... ./image-service/... ./pkg/...
+      - go build ./core-service/... ./realtime-service/... ./image-service/... ./pkg/...
 
   wails:gen:
     desc: 'Genera las definiciones de tipos TypeScript para Vue 3 desde models Go'
     dir: local-app
     cmds:
       - wails generate module
+
+  # ============================================================================
+  # 5. MÉTRICAS Y VOLUMETRÍA DE CÓDIGO
+  # ============================================================================
+  loc:
+    desc: 'Calcula y despliega el reporte de líneas de código (LOC) desglosado por lenguaje'
+    cmds:
+      - powershell -ExecutionPolicy Bypass -File ./scripts/loc.ps1
