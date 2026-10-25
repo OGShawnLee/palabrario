@@ -9,18 +9,24 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+
+	"palabrario/pkg/auth"
+	"palabrario/pkg/response"
+	"palabrario/realtime-service/internal/arena"
 )
 
 type HealthResponse struct {
-	Status    string    `json:"status"`
-	Service   string    `json:"service"`
-	Timestamp time.Time `json:"timestamp"`
+	Status      string    `json:"status"`
+	Service     string    `json:"service"`
+	ActiveRooms int       `json:"active_rooms"`
+	Timestamp   time.Time `json:"timestamp"`
 }
 
 func main() {
@@ -28,6 +34,20 @@ func main() {
 	if port == "" {
 		port = "8001"
 	}
+
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "dev-secret-key-change-in-prod"
+	}
+
+	coreServiceURL := os.Getenv("CORE_SERVICE_URL")
+	if coreServiceURL == "" {
+		coreServiceURL = "http://localhost:8000"
+	}
+
+	tokenService := auth.NewTokenService(jwtSecret, 72*time.Hour)
+	coreClient := arena.NewCoreClient(coreServiceURL, nil, tokenService)
+	hub := arena.NewArenaHub(coreClient, tokenService)
 
 	r := chi.NewRouter()
 
@@ -45,18 +65,48 @@ func main() {
 	}))
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		resp := HealthResponse{
-			Status:    "ok",
-			Service:   "realtime-service",
-			Timestamp: time.Now().UTC(),
+			Status:      "ok",
+			Service:     "realtime-service",
+			ActiveRooms: hub.ActiveRoomsCount(),
+			Timestamp:   time.Now().UTC(),
 		}
 		_ = json.NewEncoder(w).Encode(resp)
 	})
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		_, _ = w.Write([]byte(`{"message":"Bienvenido a Palabrario Realtime Service (Golang)"}`))
+	})
+
+	r.Get("/ws/arena/{roomCode}", func(w http.ResponseWriter, r *http.Request) {
+		roomCode := strings.TrimSpace(chi.URLParam(r, "roomCode"))
+		if roomCode == "" {
+			response.Error(w, http.StatusBadRequest, "El código de sala es requerido")
+			return
+		}
+
+		tokenStr := strings.TrimSpace(r.URL.Query().Get("token"))
+		if tokenStr == "" {
+			authHeader := r.Header.Get("Authorization")
+			if strings.HasPrefix(authHeader, "Bearer ") {
+				tokenStr = strings.TrimPrefix(authHeader, "Bearer ")
+			}
+		}
+
+		if tokenStr == "" {
+			response.Error(w, http.StatusUnauthorized, "Token JWT requerido en ?token= o Authorization")
+			return
+		}
+
+		claims, err := tokenService.VerifyToken(tokenStr)
+		if err != nil {
+			response.Error(w, http.StatusUnauthorized, "Token inválido o expirado")
+			return
+		}
+
+		hub.HandleWS(w, r, roomCode, claims)
 	})
 
 	server := &http.Server{

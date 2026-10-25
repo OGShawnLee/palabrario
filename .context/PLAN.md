@@ -5,7 +5,7 @@
 > **Stack Backend Unificado (100% Go):** `Go 1.24 + Chi v5 + sqlc + pgxpool/v5` (`core-service :8000`, `realtime-service :8001`, `image-service :8002`) + Puente IPC Nativo Wails (`local-app/app.go`) sobre `PostgreSQL 17 Alpine (:5432)`  
 > **Referencias Canónicas:** [`DOMAIN.md`](./DOMAIN.md) · [`INTERFACES.md`](./INTERFACES.md) · [`SCHEMA_FINAL.sql`](../SCHEMA_FINAL.sql) · [`.context/academic/1-PROJECT-SPECIFICATION.md`](./academic/1-PROJECT-SPECIFICATION.md)
 
----\
+---
 
 ## 0. Principio Rector de Ingeniería: Backend-First & Cadena Tipada End-to-End con Wails IPC
 
@@ -20,11 +20,11 @@
 > Por ello, **el desarrollo sigue estrictamente esta cadena de 6 eslabones sin alucinaciones:**
 > $$\text{1. SQL (`SCHEMA_FINAL.sql`)} \to \text{2. `sqlc`} \to \text{3. `pkg/models` + SOA Go} \to \text{4. Tests} \to \text{5. Métodos Go en `local-app/app.go` (`wails generate`)} \to \text{6. Vistas Vue 3}$$
 
----\
+---
 
 ## 1. Diagnóstico Ejecutivo: ¿Dónde Estamos Hoy?
 
-Al auditar el código real del repositorio frente a los **16 Casos de Uso (`CU01–CU16`)** y las **11 Reglas de Negocio (`RN01–RN11`)**, el proyecto ha cerrado con éxito la **Fase 3.3** (Diccionario y Curaduría por Quórum), la **Fase 3.4** (Studio Personal, Motor SM-2 y Ledger de XP), la **Fase 3.5** (Módulo de Cuenta, Perfiles Sociales, Gobernanza y Moderación) y las **Sub-fases 4.1 y 4.2** de la **Fase 4 (Seguridad S2S, DTOs de Arena, `ArenaCatalogService`, Replay 3NF y suite de pruebas en `core-service`)**:
+Al auditar el código real del repositorio frente a los **16 Casos de Uso (`CU01–CU16`)** y las **11 Reglas de Negocio (`RN01–RN11`)**, el proyecto ha cerrado con éxito la **Fase 3.3** (Diccionario y Curaduría por Quórum), la **Fase 3.4** (Studio Personal, Motor SM-2 y Ledger de XP), la **Fase 3.5** (Módulo de Cuenta, Perfiles Sociales, Gobernanza y Moderación), las **Sub-fases 4.1 y 4.2** (`core-service`: S2S JWT, DTOs de Arena, `ArenaCatalogService` y Replay 3NF) y la **Sub-fase 4.3** (`realtime-service`: motor `ArenaHub`, máquina de estados en RAM, reloj monotónico RN10, reconexión 10s RNF-CON-02, sucesión de host y WebSockets):
 
 ```mermaid
 flowchart LR
@@ -34,8 +34,8 @@ flowchart LR
     F33 --> F34["✅ Fase 3.4\nStudio & Motor SM-2\n(100%)"]
     F34 --> F35["✅ Fase 3.5\nGobernanza & Reportes\n(100%)"]
     F35 --> F41["✅ Sub-fases 4.1 & 4.2\nS2S JWT + Arena 3NF\nReplay en core-service"]
-    F41 --> F43["🚧 Sub-fase 4.3 (ACTUAL)\nArenaHub + ActiveRoom\nWebSockets & Sucesión Host"]
-    F43 --> F44["⏳ Sub-fase 4.4\nimage-service EXIF\n(:8002)"]
+    F41 --> F43["✅ Sub-fase 4.3\nArenaHub + ActiveRoom\nWebSockets & Sucesión Host"]
+    F43 --> F44["🚧 Sub-fase 4.4 (ACTUAL)\nimage-service EXIF\n(:8002)"]
     F44 --> F5["⏳ Fase 5\nPuente Wails (app.go)\n+ Bindings TS & UI"]
     F5 --> F6["🌱 Fase 6 (Largo Plazo)\nEventos de Temporada"]
 ```
@@ -52,17 +52,17 @@ flowchart LR
 | **6. `core-service` — Studio y SM-2 (`CU10–CU13`)** | **100% Completo** | `StudioService` (`RN03`, `RN04`, `RN05`), `MasteryService` (`CalculateSM2` puro, transacción ACID `pgx.Tx` con `xp_transactions` **RN11** y rachas en `users`). | Nada en Studio. |
 | **7. `core-service` — Gobernanza (`CU02–CU04`)** | **100% Completo** | `GovernanceService` (`RN02`, promoción atómica a `EDITOR`, protección del último `ADMIN`, boletos con `SELECT ... FOR UPDATE`). | Nada en Gobernanza. |
 | **8. `core-service` — Arena & Replay (`CU14, CU16`)** | **100% Completo** | `ArenaCatalogService`, handlers en `/api/v1/arena/matches/*`, validación de 8 sentidos mínimos, generación de distractores fallback, consolidación Batch Flush ACID, desempate determinista, Replay 3NF con autorización y tests en `arena_service_test.go`. | Nada en `core-service`. |
-| **9. `realtime-service` (`CU15, CU16`)** | **25% Esqueleto Go** | Ya migrado a Go 1.24 + Chi v5 en puerto `8001` ([`realtime-service/main.go`](../realtime-service/main.go) y `Dockerfile` multi-stage). | **Sub-fase 4.3:** Implementar `ArenaHub` y `ActiveRoom` (`hub.go`, `room.go`, `client_core.go`), WebSockets con cupo 8, reloj monotónico `RN10`, reconexión 10s (`RNF-CON-02`), sucesión de Host al más antiguo, Batch Flush S2S y pruebas en `arena_test.go`. |
+| **9. `realtime-service` (`CU15, CU16`)** | **100% Completo** | `ArenaHub` y `ActiveRoom` en memoria RAM (`hub.go`, `room.go`, `core_client.go`, `scoring.go`), servidor WebSocket en `GET /ws/arena/{roomCode}`, límite estricto de 8 jugadores, reloj monotónico `RN10`, ventana de reconexión de 10s (`RNF-CON-02`), sucesión de Host al jugador más antiguo, Batch Flush S2S a `core-service` y suite de pruebas en `arena_test.go`. | Nada en `realtime-service`. |
 | **10. `image-service` (Multimedia)** | **25% Esqueleto Go** | Ya migrado a Go 1.24 + Chi v5 en puerto `8002` con `/health`, graceful shutdown y `Dockerfile` multi-stage. | **Sub-fase 4.4:** Implementar `POST /api/v1/images/upload` con validación de magic bytes, limpieza EXIF (`RNF-SEG-04`) y pruebas. |
 | **11. Puente Wails Go (`local-app/app.go`) + UI** | **25% Puente / 100% UI Mock** | `local-app/app.go` implementa bóveda JWT en RAM y consultas iniciales (`SearchWords`, `GetWordDetail`). | En **Fase 5**, exponer métodos puente para todos los módulos, correr `wails generate module` y conectar vistas Vue 3. |
 
----\
+---
 
 ## 2. Plan de Implementación Paso a Paso (Checklist Operativo para Agentes)
 
 Cada fase y sub-fase de backend está diseñada como una unidad atómica de trabajo verificable mediante `sqlc generate && go build ./core-service/... ./realtime-service/... ./image-service/... ./pkg/...` y `.\scripts\test.ps1`.
 
----\
+---
 
 ### ✅ FASE 3.3 (COMPLETADA): Módulo de Diccionario y Curaduría por Quórum (`CU05, CU06, CU07, CU08`)
 
@@ -74,7 +74,7 @@ Cada fase y sub-fase de backend está diseñada como una unidad atómica de trab
 3. **[x] Servicios SOA (`core-service/internal/service/`):** Implementados `dictionary_service.go` y `curation_service.go` (`RN06`, `RN07`, `RN08`).
 4. **[x] Handlers, Router y Pruebas (`core-service/internal/`):** Actualizado `dictionary_handler.go`, creado `curation_handler.go`, rutas en `router.go` y pruebas en `service_test.go`.
 
----\
+---
 
 ### ✅ FASE 3.4 (COMPLETADA): Studio Personal, Motor Matemático SM-2 y Ledger de XP (`CU10, CU11, CU12, CU13`)
 
@@ -86,7 +86,7 @@ Cada fase y sub-fase de backend está diseñada como una unidad atómica de trab
 3. **[x] Servicios SOA (`core-service/internal/service/`):** Implementados `studio_service.go` (`RN03`, `RN04`, `RN05`) y `mastery_service.go` (`CalculateSM2`, `RN09`, `RN11`).
 4. **[x] Handlers, Router y Pruebas (`core-service/internal/`):** Creados `studio_handler.go`, `mastery_handler.go` y `studio_mastery_test.go`.
 
----\
+---
 
 ### ✅ FASE 3.5 (COMPLETADA + REFACTORIZADA): Módulo de Cuenta, Perfiles Sociales, Gobernanza y Moderación (`CU01, CU02, CU03, CU04, CU09`)
 
@@ -96,7 +96,7 @@ Cada fase y sub-fase de backend está diseñada como una unidad atómica de trab
 1. **[x] Modelos y Consultas:** Creado `pkg/models/governance.go`, ampliados `pkg/models/user.go`, `sql/queries/users.sql`, `sql/queries/curation.sql` y creado `sql/queries/governance.sql`.
 2. **[x] Servicios SOA, Handlers y Refactorización (`REFACTOR.md`):** Ampliados `identity_service.go`, `curation_service.go`, creado `governance_service.go`, handlers, helpers y pruebas en `governance_reports_test.go`.
 
----\
+---
 
 ### 📍 FASE 4: Arena Multijugador 3NF, Seguridad S2S, `realtime-service` e `image-service` (`CU14, CU15, CU16`)
 
@@ -112,7 +112,7 @@ Cada fase y sub-fase de backend está diseñada como una unidad atómica de trab
    - Implementados `GenerateInternalToken` (TTL 30s) y `VerifyInternalToken`.
    - `VerifyToken` valida estrictamente `claims.Issuer == "palabrario-core-service"`.
 2. **[x] Middleware `RequireInternalService` en [`core-service/internal/api/middleware/auth_middleware.go`](../core-service/internal/api/middleware/auth_middleware.go):**
-   - Valida el token interno con `m.tokenService.VerifyInternalToken(token)` (`403 Forbidden` si es inválido o de usuario humano) e inyecta `claims` en `auth.InternalServiceContextKey`.
+   - Valida el token interno con `m.tokenService.VerifyInternalToken(token)` (`403 Forbidden` si es inválido o de usuario humano) e inyecte `claims` en `auth.InternalServiceContextKey`.
 3. **[x] Modelos Completos de Arena y Replay 3NF en [`pkg/models/arena.go`](../pkg/models/arena.go):**
    - Incorporadas todas las estructuras de la sección **2.7.2** de [`INTERFACES.md`](./INTERFACES.md): `CreateMatchRequest`, `InternalArenaQuestion`, `MatchPackage`, `SubmitAnswerPayload`, `RoundResultPayload`, `ParticipantRoundAttempt`, `ParticipantFinalResult`, `ConsolidateMatchRequest`, `MatchSummary`, `ParticipantRoundAnswer`, `MatchRoundReplay` y `MatchReplayDetail`.
 
@@ -145,33 +145,25 @@ Cada fase y sub-fase de backend está diseñada como una unidad atómica de trab
 
 ---
 
-#### 🔹 SUB-FASE 4.3 (Prioridad Inmediata): Motor WebSocket en `realtime-service` (`ArenaHub`, `ActiveRoom`, `RN10`, `RNF-CON-02` y Sucesión de Host)
+#### ✅ SUB-FASE 4.3 (COMPLETADA): Motor WebSocket en `realtime-service` (`ArenaHub`, `ActiveRoom`, `RN10`, `RNF-CON-02` y Sucesión de Host)
 
-1. **[ ] Cliente HTTP Interno S2S (`realtime-service/internal/arena/core_client.go`):**
-   - Implementar un cliente HTTP hacia `CORE_SERVICE_URL` (default `http://localhost:8000`) que utilice `tokenService.GenerateInternalToken("realtime-service", roomCode)` en el header `Authorization: Bearer <s2sToken>` para invocar `GET /api/v1/arena/matches/{roomCode}/package` y `POST /api/v1/arena/matches/consolidate`.
-2. **[ ] Motor de Salas en RAM (`realtime-service/internal/arena/hub.go` y `room.go`):**
-   - `ArenaHub` con `sync.RWMutex` manteniendo `rooms map[string]*ActiveRoom`.
-   - `ActiveRoom` con constante `MaxParticipants = 8` y goroutine coordinadora (`RunLoop`) gobernada por canales:
-     - **Unión (`JOIN_ROOM`):** Si el usuario ya existía en `Participants[userID]` (reconexión), cancela su timer de desconexión, marca `Connected = true`, `IsReady = true`, reemplaza su conexión WebSocket y le envía el estado actual (`ROOM_STATE` y la `QUESTION` activa si está en `IN_PROGRESS`). Si es nuevo y `len(Participants) >= 8` o la sala no está en `WAITING`, rechaza la unión.
-     - **Desconexión (`RNF-CON-02` — Ventana de 10s) y Sucesión de Host:**
-       - Al cerrarse el socket de un participante, se marca `Connected = false` e `IsReady = false` y se programa un timer de `10 segundos` (configurable en tests para rapidez).
-       - Si pasan los `10 segundos` sin que el usuario se reconecte:
-         - Si la sala está en `WAITING`: se elimina al jugador de `Participants`. Si era el Host (`userID == room.HostUserID`), se busca entre los participantes conectados restantes aquel con menor `JoinedAt` (el más antiguo), se le asigna `room.HostUserID = oldest.IDUser` y `IsHost = true`, y se difunde `ROOM_STATE`. Si no queda ningún participante conectado, se cierra la sala y se elimina del `ArenaHub`.
-         - Si la sala está en `IN_PROGRESS`: el jugador conserva sus puntos acumulados pero deja de bloquear el cierre anticipado de las rondas restantes.
-     - **Inicio de Partida (`START_MATCH`):** Solo permitido si el emisor es `userID == room.HostUserID` y `Status == WAITING`. Cambia estado a `IN_PROGRESS`, emite `COUNTDOWN` y arranca la Ronda 1.
-     - **Ciclo de Ronda y Puntaje Monotónico (`RN10`):**
-       - Emite `QUESTION` usando `models.ArenaQuestion` (sin `CorrectOption`).
-       - Al recibir `SUBMIT_ANSWER`, mide `elapsedMs = time.Since(roundStartedAt).Milliseconds()` con el reloj del servidor, aplica la fórmula exacta de la sección **2.7.4** de `INTERFACES.md`, suma `elapsedMs` a `TotalTimeSpentMs` y guarda el `ParticipantRoundAttempt`.
-       - Cuando todos los participantes conectados respondieron o expira el timer de la ronda (`RoundTimeSec`), a quienes no respondieron se les registra un intento en timeout (`PointsEarned = 0`, `TimeSpentMs = RoundTimeSec * 1000`, `WrongSenseIDs`), se recalcula el ranking (`Score DESC, CorrectAnswers DESC, TotalTimeSpentMs ASC`) y se difunde `ROUND_RESULT`.
-     - **Cierre y Consolidación (`PODIUM` / `CU16`):**
-       - Al concluir la última ronda, cambia a `FINISHED`, construye `ConsolidateMatchRequest` con todos los `RoundAttempts` y `TotalTimeSpentMs`, invoca `coreClient.ConsolidateMatch`, difunde el evento `PODIUM` y libera la sala del `ArenaHub`.
-3. **[ ] Montaje en `realtime-service/main.go` y Pruebas Concurrentes (`realtime-service/internal/arena/arena_test.go`):**
-   - Exponer `GET /ws/arena/{roomCode}` validando el JWT de cliente con `pkg/auth` y actualizando `GET /health` para incluir `active_rooms`.
-   - Escribir pruebas unitarias/integración en `realtime-service/internal/arena/arena_test.go` verificando: fórmula `RN10`, límite de 8 jugadores, reconexión dentro de la ventana de gracia, sucesión automática del Host al jugador más antiguo tras expirar la desconexión en `WAITING`, y disparo del Batch Flush S2S.
+1. **[x] Cliente HTTP Interno S2S (`realtime-service/internal/arena/core_client.go`):**
+   - Cliente HTTP hacia `CORE_SERVICE_URL` con `tokenService.GenerateInternalToken("realtime-service", roomCode)` en el header `Authorization: Bearer <s2sToken>` para `GET /api/v1/arena/matches/{roomCode}/package` y `POST /api/v1/arena/matches/consolidate`.
+2. **[x] Motor de Salas en RAM (`realtime-service/internal/arena/hub.go`, `room.go`, `scoring.go` y `helpers.go`):**
+   - `ArenaHub` concurrente con `sync.RWMutex` administrando `rooms map[string]*ActiveRoom`.
+   - `ActiveRoom` gobernado por una única goroutine coordinadora (`RunLoop`) canalizando uniones, salidas, acciones y temporizadores sin condiciones de carrera.
+   - Cupo máximo estricto de 8 participantes (`MaxParticipants = 8`).
+   - Reconexión sin pérdida de estado dentro de la ventana de gracia de 10 segundos (`RNF-CON-02`).
+   - Sucesión automática de anfitrión al participante conectado más antiguo (`oldest.JoinedAt`) tras expirar la ventana de desconexión del host en estado `WAITING`.
+   - Ciclo de rondas con emisión de `models.ArenaQuestion` (sin revelar `CorrectOption`) y cálculo de puntaje monotónico exacto en servidor con `CalculateRoundPoints` (`RN10`).
+   - Cierre de ronda por timeout o respuestas completas, cálculo de podio y consolidación transaccional S2S (`ConsolidateMatch`) con difusión de evento `PODIUM`.
+3. **[x] Montaje en `realtime-service/main.go` y Pruebas Concurrentes (`realtime-service/internal/arena/arena_test.go`):**
+   - Endpoint `GET /ws/arena/{roomCode}` autenticado por JWT y `GET /health` reportando `active_rooms`.
+   - Suite de pruebas de integración completa validando: puntaje RN10, rechazo al 9° jugador, reconexión en ventana de gracia, sucesión de host y flujo de partida completo con Batch Flush hacia mock S2S.
 
 ---
 
-#### 🔹 SUB-FASE 4.4: Procesamiento Multimedia Seguro en `image-service` (`:8002` — `RNF-SEG-04`)
+#### 🔹 SUB-FASE 4.4 (Prioridad Inmediata): Procesamiento Multimedia Seguro en `image-service` (`:8002` — `RNF-SEG-04`)
 
 1. **[ ] Implementar `POST /api/v1/images/upload` en `image-service`:**
    - Proteger la ruta con validación de Bearer JWT (`pkg/auth.TokenService`).
