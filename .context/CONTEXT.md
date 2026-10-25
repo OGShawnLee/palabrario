@@ -17,7 +17,7 @@
 > 3. **Prohibido Inventar Contratos o Campos JSON:** Todo endpoint HTTP, trama WebSocket, struct Go y consulta `sqlc` debe apegarse 100% a lo especificado en [`INTERFACES.md`](./INTERFACES.md) y [`SCHEMA_FINAL.sql`](../SCHEMA_FINAL.sql).
 > 4. **Fuente Única de Verdad (SSOT) por Responsabilidad:**
 >    - **¿Qué construir ahora y en qué orden?** $\to$ Lee [`.context/PLAN.md`](./PLAN.md).
->    - **¿Qué significa cada entidad, regla de negocio (`RN01–RN11`), estado editorial o fórmula SM-2?** $\to$ Lee [`DOMAIN.md`](./DOMAIN.md).
+>    - **¿Qué significa cada entidad, regla de negocio (`RN01–RN13`), estado editorial o fórmula SM-2?** $\to$ Lee [`DOMAIN.md`](./DOMAIN.md).
 >    - **¿Qué tablas, columnas, índices o triggers existen en PostgreSQL 17?** $\to$ Lee [`SCHEMA_FINAL.sql`](../SCHEMA_FINAL.sql).
 >    - **¿Qué firma Go tiene cada servicio SOA, qué DTO recibe/devuelve cada endpoint HTTP/WS, qué consultas `sqlc` lleva y cómo se expone en Wails IPC?** $\to$ Lee [`INTERFACES.md`](./INTERFACES.md).
 >    - **¿Cómo compilar, correr tests o levantar Docker/Vagrant?** $\to$ Lee [`INFRASTRUCTURE.md`](./INFRASTRUCTURE.md).
@@ -53,7 +53,7 @@ flowchart TD
     subgraph BackendGo["Servicios de Backend (Monorepo 100% Go 1.24)"]
         Core["core-service (:8000)\nGo 1.24 + Chi v5 + sqlc + pgxpool v5\n• IdentityService (JWT + Perfil CU01)\n• GovernanceService (Roles & Boletos CU02-04)\n• DictionaryService (FTS & Autoría CU05-06)\n• CurationService (Quórum 3 & Reportes CU07-09)\n• StudioService (Decks & Colecciones CU10-11)\n• MasteryService (Motor SM-2 & XP Ledger CU12-13)\n• ArenaCatalogService (Prepare, Batch Flush & Replay 3NF CU14/16)"]
         Realtime["realtime-service (:8001)\nGo 1.24 + Chi v5 + WebSockets\n• ArenaHub en RAM (sync.RWMutex + Goroutines)\n• Temporizadores de ronda (RN10)\n• Reconexión en ventana de 10s (RNF-CON-02)\n• Sucesión de anfitrión automática\n• Cliente S2S con sub-llave criptográfica"]
-        ImageSvc["image-service (:8002)\nGo 1.24 + Chi v5\n• Validación de magic bytes y limpieza EXIF\n• Optimización y compresión WebP"]
+        ImageSvc["image-service (:8002)\nGo 1.24 + Chi v5\n• Validación de magic bytes y limpieza EXIF\n• Filtro heurístico NSFW en Go puro\n• Optimización y compresión WebP"]
     end
 
     subgraph Datos["Persistencia Relacional"]
@@ -70,14 +70,14 @@ flowchart TD
 
 ---
 
-## 3. Catálogo Consolidado de los 16 Casos de Uso y 11 Reglas de Negocio
+## 3. Catálogo Consolidado de los 16 Casos de Uso y 13 Reglas de Negocio
 
 | Módulo | Casos de Uso | Reglas de Negocio Asociadas |
 | :--- | :--- | :--- |
-| **1. Cuenta y Gobernanza** | **CU01:** Gestionar Perfil de Usuario<br>**CU02:** Solicitar Promoción a Editor<br>**CU03:** Administrar Usuarios y Roles<br>**CU04:** Emitir Boletos de Invitación | **RN01:** Propiedad de Cuenta.<br>**RN02:** Unicidad de Solicitudes (`1 PENDING` máx por aprendiz).<br>**RN08:** Privilegios de Administración (y protección del último `ADMIN`). |
-| **2. Diccionario y Curaduría** | **CU05:** Consultar Diccionario Panhispánico<br>**CU06:** Gestionar Contenido Léxico<br>**CU07:** Curar Sentidos por Quórum<br>**CU08:** Publicar Sentido Léxico<br>**CU09:** Moderar Reportes de Contenido | **RN06:** Quórum de Publicación (3 votos `APPROVE` independientes).<br>**RN07:** Prohibición de Auto-Aprobación (`author != voter`).<br>**RN08:** Veto/Aprobación directa de `ADMIN`. |
+| **1. Cuenta y Gobernanza** | **CU01:** Gestionar Perfil de Usuario<br>**CU02:** Solicitar Promoción a Editor<br>**CU03:** Administrar Usuarios y Roles<br>**CU04:** Emitir Boletos de Invitación | **RN01:** Propiedad de Cuenta.<br>**RN02:** Unicidad de Solicitudes (`1 PENDING` máx por aprendiz).<br>**RN08:** Privilegios de Administración (y protección del último `ADMIN`).<br>**RN12:** Integridad y Moderación Multimedia. |
+| **2. Diccionario y Curaduría** | **CU05:** Consultar Diccionario Panhispánico<br>**CU06:** Gestionar Contenido Léxico<br>**CU07:** Curar Sentidos por Quórum<br>**CU08:** Publicar Sentido Léxico<br>**CU09:** Moderar Reportes de Contenido | **RN06:** Quórum de Publicación (3 votos `APPROVE` independientes).<br>**RN07:** Prohibición de Auto-Aprobación (`author != voter`).<br>**RN08:** Veto/Aprobación directa de `ADMIN`.<br>**RN12:** Integridad y Moderación Multimedia. |
 | **3. Estudio y Maestría (Studio)** | **CU10:** Gestionar Barajas de Estudio<br>**CU11:** Gestionar Colecciones Temáticas<br>**CU12:** Estudiar con Repetición Espaciada<br>**CU13:** Consultar Maestría y Progreso | **RN03:** Propiedad en el Studio.<br>**RN04:** Privacidad de Recursos (`is_public`).<br>**RN05:** Contenido Oficial (`is_official` solo `EDITOR`/`ADMIN`).<br>**RN09:** Algoritmo SM-2.<br>**RN11:** Auditoría de XP (`xp_transactions` inmutable). |
-| **4. Arena Multijugador** | **CU14:** Crear y Configurar Arena<br>**CU15:** Participar en Partida Multijugador<br>**CU16:** Consolidar y Cerrar Partida (Replay 3NF) | **RN10:** Puntuación en Arena por exactitud y velocidad.<br>**RN09 & RN11:** Impacto al cierre en maestría y libro mayor de XP.<br>**RNF-CON-02:** Resiliencia de red y ventana de gracia de 10s. |
+| **4. Arena Multijugador** | **CU14:** Crear y Configurar Arena<br>**CU15:** Participar en Partida Multijugador<br>**CU16:** Consolidar y Cerrar Partida (Replay 3NF) | **RN10:** Puntuación en Arena por exactitud y velocidad.<br>**RN13:** Quórum de distractores visuales (`WORD_TO_IMAGE`).<br>**RN09 & RN11:** Impacto al cierre en maestría y libro mayor de XP.<br>**RNF-CON-02:** Resiliencia de red y ventana de gracia de 10s. |
 
 ---
 

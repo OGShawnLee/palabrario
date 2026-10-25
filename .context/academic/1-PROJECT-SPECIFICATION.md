@@ -1,4 +1,4 @@
-﻿# Documento de Especificación Funcional de Requisitos de Software
+# Documento de Especificación Funcional de Requisitos de Software
 
 **Proyecto:** Palabrario — Plataforma Colaborativa de Vocabulario y Gamificación Dialectal  
 **Materia / Contexto:** Ingeniería de Software / Sistemas Distribuidos en Red / Despliegue de Software  
@@ -274,12 +274,14 @@ Para la elaboración manual del Diagrama de Casos de Uso en formato UML estánda
 | **RN03** | Propiedad en Studio | Restricción | El Miembro solo puede modificar, reorganizar o eliminar barajas y colecciones creadas por él en su Studio. |
 | **RN04** | Visibilidad de Contenido Privado | Restricción | Las barajas y colecciones marcadas como privadas no aparecerán en búsquedas comunitarias ni podrán ser guardadas por otros usuarios. |
 | **RN05** | Curaduría de Contenido Oficial | Autorización | Solo el Editor o el Administrador pueden marcar barajas y colecciones como "Oficiales" y modificar su composición. |
-| **RN06** | Quórum Editorial Tripartito | Proceso | Para que un sentido léxico en estado borrador sea publicado automáticamente, debe acumular al menos tres (3) votos favorables de editores distintos. |
+| **RN06** | Quórum Editorial Tripartito | Proceso | Para que un sentido léxico en estado borrador sea publicado automáticamente, debe acumular al menos tres (3) votos favorables de editores distintos, auditando texto, notas culturales e imagen asociada. |
 | **RN07** | Imparcialidad Curatorial | Restricción | El Editor que propone un nuevo sentido léxico no puede emitir votos de aprobación sobre su propia propuesta. |
 | **RN08** | Veto Administrativo Directo | Autorización | El Administrador posee la facultad de aprobar, rechazar o retirar de publicación de forma inmediata cualquier lema o sentido sin requerir quórum. |
-| **RN09** | Algoritmo de Repetición Espaciada | Cálculo | El intervalo de revisión y la fase de dominio (`NEW`, `LEARNING`, `REVIEWING`, `MASTERED`) de cada sentido se computan con base en el desempeño del estudiante según el algoritmo SM-2. |
-| **RN10** | Sincronización de Arena | Operación | Durante una partida multijugador, todos los participantes reciben los reactivos de manera simultánea y cuentan con el mismo tiempo límite por ronda. |
+| **RN09** | Algoritmo de Repetición Espaciada | Cálculo | El intervalo de revisión y la fase de dominio (`NEW`, `LEARNING`, `REVIEWING`, `MASTERED`) de cada sentido se computan con base en el desempeño del estudiante (en reactivos textuales y visuales) según el algoritmo SM-2. |
+| **RN10** | Sincronización de Arena | Operación | Durante una partida multijugador, todos los participantes reciben los reactivos de manera simultánea (con precarga de recursos en rondas visuales) y cuentan con el mismo tiempo límite por ronda. |
 | **RN11** | Transaccionalidad de XP | Consistencia | Cada ganancia o modificación de puntos de experiencia debe registrarse como un movimiento auditable en el ledger (`xp_transactions`), impidiendo inconsistencias de saldo. |
+| **RN12** | Integridad y Moderación Multimedia | Restricción | Toda imagen asociada a un lema, sentido o perfil debe procesarse mediante `image-service` (máx. 5 MB, validación de magic bytes, filtro heurístico NSFW en Go puro y limpieza EXIF), prohibiéndose URLs externas arbitrarias. |
+| **RN13** | Quórum de Distractores Visuales | Operación | Una ronda multijugador de modalidad `WORD_TO_IMAGE` requiere al menos cuatro (4) sentidos con imagen válida en la baraja; de lo contrario, el sistema degrada automáticamente la ronda a modalidad textual (`WORD_TO_DEFINITION`). |
 
 #### 2.3.4. Especificaciones Textuales de Casos de Uso (Nivel de Análisis)
 
@@ -299,7 +301,7 @@ Para la elaboración manual del Diagrama de Casos de Uso en formato UML estánda
   * **4a. Datos con formato inválido:** El Sistema notifica los campos que no cumplen los criterios requeridos y solicita su corrección, permaneciendo en el paso 3.
 * **Flujos de Excepción:**
   * **5a. Error en la persistencia de datos:** El Sistema informa al Miembro la imposibilidad temporal de registrar los cambios y preserva el estado previo.
-* **Reglas de Negocio:** RN01.
+* **Reglas de Negocio:** RN01, RN12.
 
 ##### CU02: Solicitar Promoción a Editor
 * **Actor Principal:** El Aprendiz.
@@ -317,7 +319,7 @@ Para la elaboración manual del Diagrama de Casos de Uso en formato UML estánda
   * **2a. Solicitud previa existente:** El Sistema notifica al Aprendiz que ya existe una solicitud en revisión y finaliza el caso de uso.
 * **Flujos de Excepción:**
   * **5a. Falla de almacenamiento de solicitud:** El Sistema notifica la incidencia y solicita reintentar más tarde.
-* **Reglas de Negocio:** RN02.
+* **Reglas de Negocio:** RN02, RN12.
 
 ##### CU03: Administrar Usuarios y Roles
 * **Actor Principal:** El Administrador.
@@ -385,7 +387,7 @@ Para la elaboración manual del Diagrama de Casos de Uso en formato UML estánda
   * **2a. Edición de contenido propio en borrador:** El Editor modifica un sentido previamente propuesto por él mientras no haya alcanzado estado publicado. El Sistema actualiza el borrador.
 * **Flujos de Excepción:**
   * **5a. Error de integridad en la base de datos:** El Sistema rechaza la transacción y notifica el error.
-* **Reglas de Negocio:** RN05, RN07.
+* **Reglas de Negocio:** RN05, RN07, RN12.
 
 ##### CU07: Curar Sentidos por Quórum
 * **Actor Principal:** El Editor.
@@ -520,7 +522,7 @@ Para la elaboración manual del Diagrama de Casos de Uso en formato UML estánda
   6. El Sistema entrega el código PIN al Miembro para convocar a otros jugadores.
 * **Flujos Alternos:**
   * **1a. Banco de reactivos insuficiente:** El Sistema informa (`422 Unprocessable Entity`) que la baraja no cuenta con el mínimo de 8 sentidos aprobados o suficientes sentidos para el número de rondas solicitadas y solicita seleccionar otra.
-* **Reglas de Negocio:** RN04, RN10.
+* **Reglas de Negocio:** RN04, RN10, RN13.
 
 ##### CU15: Participar en Partida Multijugador
 * **Actor Principal:** El Miembro.
@@ -781,7 +783,7 @@ Los requisitos no funcionales definen los estándares de calidad arquitectónica
 * **RNF-SEG-01 (Cifrado de Credenciales):** Las contraseñas de las cuentas de usuario deberán almacenarse mediante algoritmos de derivación de claves robustos (*Argon2id* o *Bcrypt* con factor de costo $\ge 10$). Está estrictamente prohibido el almacenamiento en texto plano.
 * **RNF-SEG-02 (Autenticación y Autorización por Tokens):** La identidad en la API REST deberá validarse mediante tokens criptográficos JWT (*JSON Web Tokens*) firmados con algoritmo HMAC-SHA256, y las llamadas internas entre servicios (`realtime-service` $\to$ `core-service`) emplearán tokens S2S firmados con una sub-llave criptográfica derivada independiente de los tokens de cliente.
 * **RNF-SEG-03 (Protección contra Inyecciones):** Todas las consultas a la base de datos PostgreSQL deberán ejecutarse a través de consultas preparadas y parametrizadas compiladas estáticamente con `sqlc` sobre `pgxpool`, mitigando ataques de inyección SQL (SQLi).
-* **RNF-SEG-04 (Sanitización y Moderación Multimedia):** Las imágenes procesadas por el `image-service` deberán someterse a inspección de cabeceras binarias (eliminación de metadatos EXIF) y re-codificación forzosa en formato optimizado (*WebP* o *PNG*) para neutralizar archivos maliciosos.
+* **RNF-SEG-04 (Sanitización y Moderación Multimedia):** Las imágenes procesadas por el `image-service` deberán someterse a inspección de cabeceras binarias, validación heurística de seguridad (filtro NSFW de piel y entropía en Go puro), eliminación de metadatos EXIF y re-codificación forzosa en formato optimizado (*WebP* o *PNG*) para neutralizar archivos maliciosos o inapropiados.
 
 #### 2.6.2. Rendimiento (RNF-REN)
 * **RNF-REN-01 (Latencia en Búsqueda FTS):** El tiempo de respuesta del endpoint de autocompletado y búsqueda en el diccionario no superará los **100 milisegundos** para el percentil 95 ($P_{95}$) sobre un catálogo de hasta 50,000 lemas, aprovechando índices GIN y operadores de trigramas.

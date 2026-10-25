@@ -58,20 +58,20 @@ flowchart TD
 | :--- | :--- | :--- | :--- |
 | `/#/` | `home` | Público | Portada: Palabra del día con blurb ameno, accesos directos al buscador y colecciones en tendencia. |
 | `/#/dictionary` | `dictionary` | Público | Explorador general de palabras con filtros por país/dialecto y buscador FTS estilo Vocabulary.com. |
-| `/#/dictionary/word/:id` | `word-detail` | Público | Ficha completa: etimología, friendly blurb, sentidos (`Sense[]`), ejemplos, audios y advertencias de tabú. |
+| `/#/dictionary/word/:id` | `word-detail` | Público | Ficha completa: etimología, friendly blurb, imagen representativa, sentidos (`Sense[]`), ejemplos, audios y advertencias de tabú. |
 | `/#/collections` | `collections-index` | Público | Catálogo de colecciones comunitarias y oficiales que agrupan decks temáticos. |
 | `/#/collections/:id` | `collection-detail`| Público | Vista detallada de una colección: muestra la ruta de aprendizaje y los Decks que la componen. |
 | `/#/decks` | `decks-index` | Público | Buscador y explorador de Decks individuales públicos. |
 | `/#/decks/:id` | `deck-detail` | Público | Vista previa de tarjetas de un Deck, botón "Estudiar ahora" y botón "Iniciar partida multijugador". |
 | `/#/play` | `play-lobby` | Público | Lobby multijugador: ingresar PIN de sala o anfitrionar nueva partida. |
-| `/#/game/:roomCode` | `game-room` | Jugador | Partida en vivo: cuenta regresiva, preguntas con temporizador, puntajes en tiempo real y podio final. |
+| `/#/game/:roomCode` | `game-room` | Jugador | Partida en vivo: cuenta regresiva, preguntas con temporizador (textuales y de elección de imágenes `WORD_TO_IMAGE`), puntajes en tiempo real y podio final. |
 | `/#/studio` | `studio-dashboard` | Privado (Owner) | Centro de control del estudiante: estadísticas de racha, palabras que tocan repasar hoy y accesos directos. |
 | `/#/studio/decks` | `studio-decks` | Privado (Owner) | Mis Decks: creados, clonados o en progreso, con botón para crear nuevo Deck. |
 | `/#/studio/collections`| `studio-collections`| Privado (Owner) | Mis Colecciones: organizador lógico para agrupar varios Decks en una sola ruta de estudio. |
 | `/#/studio/mastery` | `studio-mastery` | Privado (Owner) | Lista de vocabulario personal clasificada por nivel de retención (`NEW`, `LEARNING`, `MASTERED`). |
 | `/#/u/:username` | `user-profile` | Público / Dual | Perfil social del usuario. Se adapta automáticamente si el visitante es el dueño o un tercero. |
 | `/#/editor` | `editor-dashboard` | `EDITOR` / `ADMIN` | Portal de gobernanza: bandeja de palabras en `DRAFT`, cola de revisión y aprobaciones colaborativas. |
-| `/#/editor/word/:id?` | `editor-word-form` | `EDITOR` / `ADMIN` | Formulario de creación/edición de palabras, sentidos regionales, notas de tabú y ejemplos. |
+| `/#/editor/word/:id?` | `editor-word-form` | `EDITOR` / `ADMIN` | Formulario de creación/edición de palabras, sentidos regionales, subida opcional de imagen para lema o sentido, notas de tabú y ejemplos. |
 
 ---
 
@@ -132,11 +132,17 @@ El **Studio** (`/#/studio`) es el equivalente al panel de control de un estudian
    * Alerta visual cuando una palabra consultada es vulgar o tiene doble sentido sexual en ciertas regiones.
 4. **`AddToDeckModal`:**
    * Al estar viendo una palabra en el diccionario, permite guardarla en uno de "Mis Decks" del Studio con un solo clic.
+5. **`ImageLightboxModal`:**
+   * Modal accesible para visualizar en alta resolución la imagen de una palabra o sentido junto con su nota cultural.
 
 ### B. Elementos de Interfaz y Formularios
 1. **`WordCard` (Componente de Tarjeta de Vocabulario):**
-   * Muestra el lema, categoría gramatical, bandera del dialecto y definición corta.
+   * Muestra el lema, categoría gramatical, bandera del dialecto, definición corta y miniatura opcional de imagen.
 2. **`CollectionCard` (Componente de Tarjeta de Colección):**
    * Muestra portada, insignia de cuántos Decks contiene (ej. `3 Decks • 45 Palabras`) y si es `Oficial`.
 3. **`DeckBuilder` (Dentro de Studio):**
    * Formulario con buscador predictivo para añadir palabras y ordenarlas arrastrando tarjetas.
+4. **`ImageChoiceGrid` (Dentro de Arena):**
+   * Grilla responsiva 2x2 para responder rondas visuales (`WORD_TO_IMAGE`) con precarga de las 4 imágenes, estados de selección/acierto/fallo y atajos de teclado (`1–4`).
+5. **`MediaDropzone` (En Perfil y Editor):**
+   * Zona de arrastre de archivos (`.png`, `.jpg`, `.webp`, máx. 5 MB) conectada al puente Wails Go hacia `image-service`, con barra de progreso y alertas de validación/moderación.

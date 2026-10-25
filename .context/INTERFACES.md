@@ -1,4 +1,4 @@
-﻿# 🔌 Especificación Exhaustiva de Servicios SOA, Contratos Go, Consultas `sqlc` e Interfaces HTTP/WS (`INTERFACES.md`)
+# 🔌 Especificación Exhaustiva de Servicios SOA, Contratos Go, Consultas `sqlc` e Interfaces HTTP/WS (`INTERFACES.md`)
 
 > **Documento Arquitectónico Canónico — Fuente Única de Verdad para Contratos de Backend y Frontend**  
 > **Proyecto:** Palabrario — Plataforma Gamificada de Aprendizaje y Preservación del Léxico Dialectal Panhispánico  
@@ -368,6 +368,8 @@ type WordSummaryCard struct {
 	PartOfSpeech     string     `json:"part_of_speech"`
 	Gender           WordGender `json:"gender"`
 	FriendlyBlurb    *string    `json:"friendly_blurb,omitempty"`
+	ImageURL         *string    `json:"image_url,omitempty"`
+	ImageURL         *string    `json:"image_url,omitempty"`
 	PrimarySenseID   int        `json:"primary_sense_id"`
 	ShortDefinition  string     `json:"short_definition"`
 	RegionCode       string     `json:"region_code"`
@@ -400,6 +402,7 @@ type CreateSenseRequest struct {
 	IsPrimary       bool                 `json:"is_primary"`
 	IsTabooOrVulgar bool                 `json:"is_taboo_or_vulgar"`
 	CulturalNote    *string              `json:"cultural_note,omitempty"`
+	ImageURL        *string              `json:"image_url,omitempty"`        // Opcional, URL procesada por image-service (RN12)
 	CEFRLevel       string               `json:"cefr_level"`                // Default 'B1'
 	UsageFrequency  string               `json:"usage_frequency"`           // Default 'COMMON'
 	ConceptIDs      []int                `json:"concept_ids,omitempty"`     // Opcional: vincular heterónimos
@@ -412,6 +415,7 @@ type CreateWordProposalRequest struct {
 	Gender           WordGender         `json:"gender"`                     // Default 'NEUTRAL'
 	Etymology        *string            `json:"etymology,omitempty"`
 	FriendlyBlurb    *string            `json:"friendly_blurb,omitempty"`
+	ImageURL         *string            `json:"image_url,omitempty"`         // Opcional, URL procesada por image-service (RN12)
 	OriginRegionCode *string            `json:"origin_region_code,omitempty"`
 	InitialSense     CreateSenseRequest `json:"initial_sense"`              // Obligatorio
 }
@@ -422,6 +426,8 @@ type UpdateWordRequest struct {
 	Gender           WordGender `json:"gender"`
 	Etymology        *string    `json:"etymology,omitempty"`
 	FriendlyBlurb    *string    `json:"friendly_blurb,omitempty"`
+	ImageURL         *string    `json:"image_url,omitempty"`
+	ImageURL         *string    `json:"image_url,omitempty"`
 	OriginRegionCode *string    `json:"origin_region_code,omitempty"`
 }
 
@@ -432,6 +438,7 @@ type UpdateSenseRequest struct {
 	IsPrimary       bool    `json:"is_primary"`
 	IsTabooOrVulgar bool    `json:"is_taboo_or_vulgar"`
 	CulturalNote    *string `json:"cultural_note,omitempty"`
+	ImageURL        *string `json:"image_url,omitempty"`
 	CEFRLevel       string  `json:"cefr_level"`
 	UsageFrequency  string  `json:"usage_frequency"`
 }
@@ -877,7 +884,7 @@ type InternalArenaQuestion struct {
 	IDSense       int      `json:"id_sense"`
 	IDQuestion    *int     `json:"id_question,omitempty"`
 	Lemma         string   `json:"lemma,omitempty"`
-	Modality      string   `json:"modality"`       // 'DEFINITION_TO_WORD', 'WORD_TO_DEFINITION', etc.
+	Modality      string   `json:"modality"`       // 'DEFINITION_TO_WORD', 'WORD_TO_DEFINITION', 'WORD_TO_IMAGE', etc.
 	Prompt        string   `json:"prompt"`
 	Options       []string `json:"options"`        // 4 opciones barajadas (option_a..option_d: 1 correcta + 3 distractores)
 	CorrectOption string   `json:"correct_option"` // NUNCA enviado en el evento QUESTION, revelado en ROUND_RESULT
@@ -1039,4 +1046,5 @@ En `realtime-service`, el tiempo de respuesta se mide con el reloj monotónico d
 | Método | Ruta | Middleware | Caso de Uso | Descripción |
 | :---: | :--- | :---: | :---: | :--- |
 | `GET` | `/health` | Público | Infra | ✅ Implementado en `image-service/main.go`. |
-| `POST` | `/api/v1/images/upload` | `RequireAuth` (`pkg/auth`) | CU01 / CU02 | Recibe `multipart/form-data` (`file` máx 5 MB + `category`: `avatar\|credentials`), valida magic bytes (`image/jpeg`, `image/png`, `image/webp`), elimina metadatos EXIF (`RNF-SEG-04`), codifica y devuelve `{"url": "...", "bytes": 24100}`. |
+| `POST` | `/api/v1/images/upload` | `RequireAuth` (`pkg/auth`) | CU01 / CU02 / CU06 (RN12) | Recibe `multipart/form-data` (`file` máx 5 MB + `category`: `avatar\|credentials\|word\|sense`), valida magic bytes (`image/jpeg`, `image/png`, `image/webp`), aplica filtro heurístico NSFW (piel/entropía en Go puro), elimina metadatos EXIF (`RNF-SEG-04`), guarda en volumen local y devuelve `{"url": "...", "bytes": 24100}`. |
+| `GET` | `/uploads/*` | Público | Infra / Media | Sirve estáticamente las imágenes saneadas desde el volumen local de `image-service`. |

@@ -93,7 +93,7 @@ Representa el perfil público/privado del miembro, su punto de anclaje lingüís
 * **Atributos Clave:**
   * `name` (`VARCHAR(100)`): Nombre visible del miembro.
   * `user_name` (`VARCHAR(50)`, único): Handle público (`@usuario`) para perfiles sociales (`/u/:username`).
-  * `avatar_url` (`TEXT`, opcional): URL hacia imagen optimizada en WebP por `image-service`.
+  * `avatar_url` (`TEXT`, opcional): URL hacia imagen optimizada en WebP por `image-service` (**RN12**).
   * `anchor_dialect` (`VARCHAR(10)`, default `'MX'`): **Dialecto Ancla** del usuario. Es un concepto central del dominio: el buscador FTS y las fichas léxicas priorizan las acepciones y contrastes culturales respecto al dialecto ancla del estudiante.
   * `total_xp` (`INTEGER`), `current_level` (`INTEGER`): Saldo cacheado de experiencia (sincronizado con el ledger `xp_transactions`) y nivel calculado.
   * `current_streak` (`INTEGER`), `longest_streak` (`INTEGER`), `last_activity_at` (`TIMESTAMPTZ`): Métricas de constancia de estudio (**CU01, CU13**).
@@ -105,7 +105,7 @@ Formaliza el expediente de postulación de un `LEARNER` que solicita ser promovi
   * `id_user` (`UUID`, FK $\to$ `users`): Aprendiz solicitante.
   * `institution_name` (`VARCHAR(150)`): Universidad, academia o institución de adscripción.
   * `justification` (`TEXT`): Exposición de motivos pedagógicos/lingüísticos.
-  * `credentials_url` (`TEXT`): Evidencia documental o enlace de verificación académica.
+  * `credentials_url` (`TEXT`): Evidencia documental o enlace de verificación académica (**RN12**).
   * `status` (`request_status`: `PENDING | APPROVED | REJECTED`).
   * `reviewed_by` (`UUID`, FK $\to$ `users`), `review_notes` (`TEXT`), `resolved_at` (`TIMESTAMPTZ`): Auditoría de resolución administrativa.
 * **Invariantes y Reglas:** **RN02 (Unicidad de Solicitudes):** Un aprendiz solo puede tener **una** solicitud en estado `PENDING` simultáneamente, garantizado a nivel de motor relacional mediante el índice único parcial `idx_unique_pending_editor_request`.
@@ -141,6 +141,7 @@ Representa el **Lema Canónico** (sustantivo en singular, verbo en infinitivo o 
   * `gender` (`word_gender`: `MALE | FEMALE | NEUTRAL | AMBIGUOUS`).
   * `etymology` (`TEXT`): Raíz histórica o indígena (náhuatl, quechua, maya, latín, lunfardo, etc.).
   * `friendly_blurb` (`TEXT`): **Reseña Cultural Amena**. Narrativa breve con humor e ingenio que explica el alma de la palabra y sus contrastes entre países hispanohablantes.
+  * `image_url` (`TEXT`, opcional): URL hacia imagen conceptual o representativa generada y saneada por `image-service` (**RN12**).
   * `id_origin_region` (`UUID`, FK opcional $\to$ `regions`): Si el vocablo es endémico de una región específica, la señala; si es `NULL` o `PAN`, pertenece al español general.
   * `search_vector` (`tsvector` generado y almacenado): Pondera `lemma` con peso `'A'` y `friendly_blurb` con peso `'B'` bajo la configuración `spanish_unaccent`.
 
@@ -153,6 +154,7 @@ Representa una **Acepción o Sentido Dialectal** puntual de un `Word` en una `Re
   * `definition` (`TEXT`): Definición lexicográfica formal completa.
   * `is_primary` (`BOOLEAN`): Indica si es el sentido principal del lema para priorizarlo en búsquedas y trivias.
   * `is_taboo_or_vulgar` (`BOOLEAN`) y `cultural_note` (`TEXT`): Advertencia pragmática indispensable para falsos amigos interdialectales (ej. `"coger"` en México/Argentina vs España).
+  * `image_url` (`TEXT`, opcional): URL hacia imagen específica de la acepción dialectal concreta procesada por `image-service` (**RN12**).
   * `cefr_level` (`cefr_level`: `A1 | A2 | B1 | B2 | C1 | C2 | NATIVO`) y `usage_frequency` (`EVERYDAY | COMMON | RARE | SLANG | ARCHAIC`).
   * `state` (`review_state`: `DRAFT | APPROVED | HIDDEN`): Ciclo de vida editorial. Solo los sentidos en estado `APPROVED` son visibles en consultas públicas del diccionario (**CU05, CU08**).
   * `sense_search_vector` (`tsvector` generado): Indexa `short_definition` (`A`), `definition` (`B`) y `cultural_note` (`C`).
@@ -192,7 +194,7 @@ Representa el dictamen filológico emitido por un `EDITOR` revisor sobre un `Sen
   * `approved_at` (`TIMESTAMPTZ`).
 * **Reglas de Integridad en Base de Datos (Triggers PL/pgSQL):**
   * **RN07 (`trg_prevent_self_approval`):** Lanza excepción atómica si `NEW.id_editor == senses.id_editor`. Ningún autor puede votar su propia propuesta.
-  * **RN06 (`trg_auto_approve_sense`):** Al acumular $\ge 3$ registros con `decision = 'APPROVE'` para un mismo `id_sense`, promueve automáticamente `senses.state = 'APPROVED'` (**CU08**).
+  * **RN06 (`trg_auto_approve_sense`):** Al acumular $\ge 3$ registros con `decision = 'APPROVE'` para un mismo `id_sense`, promueve automáticamente `senses.state = 'APPROVED'` (**CU08**), validando tanto la definición textual como la idoneidad de la imagen asociada (**RN12**).
 
 #### 11. `ContentReport` (Tabla: `content_reports`)
 Canaliza la vigilancia comunitaria donde cualquier `Miembro` o `Aprendiz` reporta errores lexicográficos, falta de etiqueta de tabú (`OFFENSIVE_UNMARKED`) o vandalismo sobre un lema, sentido o ejemplo, y el `Administrador` dictamina su resolución (**CU09**).
@@ -238,11 +240,11 @@ Implementan la economía auditable de progreso (**RN11**).
 ---
 
 ### 3.5. Contexto 5: Evaluación Curricular, Arena Multijugador en Tiempo Real y Replay 3NF (`Quiz & Realtime Arena`)
-Desacopla la competencia síncrona de baja latencia en RAM de la persistencia relacional en lote (**CU14, CU15, CU16, RN10, RNF-CON-02**), garantizando trazabilidad granular ronda por ronda (*Replay*) en Tercera Forma Normal (3NF).
+Desacopla la competencia síncrona de baja latencia en RAM de la persistencia relacional en lote (**CU14, CU15, CU16, RN10, RN13, RNF-CON-02**), garantizando trazabilidad granular ronda por ronda (*Replay*) en Tercera Forma Normal (3NF).
 
 #### 16. `Question`, `MatchRound` y `QuizAttempt` (Tablas: `questions`, `match_rounds`, `quiz_attempts`)
-* **`Question`:** Reactivo curricular curado por un `EDITOR` para un `Sense`, con 5 modalidades pedagógicas (`DEFINITION_TO_WORD`, `WORD_TO_DEFINITION`, `SENTENCE_COMPLETION`, `REGIONAL_EQUIVALENT`, `TONE_OR_REGISTER`), 3 distractores en JSONB (`custom_distractors`) y retroalimentación educativa (`explanation`). Si un sentido de una baraja aún no tiene pregunta artesanal, el motor genera un reactivo dinámico extrayendo definiciones de otros sentidos distintos de la misma baraja.
-* **`MatchRound` (Tabla `match_rounds` en 3NF):** Almacena de manera 100% relacional (sin blobs JSON corruptibles) cada una de las rondas generadas al preparar una partida (`id_match`, `round_number`, `id_sense`, `id_question`, `modality`, `prompt`, `option_a`, `option_b`, `option_c`, `option_d`, `correct_option`, `explanation`). Garantiza una relación biyectiva $1\text{ Ronda} = 1\text{ Sentido Único}$ dentro de la partida.
+* **`Question`:** Reactivo curricular curado por un `EDITOR` para un `Sense`, con 6 modalidades pedagógicas (`DEFINITION_TO_WORD`, `WORD_TO_DEFINITION`, `SENTENCE_COMPLETION`, `REGIONAL_EQUIVALENT`, `TONE_OR_REGISTER`, `WORD_TO_IMAGE`), 3 distractores en JSONB (`custom_distractors`) y retroalimentación educativa (`explanation`). Si un sentido de una baraja aún no tiene pregunta artesanal, el motor genera un reactivo dinámico extrayendo definiciones o imágenes de otros sentidos distintos de la misma baraja.
+* **`MatchRound` (Tabla `match_rounds` en 3NF):** Almacena de manera 100% relacional (sin blobs JSON corruptibles) cada una de las rondas generadas al preparar una partida (`id_match`, `round_number`, `id_sense`, `id_question`, `modality`, `prompt`, `option_a`, `option_b`, `option_c`, `option_d`, `correct_option`, `explanation`). Garantiza una relación biyectiva $1\text{ Ronda} = 1\text{ Sentido Único}$ dentro de la partida. En la modalidad `WORD_TO_IMAGE`, las opciones (`option_a` a `option_d`) y `correct_option` almacenan las URLs de las 4 imágenes en competencia.
 * **`QuizAttempt` (Tabla `quiz_attempts`):** Registra tanto intentos individuales de práctica como el **desglose granular por ronda de cada competidor en la Arena** (`id_match`, `round_number`, `id_user`, `id_sense`, `selected_option`, `is_correct`, `time_spent_ms`, `points_earned`), con clave foránea compuesta hacia `match_rounds(id_match, round_number)` y restricción `UNIQUE (id_match, round_number, id_user)`. Esto habilita la retrospección completa (*Match Replay*) ronda por ronda.
 
 #### 17. `Match` y `MatchParticipant` (Tablas: `matches`, `match_participants`)
@@ -251,6 +253,7 @@ Representan el ciclo de vida, las reglas operativas de la sala y el resultado co
   1. **Apertura y Límites de Baraja (`CU14`):**
      * **Piso absoluto de 8 sentidos:** La baraja seleccionada (`id_deck`) debe contar con al menos **8 sentidos en estado `APPROVED`**; de lo contrario, el sistema rechaza la apertura con `422 Unprocessable Entity` (`ErrUnprocessable`).
      * **Cero preguntas repetidas (`TotalRounds <= ApprovedSenses`):** El número de rondas (`total_rounds`, rango `8..20`, default `8`) no puede superar la cantidad de sentidos aprobados disponibles en la baraja.
+     * **Quórum de Distractores Visuales (`RN13`):** Para generar una ronda de modalidad `WORD_TO_IMAGE`, la baraja debe contar con al menos 4 recursos visuales únicos (`image_url IS NOT NULL`); si no se cumple, esa ronda degrada automáticamente a modalidad textual (`WORD_TO_DEFINITION`).
      * **Persistencia inicial en 3NF:** Se inserta el registro en `matches` (`WAITING`) con un `room_code` (PIN alfanumérico único de 6 caracteres) y se insertan inmediatamente sus $N$ filas en `match_rounds`.
   2. **Topología de Sala, Rol del Host y Sucesión Automática (`CU15` / `RNF-CON-02`):**
      * **Capacidad máxima:** Hasta **8 participantes simultáneos** por sala (`MaxParticipants = 8`).
