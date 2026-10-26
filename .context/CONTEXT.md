@@ -2,7 +2,7 @@
 
 > **Propósito de este documento (Progressive Disclosure Entrypoint):**  
 > Este archivo es el **Punto de Entrada Único y Enrutador Maestro** para cualquier agente de IA o ingeniero que trabaje en **Palabrario**.  
-> En lugar de duplicar miles de líneas de SQL o contratos HTTP que causarían desfase documental (*Context Drift*), este archivo define las **Reglas Globales Inquebrantables**, el **Stack 100% Go**, el **Puente IPC Nativo de Wails**, los **Tokens de Diseño** y te indica **exactamente qué documento especializado abrir** según la tarea solicitada.
+> En lugar de duplicar miles de líneas de SQL o contratos HTTP que causarían desfase documental (*Context Drift*), este archivo define las **Reglas Globales Inquebrantables**, el **Stack 100% Go**, el **Puente IPC Nativo de Wails + Adaptador Capacitor PWA**, los **Tokens de Diseño** y te indica **exactamente qué documento especializado abrir** según la tarea solicitada.
 
 ---
 
@@ -10,16 +10,17 @@
 
 > [!CAUTION]
 > **LEE ESTO ANTES DE ESCRIBIR UNA SOLA LÍNEA DE CÓDIGO:**
-> 1. **Enfoque Backend-First & Contract-First:** El proyecto se encuentra estabilizando el backend completo en Go (Fases 3.3 a 4). **No modifiques ni leas vistas del frontend (`local-app` / `local-app-prototype` / `UI_SPECIFICATION.md`)** a menos que el usuario lo pida explícitamente. Cuando se conecte el frontend en la Fase 5, la UI se adaptará estrictamente a los DTOs que retorna el backend, y **nunca al revés**.
-> 2. **Comunicación Cliente $\to$ Backend exclusivamente vía Puente IPC Go de Wails (`local-app/app.go`):**
->    - **JavaScript/Vue en el WebView NUNCA realiza `fetch()`/`axios` directos a `core-service` ni almacena el token JWT en `localStorage`/`sessionStorage`.**
->    - El proceso nativo Go de Wails ([`local-app/app.go`](../local-app/app.go)) actúa como un **BFF (*Backend-For-Frontend*) local y bóveda de sesión en RAM**: importa directamente los structs de [`pkg/models`](../pkg/models) (gracias a [`go.work`](../go.work)), custodia el `sessionToken` JWT en memoria privada de Go (`sync.RWMutex`), ejecuta las llamadas `net/http` o WebSockets hacia los servicios backend (`:8000`, `:8001`, `:8002`) y expone métodos Go públicos que el compilador de Wails (`wails generate module` / `wails dev`) transpila automáticamente a funciones y clases TypeScript en `local-app/frontend/wailsjs/go/main/App.js` (`.d.ts`) y `wailsjs/go/models.ts`.
+> 1. **Enfoque Backend-First & Contract-First:** El proyecto ha estabilizado el backend completo en Go (Fases 3.3 a 4). Al construir o conectar el frontend en la Fase 5, la UI se adapta estrictamente a los DTOs que retorna el backend (`wailsjs/go/models.ts`), y **nunca al revés**.
+> 2. **Comunicación Cliente $\to$ Backend vía Puente IPC Go de Wails (`local-app/app.go`) y Adaptador Polimórfico (`IPalabrarioAPI`):**
+>    - **En Escritorio (Wails V3):** JavaScript/Vue en el WebView **NUNCA** realiza `fetch()`/`axios` directos a `core-service` ni almacena el token JWT en `localStorage`/`sessionStorage`. El proceso nativo Go de Wails ([`local-app/app.go`](../local-app/app.go)) actúa como **BFF (*Backend-For-Frontend*) local y bóveda de sesión en RAM**: importa directamente los structs de [`pkg/models`](../pkg/models) (gracias a [`go.work`](../go.work)), custodia el `sessionToken` JWT en memoria privada de Go (`sync.RWMutex`), ejecuta las llamadas `net/http` o WebSockets hacia los servicios backend (`:8000`, `:8001`, `:8002`) y expone métodos Go públicos que el compilador de Wails transpila automáticamente a funciones y clases TypeScript (`wailsjs/go/main/App.d.ts` y `wailsjs/go/models.ts`).
+>    - **En Móvil / PWA (Capacitor):** Las vistas Vue consumen un único contrato `export type IPalabrarioAPI = typeof WailsAppBridge` (cero interfaces escritas a mano y cero `if (isMobile)` en los componentes `.vue`), delegando en `WailsAdapter` (Desktop IPC) o `CapacitorAdapter` (Móvil / PWA con `@capacitor/preferences`).
 > 3. **Prohibido Inventar Contratos o Campos JSON:** Todo endpoint HTTP, trama WebSocket, struct Go y consulta `sqlc` debe apegarse 100% a lo especificado en [`INTERFACES.md`](./INTERFACES.md) y [`SCHEMA_FINAL.sql`](../SCHEMA_FINAL.sql).
 > 4. **Fuente Única de Verdad (SSOT) por Responsabilidad:**
 >    - **¿Qué construir ahora y en qué orden?** $\to$ Lee [`.context/PLAN.md`](./PLAN.md).
 >    - **¿Qué significa cada entidad, regla de negocio (`RN01–RN13`), estado editorial o fórmula SM-2?** $\to$ Lee [`DOMAIN.md`](./DOMAIN.md).
 >    - **¿Qué tablas, columnas, índices o triggers existen en PostgreSQL 17?** $\to$ Lee [`SCHEMA_FINAL.sql`](../SCHEMA_FINAL.sql).
 >    - **¿Qué firma Go tiene cada servicio SOA, qué DTO recibe/devuelve cada endpoint HTTP/WS, qué consultas `sqlc` lleva y cómo se expone en Wails IPC?** $\to$ Lee [`INTERFACES.md`](./INTERFACES.md).
+>    - **¿Qué paleta de colores, tipografía (`Satoshi`), rutas (`Hash`), vistas `.vue` y mapeo de endpoints/DTOs usar en la UI?** $\to$ Lee [`UI_SPECIFICATION.md`](./UI_SPECIFICATION.md), [`ROUTES_MAP.md`](./ROUTES_MAP.md) y [`PALETTE.md`](./PALETTE.md).
 >    - **¿Cómo compilar, correr tests o levantar Docker/Vagrant?** $\to$ Lee [`INFRASTRUCTURE.md`](./INFRASTRUCTURE.md).
 >    - **¿Qué contiene `.context/academic/`?** $\to$ Contiene los entregables académicos formales ([`1-PROJECT-SPECIFICATION.md`](./academic/1-PROJECT-SPECIFICATION.md)). Son documentos formales autocontenidos; **nunca recortes ni elimines secciones de ellos**.
 
@@ -40,14 +41,14 @@ $$\text{Descubrir con humor} \longrightarrow \text{Validar con rigor (Quórum 3)
 
 ## 2. Arquitectura de Red, Puente Wails IPC y Stack Tecnológico (100% Go 1.24)
 
-Todo el ecosistema comparte los tipos de [`pkg/models`](../pkg/models) a través del workspace de Go ([`go.work`](../go.work): `.` + `./local-app`). Esto produce **Tipado End-to-End 100% Automático desde PostgreSQL hasta Vue 3** (`SCHEMA_FINAL.sql` $\to$ `sqlc` $\to$ `pkg/models` $\to$ `local-app/app.go` $\to$ `wailsjs/go/models.ts` $\to$ Componentes Vue):
+Todo el ecosistema comparte los tipos de [`pkg/models`](../pkg/models) a través del workspace de Go ([`go.work`](../go.work): `.` + `./local-app`). Esto produce **Tipado End-to-End 100% Automático desde PostgreSQL hasta Vue 3** (`SCHEMA_FINAL.sql` $\to$ `sqlc` $\to$ `pkg/models` $\to$ `local-app/app.go` $\to$ `wailsjs/go/models.ts` + `typeof WailsAppBridge` $\to$ Componentes Vue en Desktop y Capacitor PWA):
 
 ```mermaid
 flowchart TD
-    subgraph Desktop["Cliente Nativo Desktop (Wails v2 — Proceso Único)"]
-        VueUI["WebView Frontend (Vue 3 + TypeScript + UnoCSS)\n• Invoca bindings autogenerados en wailsjs/go/main/App\n• Recibe eventos en vivo vía runtime.EventsOn"]
+    subgraph Desktop["Cliente Multiplataforma (Wails V3 Desktop + Capacitor PWA)"]
+        VueUI["WebView Frontend (Vue 3 + TypeScript + UnoCSS + Reka UI)\n• Consume contrato único IPalabrarioAPI = typeof WailsAppBridge\n• Recibe eventos en vivo vía ArenaEventBus"]
         WailsGo["Puente Nativo Go BFF (local-app/app.go)\n• Custodia el JWT en RAM privada (Inmune a XSS)\n• Importa pkg/models directamente vía go.work\n• Cliente HTTP/WS/Multipart en Go puro"]
-        VueUI <-->|"Wails IPC Bindings & Events\n(wails generate module)"| WailsGo
+        VueUI <-->|"WailsAdapter (IPC Nativo)\no CapacitorAdapter (PWA Móvil)"| WailsGo
     end
 
     subgraph BackendGo["Servicios de Backend (Monorepo 100% Go 1.24)"]
@@ -81,16 +82,14 @@ flowchart TD
 
 ---
 
-## 4. Sistema de Diseño Consolidado (Design Tokens v2.0 — Referencia para Fase 5)
+## 4. Sistema de Diseño Consolidado ("Imprenta Táctil Ilustrada" — Ver [`PALETTE.md`](./PALETTE.md))
 
-Centralizado en [`local-app/frontend/uno.config.ts`](../local-app/frontend/uno.config.ts) bajo **5 pilares fundamentales**:
-1. **Marca (`brand` `#8D3B2B` / `brand-dark` `#722A1E`):** Botones primarios, enlaces activos y badges.
-2. **Canvas (`canvas` `#F8D9C8`):** Fondo base cálido de toda la aplicación.
-3. **Superficie (`surface` `#FAF0E8`):** Fondo crema para modales, blurbs y tarjetas secundarias.
-4. **Tipografía (`chocolate` `#5C2B16`):** Color único para texto con jerarquía por opacidad (`100%`, `/80`, `/70`, `/40`).
-5. **Borde (`border` `#EFC1AC`):** Contornos y divisores canónicos.
-- **Acentos Pasteles:** `pastel-peach` (`#F3C68F`), `pastel-mint` (`#A7C8C7` + `text-forest` `#1C3D3C`), `pastel-clay` (`#E6AA94`), `pastel-wheat` (`#F7D8A5` + `text-bronze` `#54350A`).
-- **Tipografías:** `Satoshi` (Sans), `Ranade` (Serif literaria), `Supreme` (Display/Mono).
+Documentado a detalle con ilustraciones de referencia y configuración de UnoCSS en [`.context/PALETTE.md`](./PALETTE.md) bajo **4 Pilares Estructurales + 3 Tokens Semánticos**:
+1. **Lienzo (`paper` `#F6F3EC`) y Superficie (`surface` `#FDFBF6`):** Fondos cálidos de papel editorial que eliminan el blanco clínico.
+2. **Tinta Universal (`ink` `#121212`):** Color único para tipografía (`text-ink`, `text-ink/65`, `text-ink/40`), bordes visibles amigables (`border-2 border-ink`) y sombras táctiles desplazadas (`shadow-tactile`: `3px 3px 0px #121212`).
+3. **Marca Bermellón (`brand` `#F23814` / `brand-soft` `#F77F52`):** Naranja editorial vibrante para CTAs primarios, estados activos y acentos hero.
+4. **Tokens Semánticos y Pasteles (`success` `#0E6B5C` Jade, `warning` `#E89B25` Amber, `info` `#B8C7DC` Cobalt):** Reservados estrictamente para estados de quórum, maestría SM-2, alertas de tabú y etiquetas dialectales/CEFR.
+5. **Tipografía Única:** **`Satoshi`** en todos los pesos (`Regular 400`, `Bold 700`, `Black 900`), usando `tabular-nums` para temporizadores, códigos PIN y marcadores en vivo.
 
 ---
 
@@ -99,10 +98,10 @@ Centralizado en [`local-app/frontend/uno.config.ts`](../local-app/frontend/uno.c
 Copia y pega este bloque al iniciar una nueva conversación para enrutar al modelo sin saturar su ventana de contexto:
 
 ```text
-Hola hermano, continuemos con Palabrario bajo enfoque Backend-First.
-1. Lee primero @.context/CONTEXT.md y @.context/PLAN.md.
-2. Todo nuestro backend (core-service :8000, realtime-service :8001 e image-service :8002) es 100% Go 1.24 + Chi v5 + sqlc + pgxpool sobre PostgreSQL 17 (@SCHEMA_FINAL.sql), y el cliente escritorio se comunica a través del puente Go nativo de Wails (local-app/app.go -> wailsjs).
-3. Antes de escribir código, consulta los contratos exactos en @.context/INTERFACES.md y las reglas de dominio en @.context/DOMAIN.md. No toques el frontend (local-app) ni inventes campos fuera de INTERFACES.md.
+Hola hermano, continuemos con Palabrario bajo enfoque Backend-First & Contract-First.
+1. Lee primero @.context/CONTEXT.md, @.context/PLAN.md y (si toca UI) @.context/UI_SPECIFICATION.md + @.context/ROUTES_MAP.md + @.context/PALETTE.md.
+2. Todo nuestro backend (core-service :8000, realtime-service :8001 e image-service :8002) es 100% Go 1.24 + Chi v5 + sqlc + pgxpool sobre PostgreSQL 17 (@SCHEMA_FINAL.sql), y el cliente (Wails V3 + Capacitor PWA) se comunica a través del puente Go nativo (local-app/app.go -> wailsjs) bajo el contrato IPalabrarioAPI = typeof WailsAppBridge.
+3. Antes de escribir código, consulta los contratos exactos en @.context/INTERFACES.md y las reglas de dominio en @.context/DOMAIN.md. No inventes campos fuera de INTERFACES.md ni colores fuera de PALETTE.md.
 Hoy vamos a implementar: [Indicar Fase o Tarea de .context/PLAN.md].
 ```
 

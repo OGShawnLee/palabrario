@@ -10,7 +10,7 @@ Este documento describe la arquitectura de desarrollo y despliegue híbrida entr
 flowchart TD
     subgraph Host["1. Windows (Host)"]
         Editor["Editor / IDE (VS Code, Go 1.24, sqlc)"]
-        Frontend["Cliente Nativo Wails v2 (Go BFF + Vue 3 + Vite)"]
+        Frontend["Cliente Nativo Wails V3 (Go BFF + Vue 3 + Vite)"]
         TestRunner["Orquestador de Pruebas (scripts/test.ps1)"]
         RsyncWatcher["vagrant rsync-auto (Opcional con VM)"]
     end

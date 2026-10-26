@@ -37,7 +37,7 @@ El propósito cardinal de este documento es definir, delimitar y formalizar de m
 El documento servirá como marco de referencia y contrato técnico vinculante para las fases subsiguientes del ciclo de vida del proyecto, cumpliendo los siguientes objetivos específicos:
 
 1. **Guía de Diseño e Implementación para el Backend:** Servir de especificación canónica para modelar las entidades de datos (PostgreSQL 17), los contratos de endpoints de la API REST del monolito modular (*Core Service* bajo Go 1.24, Chi v5, `sqlc` y `pgxpool`) y los protocolos orientados a eventos vía WebSockets (*Realtime Service* en Go 1.24 + Chi v5 + WebSockets).
-2. **Guía de Desarrollo para el Cliente Nativo:** Proveer las directrices funcionales de interacción, estados de vistas y flujos de navegación para la aplicación de escritorio desarrollada con Wails v2, Vue 3 y UnoCSS.
+2. **Guía de Desarrollo para el Cliente Nativo:** Proveer las directrices funcionales de interacción, estados de vistas y flujos de navegación para la aplicación de escritorio desarrollada con Wails V3, Vue 3 y UnoCSS.
 3. **Validación y Pruebas de Software:** Suministrar los criterios de aceptación y casos de prueba indispensables para los procesos de Aseguramiento de Calidad (QA), verificación de integridad de datos y pruebas de concurrencia en partidas multijugador.
 4. **Pacto con los Interesados (Stakeholders):** Alinear las expectativas funcionales del equipo de desarrollo, los docentes y lingüistas curadores de contenido, los administradores de la plataforma y el cuerpo docente evaluador del proyecto.
 
@@ -100,7 +100,7 @@ A fin de mantener la viabilidad técnica y operativa del proyecto, se establecen
 1. **Pasarelas de Pago Monetario:** La plataforma operará bajo un modelo abierto e institucional sustentado en boletos de invitación; no se integrarán procesadores de cobro ni transacciones bancarias directas.
 2. **Reconocimiento y Síntesis de Voz en Tiempo Real:** El prototipo se enfocará estrictamente en la adquisición léxica textual, semántica y contextual; la integración de modelos de síntesis de voz fonética queda reservada para fases futuras.
 3. **Gobernanza Editorial Descentralizada sin Moderación:** A pesar de contar con quórum automático, el sistema prohíbe la publicación desregulada; los administradores mantendrán siempre facultades de anulación y veto institucional.
-4. **Clientes Móviles Nativos:** Si bien la base de código frontend en Vue 3 y la arquitectura de API REST son desacopladas y compatibles con Web/PWA, el alcance de entrega de esta fase se concentra exclusivamente en el cliente de escritorio nativo desarrollado con Wails v2.
+4. **Clientes Móviles Nativos:** Si bien la base de código frontend en Vue 3 y la arquitectura de API REST son desacopladas y compatibles con Web/PWA, el alcance de entrega de esta fase se concentra exclusivamente en el cliente de escritorio nativo desarrollado con Wails V3.
 
 ---
 
@@ -137,7 +137,7 @@ A continuación, se define el conjunto de términos técnicos, filológicos y ar
 | **Studio** | Dominio de UI | Espacio de trabajo personal y privado del estudiante dentro de la interfaz de usuario, orientado a la gestión de sus barajas, colecciones y panel de maestría. |
 | **tsvector / tsquery** | Arquitectura de Datos | Tipos de datos nativos de PostgreSQL para almacenar documentos de texto normalizados y ejecutar consultas léxicas ponderadas de alta velocidad. |
 | **UnoCSS** | Frontend | Motor atómico de utilidades CSS de alto rendimiento que genera estilos bajo demanda para la interfaz gráfica del cliente en Vue 3. |
-| **Wails v2** | Frontend / Runtime | Marco de trabajo que combina el lenguaje de programación Go para el backend nativo de escritorio y tecnologías web estándar (HTML/JS/Vue) para la capa de presentación visual. |
+| **Wails V3** | Frontend / Runtime | Marco de trabajo que combina el lenguaje de programación Go para el backend nativo de escritorio y tecnologías web estándar (HTML/JS/Vue) para la capa de presentación visual. |
 | **WebSocket** | Comunicaciones en Red | Protocolo de comunicación bidireccional y persistente sobre una única conexión TCP, indispensable para la sincronización de rondas y difusión de estados en las arenas de juego en vivo. |
 | **XP (*Experience Points*)** | Dominio Pedagógico / Gamificación | Unidad métrica de progreso que mide el esfuerzo del estudiante; se registra en un libro contable auditable (`xp_transactions`) al acertar preguntas, cumplir rachas o triunfar en la arena. |
 
@@ -154,7 +154,7 @@ El sistema **Palabrario** opera como una plataforma cliente-servidor distribuida
 El entorno del sistema se estructura alrededor de un límite perimetral claramente definido entre la capa cliente y los servicios de backend:
 
 1. **Entorno de Cliente (Frontends):**
-   - El cliente primario es una **aplicación de escritorio nativa** empaquetada con Wails v2 (Go nativo + motor de renderizado web basado en WebView2 para Windows y WebKitGTK para Linux).
+   - El cliente primario es una **aplicación de escritorio nativa** empaquetada con Wails V3 (Go nativo + motor de renderizado web basado en WebView2 para Windows y WebKitGTK para Linux).
    - El cliente se comunica de forma segura mediante HTTP/REST hacia el núcleo de negocio y mantiene conexiones bidireccionales persistentes sobre WebSockets con el servicio de salas de juego.
    - Diseñado bajo una estrategia desacoplada que permite extender la misma capa visual hacia navegadores web estándar (Web/PWA) en etapas subsecuentes.
 
@@ -179,7 +179,7 @@ flowchart TD
     end
 
     subgraph SistemaPalabrario["Límite del Sistema: PALABRARIO"]
-        AppCliente["Cliente de Escritorio Nativo\n(Wails v2 + Vue 3 + UnoCSS)"]
+        AppCliente["Cliente de Escritorio Nativo\n(Wails V3 + Vue 3 + UnoCSS)"]
         PlataformaBackend["Ecosistema Backend Distribuido (100% Go 1.24)\n• Core Service (Monolito Modular Go 1.24 + sqlc)\n• Realtime Service (Go 1.24 + Chi + WebSockets)\n• Image Service (Go 1.24 + Chi)\n• PostgreSQL 17 (FTS & ACID)"]
         AppCliente <-->|HTTP REST / WebSockets| PlataformaBackend
     end
@@ -611,7 +611,7 @@ Los requisitos no funcionales definen los estándares de calidad arquitectónica
 #### 2.6.2. Rendimiento (RNF-REN)
 * **RNF-REN-01 (Latencia en Búsqueda FTS):** El tiempo de respuesta del endpoint de autocompletado y búsqueda en el diccionario no superará los **100 milisegundos** para el percentil 95 ($P_{95}$) sobre un catálogo de hasta 50,000 lemas, aprovechando índices GIN y operadores de trigramas.
 * **RNF-REN-02 (Baja Latencia en Multijugador):** El tiempo de difusión de eventos de ronda, temporizadores y actualización de marcadores a través del servicio de WebSockets (`realtime-service`) no superará los **50 milisegundos** en redes locales o de banda ancha estándar.
-* **RNF-REN-03 (Tiempo de Arranque del Cliente):** La aplicación cliente de escritorio (Wails v2) deberá inicializarse y presentar la portada interactiva en un tiempo no mayor a **2.0 segundos** en equipos con hardware promedio.
+* **RNF-REN-03 (Tiempo de Arranque del Cliente):** La aplicación cliente de escritorio (Wails V3) deberá inicializarse y presentar la portada interactiva en un tiempo no mayor a **2.0 segundos** en equipos con hardware promedio.
 
 #### 2.6.3. Disponibilidad y Confiabilidad (RNF-DIS / RNF-CON)
 * **RNF-CON-01 (Transaccionalidad e Integridad ACID):** Toda operación que involucre el saldo de experiencia (`xp_transactions`), la consolidación de partidas (`matches`, `match_participants`, `quiz_attempts`), la asociación de tarjetas a barajas y la auto-aprobación por quórum deberá ejecutarse dentro de transacciones atómicas de PostgreSQL con nivel de aislamiento *Read Committed*.
@@ -640,7 +640,7 @@ Las restricciones delimitan las decisiones arquitectónicas, tecnológicas y nor
    - No se permite la inclusión de bases de datos NoSQL ni brokers de mensajería externos (Redis, Kafka o RabbitMQ) en la fase de MVP, delegando la persistencia y bloqueos transaccionales a **PostgreSQL 17**.
 
 2. **Restricciones del Cliente de Escritorio:**
-   - La aplicación cliente debe compilarse utilizando **Wails v2** con backend nativo en **Go 1.24+** y frontend en **Vue 3 (Composition API) + UnoCSS + Vite**.
+   - La aplicación cliente debe compilarse utilizando **Wails V3** con backend nativo en **Go 1.24+** y frontend en **Vue 3 (Composition API) + UnoCSS + Vite**.
    - El enrutamiento de vistas debe utilizar obligatoriamente **Hash History** (`createWebHashHistory()`) para evitar errores de resolución de rutas en el runtime de WebView2/WebKit.
 
 3. **Restricciones de Entorno y Despliegue Local:**

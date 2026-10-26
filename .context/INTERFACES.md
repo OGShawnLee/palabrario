@@ -758,7 +758,7 @@ type CardReviewResult struct {
 }
 
 type XPTransactionItem struct {
-	IDTransaction int       `json:"id_transaction"`
+	IDTransaction string    `json:"id_transaction"`
 	AmountXP      int       `json:"amount_xp"`
 	Reason        string    `json:"reason"` // 'QUIZ_CORRECT', 'MATCH_WIN', 'DAILY_STREAK', 'DECK_COMPLETED', 'ACHIEVEMENT_UNLOCKED'
 	MetadataID    *string   `json:"metadata_id,omitempty"`
@@ -1046,5 +1046,5 @@ En `realtime-service`, el tiempo de respuesta se mide con el reloj monotónico d
 | Método | Ruta | Middleware | Caso de Uso | Descripción |
 | :---: | :--- | :---: | :---: | :--- |
 | `GET` | `/health` | Público | Infra | ✅ Implementado en `image-service/main.go`. |
-| `POST` | `/api/v1/images/upload` | `RequireAuth` (`pkg/auth`) | CU01 / CU02 / CU06 (RN12) | Recibe `multipart/form-data` (`file` máx 5 MB + `category`: `avatar\|credentials\|word\|sense`), valida magic bytes (`image/jpeg`, `image/png`, `image/webp`), aplica filtro heurístico NSFW (piel/entropía en Go puro), elimina metadatos EXIF (`RNF-SEG-04`), guarda en volumen local y devuelve `{"url": "...", "bytes": 24100}`. |
+| `POST` | `/api/v1/images/upload` | `RequireAuth` (`pkg/auth`) | CU01 / CU02 / CU06 (RN12) | Recibe `multipart/form-data` (`file` máx 5 MB + `category`: `avatar\|credentials\|general`), valida magic bytes (`image/jpeg`, `image/png`, `image/webp`), aplica filtro heurístico NSFW (piel/entropía en Go puro), elimina metadatos EXIF (`RNF-SEG-04`), guarda en volumen local y devuelve `{"url": "...", "bytes": 24100}`. |
 | `GET` | `/uploads/*` | Público | Infra / Media | Sirve estáticamente las imágenes saneadas desde el volumen local de `image-service`. |

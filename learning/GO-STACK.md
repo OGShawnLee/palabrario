@@ -208,7 +208,7 @@ En [`core-service/internal/service/errors.go`](../core-service/internal/service/
 
 En una aplicación web tradicional, el frontend en Vue haría `fetch("http://localhost:8000/api/v1/...")` y guardaría el token JWT en `localStorage` (donde cualquier vulnerabilidad XSS en JavaScript podría robarlo).
 
-En **Palabrario**, gracias a **Wails v2** y a nuestro workspace unificado ([`go.work`](../go.work)), la comunicación es mucho más segura y 100% tipada:
+En **Palabrario**, gracias a **Wails V3** y a nuestro workspace unificado ([`go.work`](../go.work)), la comunicación es mucho más segura y 100% tipada:
 
 1. **Bóveda de Sesión en RAM (`local-app/app.go`):**
    Cuando el usuario inicia sesión (`a.SignIn(email, password)`), es el proceso Go de escritorio (`local-app/app.go`) quien hace la petición HTTP a `core-service`. Al recibir el `AuthResponse`, **Go guarda el `sessionToken` JWT en una variable privada en memoria RAM (`a.sessionToken` protegida con `sync.RWMutex`)** y le devuelve a Vue únicamente el `UserProfile`. El navegador/WebView jamás ve el token JWT.

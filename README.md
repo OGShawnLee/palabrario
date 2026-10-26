@@ -15,7 +15,7 @@
 | **[`INTERFACES.md`](.context/INTERFACES.md)** | Arquitectura Orientada a Servicios (SOA) en Go 1.24, DTOs canónicos, consultas `sqlc`, eventos WebSocket y mapa completo de endpoints HTTP. |
 | **[`SCHEMA_FINAL.sql`](SCHEMA_FINAL.sql)** | Esquema DDL canónico en PostgreSQL 17 (`unaccent`, `pg_trgm`, `tsvector` GIN, triggers `RN06`/`RN07` y datos semilla). |
 | **[`INFRASTRUCTURE.md`](.context/INFRASTRUCTURE.md)** | Guía de contenedores Docker Compose, monorepo 100% Go + `sqlc` y máquina virtual Vagrant. |
-| **[`UI_SPECIFICATION.md`](.context/UI_SPECIFICATION.md)** | Mapa de enrutamiento, espacios de navegación y componentes globales del cliente Wails v2 + Vue 3 + UnoCSS (para Fase 5). |
+| **[`UI_SPECIFICATION.md`](.context/UI_SPECIFICATION.md)** | Mapa de enrutamiento, espacios de navegación y componentes globales del cliente Wails V3 + Vue 3 + UnoCSS (para Fase 5). |
 | **[`.context/academic/`](.context/academic)** | Entregables académicos formales autocontenidos (`1-PROJECT-PROPOSAL.md`, `2-PROJECT-SPECIFICATION.md`, `3-FINAL-USE-CASES.md`). |
 
 ---
@@ -43,7 +43,7 @@ Palabrario está diseñado bajo una arquitectura de **Monolito Modular Orientado
 ```mermaid
 flowchart TD
     subgraph Client["Cliente Nativo Desktop"]
-        Desktop["🖥️ Palabrario Desktop (Wails v2 + Go + Vue 3)"]
+        Desktop["🖥️ Palabrario Desktop (Wails V3 + Go + Vue 3)"]
     end
 
     subgraph Backend["Backend Services (Monorepo Go 1.24)"]
@@ -70,7 +70,7 @@ flowchart TD
 | **Backend Unificado** | **Golang (Go 1.24)** | Node.js / Bun / Python | Binarios estáticos compilados sin dependencias externas en runtime. Consumo de memoria reducido a **< 5 MiB** por servicio en Docker y compartición nativa de `pkg/models` y `pkg/auth` en un solo `go.mod`. |
 | **Acceso a Datos** | **`sqlc` + `pgxpool`** | ORMs pesados (GORM, Prisma) | Consultas SQL 100% tipadas en tiempo de compilación. Cero costo de reflexión en runtime, rendimiento nativo de base de datos y prevención absoluta de SQL Injections. |
 | **Gestión de UUID** | **`github.com/google/uuid`** | Funciones caseras / strings | Estandarización RFC 4122, soporte nativo como `driver.Valuer`/`sql.Scanner` con `pgx` y mapeo transparente en `sqlc`. |
-| **Cliente Desktop** | **Wails v2 (Go + Vue 3)** | Electron | Empaqueta un binario nativo que reutiliza el webview del sistema operativo. Huella de RAM de **~30 MiB** (frente a los >250 MiB del runtime Chromium de Electron). |
+| **Cliente Desktop** | **Wails V3 (Go + Vue 3)** | Electron | Empaqueta un binario nativo que reutiliza el webview del sistema operativo. Huella de RAM de **~30 MiB** (frente a los >250 MiB del runtime Chromium de Electron). |
 | **Persistencia** | **PostgreSQL 17** | NoSQL / SQLite | Índices trigramáticos (`pg_trgm`), soporte de diacríticos (`unaccent`), funciones almacenadas determinísticas y triggers relacionales estrictos (RN06 quórum 3 y RN07 anti-autoaprobación). |
 
 ---
@@ -83,7 +83,7 @@ flowchart TD
 | **`core-service`** | Go 1.24 (Alpine) | `8000` | `8000` | Monolito Modular SOA: Auth, Gobernanza, Diccionario, Quórum, Studio, SM-2 |
 | **`realtime-service`**| Go 1.24 (Alpine) | `8001` | `8001` | Sincronización WebSockets en RAM para la Arena multijugador |
 | **`image-service`** | Go 1.24 (Alpine) | `8002` | `8002` | Procesamiento, saneamiento EXIF, moderación NSFW y storage local |
-| **`local-app`** | Wails v2 (Go + Vue 3) | N/A | Nativo | Interfaz gráfica de usuario para escritorio |
+| **`local-app`** | Wails V3 (Go + Vue 3) | N/A | Nativo | Interfaz gráfica de usuario para escritorio |
 
 ---
 
@@ -173,7 +173,7 @@ go test -v ./core-service/...
 - [x] **Fase 3.4: Studio Personal, Motor de Repetición Espaciada (SM-2) y Ledger de XP (`CU10–CU13`)**
 - [x] **Fase 3.5: Gobernanza Institucional, Perfiles y Moderación de Reportes (`CU01–CU04, CU09`)**
 - [x] **Fase 4: Arena Multijugador 3NF, Seguridad S2S, `realtime-service`, `image-service` y Soporte Multimedia (`CU14–CU16`)**
-- [ ] **Fase 5: Integración End-to-End Desktop (Wails v2) y Pipeline CI/CD** *(En Definición)*
+- [ ] **Fase 5: Integración End-to-End Desktop (Wails V3) y Pipeline CI/CD** *(En Definición)*
 - [ ] **Fase 6 (Incremento a Largo Plazo): Sistema de Eventos Culturales de Temporada**
 
 ---
