@@ -55,6 +55,8 @@ services:
     restart: unless-stopped
     ports:
       - "8001:8001"
+    environment:
+      - CORE_SERVICE_URL=http://core-service:8000
     env_file:
       - ./realtime-service/.env
 
