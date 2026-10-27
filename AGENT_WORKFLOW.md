@@ -78,11 +78,21 @@ flowchart TD
    Cuando **Flash 3.8 High** termine una sub-fase y tanto Go como TypeScript/Vite compilen con 0 errores, **cierra ese chat**. Para la siguiente sub-fase, abre una conversación completamente nueva.
 2. **Contexto Mínimo Viable (*Surgical Prompting*):**
    Nunca le pases todo el repositorio a un agente constructor. Pásale únicamente los archivos listados en cada prompt del Playbook (`.context/UI_SPECIFICATION.md`, `.context/PALETTE.md`, `.context/ROUTES_MAP.md`, `.context/UI_FLOWS.md` y la sección relevante de `.context/INTERFACES.md`).
-3. **El Compilador Go (`go build`), `vue-tsc` y `vite build` como Jueces Automáticos:**
-   Todo prompt para un agente constructor de Fase 5 exige que al finalizar ejecute:
-   - `go build ./local-app/...`
-   - `npm --prefix local-app/frontend run type-check` (`vue-tsc --noEmit`)
-   - `npm --prefix local-app/frontend run build`
+3. **Cadena de Verificación Automatizada (`client:check`) como Juez Único:**
+   Todo prompt para un agente constructor de Fase 5 exige que al finalizar ejecute la tarea unificada:
+   ```powershell
+   wails3 task client:check
+   # (o powershell -File .\scripts\client.ps1 check)
+   ```
+   *(Esta tarea encadena automáticamente en orden estricto: regeneración de bindings $\to$ verificación de tipos TypeScript con `tsc --noEmit` $\to$ compilación frontend con Vite $\to$ compilación del binario Go).*
+
+   > [!IMPORTANT]
+   > **Regla sobre Bindings y Definiciones Faltantes:** Si TypeScript reporta que no encuentra módulos en `bindings/` o faltan métodos de Go, **NUNCA inventes interfaces a mano en el frontend**. Ejecuta inmediatamente:
+   > ```powershell
+   > wails3 task client:bindings
+   > # (o powershell -File .\scripts\client.ps1 bindings)
+   > ```
+   > para regenerar el contrato tipado desde Go.
 4. **Prohibido Tocar el Backend Cerrado (*Scope Lock*):**
    Los servicios `core-service/`, `realtime-service/`, `image-service/`, `pkg/` y `SCHEMA_FINAL.sql` están **100% cerrados y probados**. Ningún constructor de Fase 5 tiene permiso de modificarlos salvo instrucción explícita del Arquitecto.
 5. **Commit Limpio como Punto de Control (*Checkpoint*):**
@@ -113,15 +123,15 @@ El directorio `local-app/` fue limpiado para iniciar desde cero sin basura de pr
 
 1. **Capa Go de Escritorio (`local-app/`):**
    - `local-app/go.mod`: Módulo `palabrario/local-app` (Go 1.24) enlazado al `go.work` raíz e importando `palabrario/pkg/models`.
-   - `local-app/wails.json`: Configuración limpia apuntando a `frontend` (`npm run build`, `npm run dev`).
-   - `local-app/main.go` y `local-app/app.go` (esqueleto base):
+   - Configuración Wails v3 (`build/config.yml` y `Taskfile.yml`) apuntando a `frontend`.
+   - `local-app/main.go` y `local-app/app.go` (esqueleto base Wails v3 con `github.com/wailsapp/wails/v3/pkg/application`):
      - Estructura `App` con `ctx context.Context`, `httpClient *http.Client`, URLs base configurables por entorno (`PALABRARIO_CORE_URL` default `http://localhost:8000`, `PALABRARIO_REALTIME_URL` default `ws://localhost:8001`, `PALABRARIO_IMAGE_URL` default `http://localhost:8002`), y `sessionToken string` privado protegido por `mu sync.RWMutex`.
      - Ventana configurada a `1280x820` (mínimo `390x680`) con color de fondo `#F6F3EC` (`paper`).
      - Embebido seguro de `frontend/dist` (`//go:embed all:frontend/dist`).
 
 2. **Capa Frontend Multiplataforma (`local-app/frontend/`):**
-   - `package.json`: Configurar con `vue` (^3.5), `vue-router` (^4.5), `reka-ui`, `@capacitor/core`, `@capacitor/cli`, `@capacitor/preferences`, `unocss`, `@unocss/preset-uno`, `@unocss/preset-icons`, `@iconify-json/lucide`, `typescript`, `vue-tsc`, `vite` y `@vitejs/plugin-vue`.
-   - Scripts en `package.json`: `"dev": "vite"`, `"build": "vue-tsc --noEmit && vite build"`, `"type-check": "vue-tsc --noEmit"`, `"preview": "vite preview"`.
+   - `package.json`: Configurar con `vue` (^3.5), `vue-router` (^4.5), `reka-ui`, `lucide-vue-next`, `@capacitor/core`, `@capacitor/cli`, `@capacitor/preferences`, `unocss`, `@unocss/preset-uno`, `typescript`, `vite` y `@vitejs/plugin-vue`.
+   - Scripts en `package.json`: `"dev": "vite"`, `"build": "vite build --mode production"`, `"type-check": "tsc --noEmit"`, `"preview": "vite preview"`.
    - `capacitor.config.ts`: `appId: 'com.palabrario.app'`, `appName: 'Palabrario'`, `webDir: 'dist'`.
    - `uno.config.ts`: Copiar **exactamente** la configuración de `@.context/PALETTE.md` (colores `paper`, `surface`, `ink`, `brand`, `brand-soft`, `success`, `warning`, `info`, fuente `Satoshi`, sombras `tactile-*` y shortcuts `card-editorial`, `btn-brand`, `btn-surface`, `badge-pill`, `input-editorial`).
    - `index.html`, `vite.config.ts` (con alias `@` -> `./src`), `tsconfig.json` y `src/vite-env.d.ts`.
@@ -139,11 +149,12 @@ El directorio `local-app/` fue limpiado para iniciar desde cero sin basura de pr
 - **PROHIBIDO** crear archivos `mock` o usar colores genéricos fuera de `@.context/PALETTE.md`.
 
 ### 4. Verificación Obligatoria antes de Finalizar
-Instala las dependencias en `local-app/frontend` y ejecuta:
-1. `npm --prefix local-app/frontend run type-check`
-2. `npm --prefix local-app/frontend run build`
-3. `go build ./local-app/...`
-No des por terminada la tarea hasta que los 3 comandos pasen con 0 errores.
+Instala las dependencias en `local-app/frontend` y ejecuta la cadena completa:
+```powershell
+wails3 task client:check
+# (o powershell -File .\scripts\client.ps1 check)
+```
+No des por terminada la tarea hasta que la verificación pase con 0 errores.
 ```
 
 ---
@@ -174,25 +185,28 @@ Actúa como Ingeniero Senior en Go y TypeScript. Vamos a ejecutar la **Sub-Fase 
    - **Arena & WebSocket (`Módulo 7`):** `CreateArenaMatch`, `JoinArenaMatch`, `GetMyMatchHistory`, `GetMatchReplayDetail`, más los métodos WebSocket hacia `realtime-service (:8001)`: `ConnectArenaRoom(roomCode string) error`, `SubmitArenaAnswer(roundNumber int, selectedOption string) error`, `LeaveArenaRoom() error` (gestionando la conexión WS activa en `App` y emitiendo eventos al frontend para cada `models.WSMessage`).
    - **Multimedia (`Módulo 8`):** `UploadImage(category string, filename string, fileBytes []byte) (*models.ImageUploadResponse, error)` que envía `multipart/form-data` a `POST /api/v1/images/upload` en `image-service (:8002)`.
 
-2. **Bindings TypeScript (`local-app/frontend/wailsjs/`):**
-   - Crea/actualiza `local-app/frontend/wailsjs/go/models.ts` reflejando **todos** los structs de `pkg/models` con sus campos `snake_case` exactos.
-   - Crea/actualiza `local-app/frontend/wailsjs/go/main/App.d.ts` y `App.js` exportando todas las funciones de `local-app/app.go`, así como `wailsjs/runtime/runtime.d.ts` y `runtime.js` (`EventsOn`, `EventsOff`, `EventsEmit`).
+2. **Bindings TypeScript (`local-app/frontend/bindings/`):**
+   - En Wails v3 los bindings se generan automáticamente ejecutando `wails3 task client:bindings` (o `wails3 task client:check`).
+   - Se generan en `local-app/frontend/bindings/palabrario/...` reflejando los structs de `pkg/models` y los métodos expuestos de `app.go`.
+   - Para el runtime de eventos en Wails v3, importa desde `@wailsio/runtime` (`Events.On`, `Events.Off`, `Events.Emit`).
 
 3. **Adaptador Polimórfico Dual (`local-app/frontend/src/api/`):**
-   - `src/api/client.ts`: Declara `import * as WailsAppBridge from '../../wailsjs/go/main/App'; export type IPalabrarioAPI = typeof WailsAppBridge;` y exporta `export const api: IPalabrarioAPI` seleccionando entre `WailsDesktopAdapter` (cuando existe `(window as any).go?.main?.App`) y `CapacitorMobileAdapter`.
+   - `src/api/client.ts`: Declara `import * as WailsAppBridge from '../bindings/palabrario/app'; export type IPalabrarioAPI = typeof WailsAppBridge;` y exporta `export const api: IPalabrarioAPI` seleccionando entre `WailsDesktopAdapter` (cuando corre en runtime de Wails) y `CapacitorMobileAdapter`.
    - `src/api/wails.adapter.ts`: Implementa `IPalabrarioAPI` delegando directamente en `WailsAppBridge`.
    - `src/api/capacitor.adapter.ts`: Implementa el 100% de `IPalabrarioAPI` mediante `fetch` tipado hacia las URLs de `:8000` y `:8002`, gestionando el token con `@capacitor/preferences` (sin exponerlo en `localStorage` en escritorio).
-   - `src/api/arena.events.ts`: Implementa `ArenaEventBus` unificando la suscripción a tramas `models.WSMessage` tanto en Wails (`EventsOn('arena:ws_message')`) como en Capacitor/PWA (`WebSocket` nativo).
+   - `src/api/arena.events.ts`: Implementa `ArenaEventBus` unificando la suscripción a tramas `models.WSMessage` tanto en Wails (`Events.On('arena:ws_message')`) como en Capacitor/PWA (`WebSocket` nativo).
 
 ### 3. Restricciones Estrictas (Scope Lock)
 - **PROHIBIDO** modificar `core-service/`, `realtime-service/`, `image-service/`, `pkg/` o `SCHEMA_FINAL.sql`.
+- **PROHIBIDO** inventar interfaces o tipos TypeScript a mano para el backend o Wails. Si falta una definición, ejecuta `wails3 task client:bindings` para regenerarlas desde Go.
 - Ningún método o campo puede inventarse fuera de `pkg/models` y `@.context/INTERFACES.md`.
 
 ### 4. Verificación Obligatoria antes de Finalizar
-Ejecuta y asegura 0 errores en:
-1. `go build ./local-app/...`
-2. `npm --prefix local-app/frontend run type-check`
-3. `npm --prefix local-app/frontend run build`
+Ejecuta la cadena completa y asegura 0 errores:
+```powershell
+wails3 task client:check
+# (o powershell -File .\scripts\client.ps1 check)
+```
 ```
 
 ---
@@ -207,7 +221,7 @@ Actúa como Ingeniero Frontend Senior especialista en Vue 3, TypeScript, Reka UI
 - `@.context/PALETTE.md`
 - `@.context/ROUTES_MAP.md` (Las 23 rutas, guardias y layouts)
 - `@.context/UI_FLOWS.md` (Especialmente **Flujo 1: Auth e Hidratación** y **Flujo 2: TopBar DropdownMenu -> CredentialsRolePopover y Perfil**)
-- `@local-app/frontend/src/api/client.ts` y `@local-app/frontend/wailsjs/go/models.ts`
+- `@local-app/frontend/src/api/client.ts` y `@local-app/frontend/bindings/`
 
 ### 2. Alcance Exacto a Construir en `local-app/frontend/src/`
 
@@ -220,7 +234,7 @@ Actúa como Ingeniero Frontend Senior especialista en Vue 3, TypeScript, Reka UI
 
 3. **Enrutador Completo (`src/router/index.ts`):**
    - Configurar `createWebHashHistory()` con las **23 rutas** de `@.context/ROUTES_MAP.md`.
-   - Implementar el `router.beforeEach` que ejecuta `hydrateSession()` en el arranque y aplica las guardias: `guestOnly`, `requireAuth`, `requireRole: ['EDITOR', 'ADMIN']` y `requireRole: ['ADMIN']`.
+   - Implementar el `router.beforeEach` que ejecuta `hydrateSession()` en el arranque y aplica las guardias: `guestOnly`, `requireAuth`, `requireRole: ['EDITOR', 'ADMIN']` y `requireRole: ['ADMIN']` handicaps.
 
 4. **Layouts y Componentes de Shell (`src/layouts/` y `src/components/ui/`):**
    - `src/components/ui/MediaDropzone.vue`: Dropzone reutilizable que valida tamaño `<= 5 MB` y formatos `JPG/PNG/WEBP`, invoca `api.UploadImage(category, file.name, bytes)` y emite la URL saneada o error NSFW/tamaño.
@@ -239,12 +253,15 @@ Actúa como Ingeniero Frontend Senior especialista en Vue 3, TypeScript, Reka UI
 
 ### 3. Restricciones Estrictas (Scope Lock)
 - **PROHIBIDO** usar colores fuera de `@.context/PALETTE.md` (cero `bg-white`, `text-gray-*`, `bg-blue-*`, etc.).
+- **PROHIBIDO** inventar interfaces o tipos TypeScript a mano para el backend o Wails. Si falta una definición, ejecuta `wails3 task client:bindings` para regenerarlas desde Go.
 - **PROHIBIDO** hacer llamadas `fetch` directas en `.vue`; usa exclusivamente `api` (`src/api/client.ts`).
 
 ### 4. Verificación Obligatoria antes de Finalizar
-1. `npm --prefix local-app/frontend run type-check`
-2. `npm --prefix local-app/frontend run build`
-3. `go build ./local-app/...`
+Ejecuta la cadena completa y asegura 0 errores:
+```powershell
+wails3 task client:check
+# (o powershell -File .\scripts\client.ps1 check)
+```
 ```
 
 ---
@@ -259,7 +276,7 @@ Actúa como Ingeniero Frontend Senior en Vue 3, Reka UI y UnoCSS. Vamos a ejecut
 - `@.context/PALETTE.md` (Sección 5: Anatomía Visual Inspirada en Vocabulary.com)
 - `@.context/ROUTES_MAP.md` (Rutas `#4, #5 y #6`)
 - `@.context/UI_FLOWS.md` (**Flujo 3: Exploración FTS, Ficha Estilo Vocabulary.com, Guardado en Baraja y Reporte**)
-- `@local-app/frontend/src/api/client.ts` y `@local-app/frontend/wailsjs/go/models.ts`
+- `@local-app/frontend/src/api/client.ts` y `@local-app/frontend/bindings/`
 
 ### 2. Alcance Exacto a Construir en `local-app/frontend/src/`
 
@@ -288,12 +305,15 @@ Actúa como Ingeniero Frontend Senior en Vue 3, Reka UI y UnoCSS. Vamos a ejecut
 
 ### 3. Restricciones Estrictas (Scope Lock)
 - **PROHIBIDO** usar colores fuera de `@.context/PALETTE.md`.
+- **PROHIBIDO** inventar interfaces o tipos TypeScript a mano para el backend o Wails. Si falta una definición, ejecuta `wails3 task client:bindings` para regenerarlas desde Go.
 - **PROHIBIDO** modificar archivos del backend o rutas ajenas a esta sub-fase.
 
 ### 4. Verificación Obligatoria antes de Finalizar
-1. `npm --prefix local-app/frontend run type-check`
-2. `npm --prefix local-app/frontend run build`
-3. `go build ./local-app/...`
+Ejecuta la cadena completa y asegura 0 errores:
+```powershell
+wails3 task client:check
+# (o powershell -File .\scripts\client.ps1 check)
+```
 ```
 
 ---
@@ -308,7 +328,7 @@ Actúa como Ingeniero Frontend Senior en Vue 3, Reka UI y UnoCSS. Vamos a ejecut
 - `@.context/PALETTE.md`
 - `@.context/ROUTES_MAP.md` (Rutas `#7, #8, #9 y #10`)
 - `@.context/INTERFACES.md` (Sección 2.6: Módulo Studio)
-- `@local-app/frontend/src/api/client.ts` y `@local-app/frontend/wailsjs/go/models.ts`
+- `@local-app/frontend/src/api/client.ts` y `@local-app/frontend/bindings/`
 
 ### 2. Alcance Exacto a Construir en `local-app/frontend/src/views/community/`
 Reemplaza los placeholders de las rutas `#7 a #10` con su implementación completa:
@@ -334,11 +354,15 @@ Reemplaza los placeholders de las rutas `#7 a #10` con su implementación comple
 
 ### 3. Restricciones Estrictas (Scope Lock)
 - **PROHIBIDO** usar colores fuera de `@.context/PALETTE.md`.
+- **PROHIBIDO** inventar interfaces o tipos TypeScript a mano para el backend o Wails. Si falta una definición, ejecuta `wails3 task client:bindings` para regenerarlas desde Go.
 - **PROHIBIDO** modificar archivos del backend.
 
 ### 4. Verificación Obligatoria antes de Finalizar
-1. `npm --prefix local-app/frontend run type-check`
-2. `npm --prefix local-app/frontend run build`
+Ejecuta la cadena completa y asegura 0 errores:
+```powershell
+wails3 task client:check
+# (o powershell -File .\scripts\client.ps1 check)
+```
 ```
 
 ---
@@ -353,7 +377,7 @@ Actúa como Ingeniero Frontend Senior en Vue 3, Reka UI y UnoCSS. Vamos a ejecut
 - `@.context/PALETTE.md`
 - `@.context/ROUTES_MAP.md` (Rutas `#11, #13, #14, #15 y #16`)
 - `@.context/DOMAIN.md` (Reglas `RN03`, `RN04` límite de 100 cartas por deck, `RN05` colecciones públicas solo admiten decks públicos)
-- `@local-app/frontend/src/api/client.ts` y `@local-app/frontend/wailsjs/go/models.ts`
+- `@local-app/frontend/src/api/client.ts` y `@local-app/frontend/bindings/`
 
 ### 2. Alcance Exacto a Construir en `local-app/frontend/src/views/studio/`
 Reemplaza los placeholders de las rutas `#11, #13, #14, #15 y #16`:
@@ -381,11 +405,15 @@ Reemplaza los placeholders de las rutas `#11, #13, #14, #15 y #16`:
 
 ### 3. Restricciones Estrictas (Scope Lock)
 - **PROHIBIDO** usar colores fuera de `@.context/PALETTE.md`.
+- **PROHIBIDO** inventar interfaces o tipos TypeScript a mano para el backend o Wails. Si falta una definición, ejecuta `wails3 task client:bindings` para regenerarlas desde Go.
 - **PROHIBIDO** modificar archivos del backend.
 
 ### 4. Verificación Obligatoria antes de Finalizar
-1. `npm --prefix local-app/frontend run type-check`
-2. `npm --prefix local-app/frontend run build`
+Ejecuta la cadena completa y asegura 0 errores:
+```powershell
+wails3 task client:check
+# (o powershell -File .\scripts\client.ps1 check)
+```
 ```
 
 ---
@@ -400,7 +428,7 @@ Actúa como Ingeniero Frontend Senior en Vue 3, Reka UI y UnoCSS. Vamos a ejecut
 - `@.context/PALETTE.md`
 - `@.context/ROUTES_MAP.md` (Rutas `#12 y #17`)
 - `@.context/UI_FLOWS.md` (**Flujo 4: Sesión Inmersiva de Repaso SM-2 y Ledger de XP**)
-- `@local-app/frontend/src/api/client.ts` y `@local-app/frontend/wailsjs/go/models.ts`
+- `@local-app/frontend/src/api/client.ts` y `@local-app/frontend/bindings/`
 
 ### 2. Alcance Exacto a Construir en `local-app/frontend/src/`
 
@@ -429,11 +457,15 @@ Actúa como Ingeniero Frontend Senior en Vue 3, Reka UI y UnoCSS. Vamos a ejecut
 
 ### 3. Restricciones Estrictas (Scope Lock)
 - **PROHIBIDO** usar colores fuera de `@.context/PALETTE.md`.
+- **PROHIBIDO** inventar interfaces o tipos TypeScript a mano para el backend o Wails. Si falta una definición, ejecuta `wails3 task client:bindings` para regenerarlas desde Go.
 - **PROHIBIDO** modificar archivos del backend.
 
 ### 4. Verificación Obligatoria antes de Finalizar
-1. `npm --prefix local-app/frontend run type-check`
-2. `npm --prefix local-app/frontend run build`
+Ejecuta la cadena completa y asegura 0 errores:
+```powershell
+wails3 task client:check
+# (o powershell -File .\scripts\client.ps1 check)
+```
 ```
 
 ---
@@ -449,7 +481,7 @@ Actúa como Ingeniero Frontend Senior en Vue 3, WebSockets y UnoCSS. Vamos a eje
 - `@.context/ROUTES_MAP.md` (Rutas `#18, #19 y #20`)
 - `@.context/UI_FLOWS.md` (**Flujo 5: Arena Multijugador en Tiempo Real, Modalidad Visual RN13 y Replay 3NF**)
 - `@.context/INTERFACES.md` (Sección 2.7: Contratos HTTP y Tramas WebSocket de Arena)
-- `@local-app/frontend/src/api/client.ts`, `@local-app/frontend/src/api/arena.events.ts` y `@local-app/frontend/wailsjs/go/models.ts`
+- `@local-app/frontend/src/api/client.ts`, `@local-app/frontend/src/api/arena.events.ts` y `@local-app/frontend/bindings/`
 
 ### 2. Alcance Exacto a Construir en `local-app/frontend/src/`
 
@@ -478,11 +510,15 @@ Actúa como Ingeniero Frontend Senior en Vue 3, WebSockets y UnoCSS. Vamos a eje
 
 ### 3. Restricciones Estrictas (Scope Lock)
 - **PROHIBIDO** usar colores fuera de `@.context/PALETTE.md`.
+- **PROHIBIDO** inventar interfaces o tipos TypeScript a mano para el backend o Wails. Si falta una definición, ejecuta `wails3 task client:bindings` para regenerarlas desde Go.
 - **PROHIBIDO** abrir WebSockets manuales fuera de `api.ConnectArenaRoom` y `ArenaEventBus`.
 
 ### 4. Verificación Obligatoria antes de Finalizar
-1. `npm --prefix local-app/frontend run type-check`
-2. `npm --prefix local-app/frontend run build`
+Ejecuta la cadena completa y asegura 0 errores:
+```powershell
+wails3 task client:check
+# (o powershell -File .\scripts\client.ps1 check)
+```
 ```
 
 ---
@@ -498,7 +534,7 @@ Actúa como Ingeniero Frontend Senior en Vue 3, Reka UI y UnoCSS. Vamos a ejecut
 - `@.context/ROUTES_MAP.md` (Rutas `#21, #22 y #23`)
 - `@.context/UI_FLOWS.md` (**Flujo 6: Autoría Léxica con Imagen, Quórum Tripartito y Moderación en Cascada**)
 - `@.context/INTERFACES.md` (Secciones 2.3, 2.4 y 2.5)
-- `@local-app/frontend/src/api/client.ts` y `@local-app/frontend/wailsjs/go/models.ts`
+- `@local-app/frontend/src/api/client.ts` y `@local-app/frontend/bindings/`
 
 ### 2. Alcance Exacto a Construir en `local-app/frontend/src/`
 
@@ -526,12 +562,15 @@ Actúa como Ingeniero Frontend Senior en Vue 3, Reka UI y UnoCSS. Vamos a ejecut
 
 ### 3. Restricciones Estrictas (Scope Lock)
 - **PROHIBIDO** usar colores fuera de `@.context/PALETTE.md`.
+- **PROHIBIDO** inventar interfaces o tipos TypeScript a mano para el backend o Wails. Si falta una definición, ejecuta `wails3 task client:bindings` para regenerarlas desde Go.
 - **PROHIBIDO** modificar archivos del backend.
 
 ### 4. Verificación Obligatoria antes de Finalizar
-1. `npm --prefix local-app/frontend run type-check`
-2. `npm --prefix local-app/frontend run build`
-3. `go build ./local-app/...`
+Ejecuta la cadena completa y asegura 0 errores:
+```powershell
+wails3 task client:check
+# (o powershell -File .\scripts\client.ps1 check)
+```
 ```
 
 ---
@@ -542,7 +581,7 @@ Actúa como Ingeniero Frontend Senior en Vue 3, Reka UI y UnoCSS. Vamos a ejecut
 Cuando el constructor termine cualquiera de las sub-fases `5.1` a `5.9`, regresa al chat del **Arquitecto (Argón)** y escribe:
 ```text
 Hermano, el agente constructor terminó la Sub-Fase [5.X].
-Por favor audita los cambios con `git status` y `git diff`, verifica que se cumplan al 100% las especificaciones de @.context/UI_SPECIFICATION.md, @.context/PALETTE.md, @.context/ROUTES_MAP.md y @.context/UI_FLOWS.md, ejecuta `go build ./local-app/...` y `npm --prefix local-app/frontend run build`, actualiza el estado en @.context/PLAN.md y prepara el commit semántico.
+Por favor audita los cambios con `git status` y `git diff`, verifica que se cumplan al 100% las especificaciones de @.context/UI_SPECIFICATION.md, @.context/PALETTE.md, @.context/ROUTES_MAP.md y @.context/UI_FLOWS.md, ejecuta `wails3 task client:check` (o `powershell -File .\scripts\client.ps1 check`), actualiza el estado en @.context/PLAN.md y prepara el commit semántico.
 ```
 
 ---
@@ -555,7 +594,7 @@ Hermano, Argón no está disponible actualmente. Asume temporalmente el rol de A
 Por favor ejecuta una revisión y auditoría diagnóstica siguiendo estas directrices:
 1. Inspecciona `git status` y `git diff` línea por línea para auditar todos los cambios aplicados en la sub-fase.
 2. Verifica el cumplimiento al 100% de @.context/UI_SPECIFICATION.md, @.context/PALETTE.md (cero colores fuera de la paleta semántica), @.context/ROUTES_MAP.md, @.context/UI_FLOWS.md y @.context/INTERFACES.md.
-3. Verifica que no existan llamadas `fetch` directas fuera del adaptador ni tokens en `localStorage` en modo escritorio, y ejecuta `go build ./local-app/...` y `npm --prefix local-app/frontend run build`.
+3. Verifica que no existan llamadas `fetch` directas fuera del adaptador ni tokens en `localStorage` en modo escritorio, y ejecuta `wails3 task client:check` (o `powershell -File .\scripts\client.ps1 check`).
 4. REGLAS ESTRICTAS DE ESTA AUDITORÍA:
    - Modo SOLO LECTURA: Es auditoría únicamente; NO DEBES APLICAR NINGÚN CAMBIO de código ni crear o modificar archivos.
    - Prohibido actualizar el estado en @.context/PLAN.md y @README.md a menos que recibas autorización explícita del Tech Lead.

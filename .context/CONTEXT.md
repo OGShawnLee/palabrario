@@ -23,6 +23,7 @@
 >    - **¿Qué paleta de colores, tipografía (`Satoshi`), rutas (`Hash`), vistas `.vue` y mapeo de endpoints/DTOs usar en la UI?** $\to$ Lee [`UI_SPECIFICATION.md`](./UI_SPECIFICATION.md), [`ROUTES_MAP.md`](./ROUTES_MAP.md) y [`PALETTE.md`](./PALETTE.md).
 >    - **¿Cómo compilar, correr tests o levantar Docker/Vagrant?** $\to$ Lee [`INFRASTRUCTURE.md`](./INFRASTRUCTURE.md).
 >    - **¿Qué contiene `.context/academic/`?** $\to$ Contiene los entregables académicos formales ([`1-PROJECT-SPECIFICATION.md`](./academic/1-PROJECT-SPECIFICATION.md)). Son documentos formales autocontenidos; **nunca recortes ni elimines secciones de ellos**.
+>    - **¿Qué comandos y scripts automatizados usar para compilar, verificar o probar backend y cliente?** $\to$ Consulta el orquestador raíz [`Taskfile.yml`](../Taskfile.yml) (ejecuta `wails3 task --list`), el manual de escritorio en [`learning/WAILS3-STACK.md`](../learning/WAILS3-STACK.md), o los scripts [`scripts/test.ps1`](../scripts/test.ps1) (backend) y [`scripts/client.ps1`](../scripts/client.ps1) (cliente). **Nunca inventes comandos de compilación ni ejecutes flags manuales sueltos.**
 
 ---
 

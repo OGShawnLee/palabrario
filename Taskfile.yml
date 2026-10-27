@@ -2,7 +2,7 @@
 version: '3'
 
 vars:
-  GO_TARGETS: './pkg/... ./core-service/...'
+  GO_TARGETS: './pkg/... ./core-service/... ./realtime-service/... ./image-service/...'
   VM_DIR: '/home/vagrant/palabrio'
 
 tasks:
@@ -118,14 +118,41 @@ tasks:
     cmds:
       - go build ./core-service/... ./realtime-service/... ./image-service/... ./pkg/...
 
-  wails:gen:
-    desc: 'Genera las definiciones de tipos TypeScript para Vue 3 desde models Go'
+  # ============================================================================
+  # 5. CLIENTE DESKTOP (WAILS V3 + BUN)
+  # ============================================================================
+  client:check:
+    desc: 'Verificación rápida total del cliente (Bindings + Tipos TS + Vite + Go)'
     dir: local-app
     cmds:
-      - wails generate module
+      - wails3 task check
+
+  client:build:
+    desc: 'Compila el binario de producción (local-app/bin/palabrario.exe)'
+    dir: local-app
+    cmds:
+      - wails3 task build
+
+  client:start:
+    desc: 'Compila y abre la aplicación nativa en vivo'
+    dir: local-app
+    cmds:
+      - wails3 task start
+
+  client:dev:
+    desc: 'Modo desarrollo en caliente (Vite + Wails hot reload en :9245)'
+    dir: local-app
+    cmds:
+      - wails3 task dev
+
+  client:bindings:
+    desc: 'Regenera únicamente los bindings TypeScript desde Go'
+    dir: local-app
+    cmds:
+      - wails3 task bindings
 
   # ============================================================================
-  # 5. MÉTRICAS Y VOLUMETRÍA DE CÓDIGO
+  # 6. MÉTRICAS Y VOLUMETRÍA DE CÓDIGO
   # ============================================================================
   loc:
     desc: 'Calcula y despliega el reporte de líneas de código (LOC) desglosado por lenguaje'

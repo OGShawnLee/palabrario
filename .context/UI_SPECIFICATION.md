@@ -33,6 +33,7 @@ Antes de modificar o crear cualquier archivo dentro de `local-app/`, consulta el
 > 3. **Fidelidad Estricta a [`.context/PALETTE.md`](./PALETTE.md):** Queda estrictamente prohibido usar colores por defecto de Tailwind/UnoCSS (`bg-red-500`, `text-gray-600`, `shadow-lg`, etc.) o valores hexadecimales sueltos. Se usan únicamente los 4 tokens base (`paper`, `surface`, `ink`, `brand`), los 3 semánticos (`success`, `warning`, `info`) y los atajos canónicos (`card-editorial`, `btn-primary`, `btn-secondary`, `input-editorial`, `badge-pill`, `shadow-tactile`).
 > 4. **Cero Propiedades JSON o Endpoints Inventados:** Toda prop o estado que represente datos del servidor debe estar tipado con las clases e interfaces autogeneradas en `wailsjs/go/models.ts` y mapeado en [`.context/ROUTES_MAP.md`](./ROUTES_MAP.md).
 > 5. **Tipografía Única `Satoshi`:** No importar fuentes secundarias. En temporizadores, marcadores de XP y códigos PIN de Arena es mandatorio usar la clase `tabular-nums`.
+> 6. **Iconografía Oficial con `lucide-vue-next`:** La biblioteca oficial y exclusiva de iconos para todos los componentes Vue es **`lucide-vue-next`** (ej. `import { BookOpen, Trophy, Sparkles, Flame, Check, X, ShieldAlert } from 'lucide-vue-next'`). Queda prohibido usar SVGs inline sin tipar, strings HTML crudos o fuentes secundarias. Todo icono se instancia como componente Vue y se estiliza con clases UnoCSS (`w-5 h-5 text-ink`, `stroke-2`, etc.) manteniendo el grosor de trazo editorial.
 
 ---
 

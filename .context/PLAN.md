@@ -58,11 +58,12 @@ flowchart LR
 
 ## 2. Plan de Implementación Detallado de la Fase 5 (9 Sub-Fases Atómicas)
 
-> **Metodología de Ejecución:** Siguiendo [`AGENT_WORKFLOW.md`](../AGENT_WORKFLOW.md), hemos granularizado la Fase 5 en **9 sub-fases atómicas, independientes y fáciles de auditar**.  
-> Cada sub-fase corresponde a **1 sesión limpia con un agente constructor** y debe cerrar obligatoriamente con:
-> 1. `go build ./local-app/...` (cero errores de compilación Go).
-> 2. `npm --prefix local-app/frontend run type-check` / `vue-tsc --noEmit` (cero errores de tipos en TypeScript/Vue).
-> 3. `npm --prefix local-app/frontend run build` (empaquetado limpio de Vite).
+**Metodología de Ejecución:** Siguiendo [`AGENT_WORKFLOW.md`](../AGENT_WORKFLOW.md), hemos granularizado la Fase 5 en **9 sub-fases atómicas, independientes y fáciles de auditar**.  
+Cada sub-fase corresponde a **1 sesión limpia con un agente constructor** y debe cerrar obligatoriamente con:
+```powershell
+wails3 task client:check # (o powershell -File .\scripts\client.ps1 check)
+```
+con código de salida `0` (cadena automatizada de bindings Go -> TS, chequeo de tipos, empaquetado Vite y `go build .`).
 
 ```mermaid
 flowchart TD
@@ -90,7 +91,7 @@ flowchart TD
   - [ ] **`local-app/frontend/uno.config.ts`:** Copiar exactamente la configuración canónica de [`.context/PALETTE.md`](./PALETTE.md) (tokens `paper`, `surface`, `ink`, `brand`, `brand-soft`, `success`, `warning`, `info`, sombras `tactile-*` y shortcuts `card-editorial`, `btn-brand`, `btn-surface`, `badge-pill`, `input-editorial`).
   - [ ] **Estructura limpia de directorios en `local-app/frontend/src/`:** Crear las carpetas `api/`, `assets/`, `components/ui/`, `components/dictionary/`, `components/studio/`, `components/arena/`, `components/editorial/`, `composables/`, `layouts/`, `router/`, `views/` y un `App.vue` mínimo verificable.
   - [ ] **`local-app/README.md`:** Documentación arquitectónica clara explicando la estructura del cliente, el flujo de desarrollo dual (Wails Desktop vs Capacitor PWA) y los comandos de compilación/verificación.
-- **Criterio de Cierre:** `go build ./local-app/...`, `npm --prefix local-app/frontend run type-check` y `npm --prefix local-app/frontend run build` pasan con 0 errores.
+- **Criterio de Cierre:** `wails3 task client:check` (o `.\scripts\client.ps1 check`) pasa con 0 errores.
 
 ---
 
@@ -109,7 +110,7 @@ flowchart TD
     - `wails.adapter.ts`: Delega 1:1 en `window.go.main.App`.
     - `capacitor.adapter.ts`: Implementa exactamente `IPalabrarioAPI` usando `fetch` tipado y custodia el JWT con `@capacitor/preferences` (Keystore/Keychain nativo en móvil o memoria efímera en PWA).
     - `arena.events.ts`: Implementa `ArenaEventBus` unificando `EventsOn("arena:ws_message")` en Wails y `WebSocket.onmessage` en Capacitor/PWA.
-- **Criterio de Cierre:** `go build ./local-app/...` y `vue-tsc --noEmit` verifican que `WailsDesktopAdapter` y `CapacitorMobileAdapter` satisfacen al 100% el contrato `IPalabrarioAPI`.
+- **Criterio de Cierre:** `wails3 task client:check` pasa con 0 errores, verificando que `WailsDesktopAdapter` y `CapacitorMobileAdapter` satisfacen al 100% el contrato `IPalabrarioAPI`.
 
 ---
 
@@ -128,7 +129,7 @@ flowchart TD
     - `views/auth/SignInView.vue` (`/#/auth/sign-in` — `RF01`).
     - `views/auth/SignUpView.vue` (`/#/auth/sign-up` — selector `ListRegions`).
     - `views/profile/UserProfileView.vue` (`/#/u/:username` — `CU01`): Ficha pública (avatar, bio, región, `reputation_score`, `current_level`, `streak_days`, estadísticas de autoría) + panel de edición de perfil (`UpdateProfile` + `MediaDropzone(category='avatar')`) y cambio de contraseña (`ChangePassword`) cuando `is_owner == true`.
-- **Criterio de Cierre:** Navegación funcional entre las 23 rutas, login/registro/logout operativos, Popover de Credenciales funcional desde `TopBar`, y `vue-tsc --noEmit` en verde.
+- **Criterio de Cierre:** Navegación funcional entre las 23 rutas, login/registro/logout operativos, Popover de Credenciales funcional desde `TopBar`, y `wails3 task client:check` en verde (0 errores).
 
 ---
 
@@ -148,7 +149,7 @@ flowchart TD
     - `views/community/HomeView.vue` (`/#/`): Palabra del Día (`GetWordOfTheDay`), accesos rápidos y escaparates de colecciones/decks públicos.
     - `views/community/DictionaryView.vue` (`/#/dictionary`): Buscador FTS + `pg_trgm`, filtros por país (`ListRegions`), categoría gramatical y nivel CEFR (`ExploreWords`).
     - `views/community/WordDetailView.vue` (`/#/dictionary/:id`): Ficha completa integrando `FriendlyBlurb`, lista de `SenseItem` y modales según el **Flujo 3 de [`.context/UI_FLOWS.md`](./UI_FLOWS.md)**.
-- **Criterio de Cierre:** `vue-tsc --noEmit` y `npm run build` sin errores; trazabilidad completa de `CU05` y `CU09`.
+- **Criterio de Cierre:** `wails3 task client:check` pasa con 0 errores; trazabilidad completa de `CU05` y `CU09`.
 
 ---
 
@@ -160,7 +161,7 @@ flowchart TD
   - [ ] **`views/community/CollectionDetailView.vue` (`/#/collections/:id` — Ruta #8):** Portada editorial de la colección (`GetCollectionDetail`), descripción y grilla de barajas que la componen con enlace a cada una.
   - [ ] **`views/community/PublicDecksView.vue` (`/#/decks` — Ruta #9):** Catálogo paginado de barajas comunitarias (`ExplorePublicDecks`) mostrando autor, conteo de tarjetas (`word_count`) y contador de clones (`clone_count`).
   - [ ] **`views/community/PublicDeckDetailView.vue` (`/#/decks/:id` — Ruta #10):** Vista previa de las tarjetas (`SenseSummary`) de una baraja pública (`GetDeckDetail`) y botón táctil **"Clonar a Mi Studio"** (`ClonePublicDeck` — `RN03`) que redirige al nuevo deck clonado o inicia repaso.
-- **Criterio de Cierre:** `vue-tsc --noEmit` y `npm run build` limpios; clonación de decks públicos verificada contra `IPalabrarioAPI`.
+- **Criterio de Cierre:** `wails3 task client:check` limpio (0 errores); clonación de decks públicos verificada contra `IPalabrarioAPI`.
 
 ---
 
@@ -173,7 +174,7 @@ flowchart TD
   - [ ] **`views/studio/StudioDeckEditorView.vue` (`/#/studio/decks/:id` — Ruta #14):** Editor de metadatos (`UpdateDeck`: nombre, descripción, switch `is_public`), buscador integrado para añadir acepciones (`AddSenseToDeck` respetando tope de 100 cartas `RN04`), remoción de cartas (`RemoveSenseFromDeck`) y botón *"Estudiar este Deck"* (`/#/studio/session?deckId=:id`).
   - [ ] **`views/studio/StudioCollectionsView.vue` (`/#/studio/collections` — Ruta #15):** Listado de colecciones propias (`ListMyCollections`), creación (`CreateCollection`) y borrado (`DeleteCollection`).
   - [ ] **`views/studio/StudioCollectionEditorView.vue` (`/#/studio/collections/:id` — Ruta #16):** Editor de colección (`UpdateCollection`), vinculación ordenada de barajas (`AddDeckToCollection` validando `RN05`: colecciones públicas solo admiten decks públicos) y desvinculación (`RemoveDeckFromCollection`).
-- **Criterio de Cierre:** `vue-tsc --noEmit` y `npm run build` limpios; reglas `RN04` y `RN05` reflejadas en la UI.
+- **Criterio de Cierre:** `wails3 task client:check` limpio (0 errores); reglas `RN04` y `RN05` reflejadas en la UI.
 
 ---
 
@@ -190,7 +191,7 @@ flowchart TD
   - [ ] **`views/studio/StudioMasteryView.vue` (`/#/studio/mastery` — Ruta #17):**
     - Estadísticas globales de retención (`GetMasterySummary` + `MasteryProgressBar`).
     - Tabla del libro mayor auditable de experiencia (`GetMyXPTransactions` — `RN11`) y vitrina de medallas/logros desbloqueados (`GetMyAchievements`).
-- **Criterio de Cierre:** `vue-tsc --noEmit` y `npm run build` limpios; sesión SM-2 operable por click y teclado (`1..4`, `Espacio`).
+- **Criterio de Cierre:** `wails3 task client:check` limpio (0 errores); sesión SM-2 operable por click y teclado (`1..4`, `Espacio`).
 
 ---
 
@@ -211,7 +212,7 @@ flowchart TD
     - Maneja desconexión temporal / reconexión en ventana de gracia de 10s (`RNF-CON-02`) y salida limpia en `onUnmounted` (`LeaveArenaRoom`).
   - [ ] **`views/arena/ArenaReplayView.vue` (`/#/arena/matches/:matchId` — Ruta #20):**
     - Consume `GetMatchReplayDetail(matchId)` para mostrar el podio histórico y un acordeón/pestañas ronda por ronda (`MatchRoundReplay`) detallando la pregunta, respuesta correcta y qué contestó cada jugador con su tiempo en milisegundos (`time_spent_ms`).
-- **Criterio de Cierre:** `vue-tsc --noEmit` y `npm run build` limpios; manejo completo de las tramas WS (`ROOM_STATE`, `COUNTDOWN`, `QUESTION`, `ROUND_RESULT`, `PODIUM`, `ERROR`).
+- **Criterio de Cierre:** `wails3 task client:check` limpio (0 errores); manejo completo de las tramas WS (`ROOM_STATE`, `COUNTDOWN`, `QUESTION`, `ROUND_RESULT`, `PODIUM`, `ERROR`).
 
 ---
 
@@ -231,7 +232,7 @@ flowchart TD
     - **Tab 2 — Boletos de Invitación (`CU04`):** Generador de boletos VIP (`GenerateInvitationTickets`) y listado con estado (`ACTIVE`, `REDEEMED`, `EXPIRED`).
     - **Tab 3 — Moderación de Reportes (`CU09`):** Cola de denuncias (`ListCommunityReports`) y resolución (`ResolveCommunityReport`: `DISMISSED`, `RESOLVED` o `CONTENT_ARCHIVED` con archivado en cascada).
     - **Tab 4 — Directorio de Usuarios (`CU03`):** Buscador de cuentas (`ListUsersForGovernance`), cambio de rol (`UpdateUserRole`) y suspensión (`UpdateUserStatus`) respetando protección del último `ADMIN`.
-- **Criterio de Cierre:** `go build ./...`, `.\scripts\test.ps1`, `vue-tsc --noEmit` y `npm run build` 100% en verde; Fase 5 completada en su totalidad.
+- **Criterio de Cierre:** `wails3 task test` (o `.\scripts\test.ps1`) y `wails3 task client:check` (o `.\scripts\client.ps1 check`) 100% en verde con 0 errores; Fase 5 completada en su totalidad.
 
 ---
 

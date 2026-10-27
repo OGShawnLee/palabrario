@@ -1,0 +1,54 @@
+version: '3'
+
+vars:
+  APP_NAME: "palabrario"
+  BIN_DIR: "bin"
+  PACKAGE_MANAGER: '{{.PACKAGE_MANAGER | default "bun"}}'
+  VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
+  GOOS: '{{.GOOS | default OS}}'
+
+includes:
+  common: ./build/Taskfile.yml
+  windows: ./build/windows/Taskfile.yml
+  darwin: ./build/darwin/Taskfile.yml
+  linux: ./build/linux/Taskfile.yml
+
+tasks:
+  build:
+    summary: Compila la aplicación de escritorio
+    cmds:
+      - task: "{{.GOOS}}:build"
+
+  package:
+    summary: Empaqueta la versión de producción
+    cmds:
+      - task: "{{.GOOS}}:package"
+
+  run:
+    summary: Ejecuta el binario compilado
+    cmds:
+      - task: "{{.GOOS}}:run"
+
+  start:
+    summary: Compila y lanza la aplicación inmediatamente
+    cmds:
+      - task: build
+      - task: run
+
+  dev:
+    summary: Modo desarrollo en vivo (Hot-Reload)
+    cmds:
+      - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}
+
+  bindings:
+    summary: Regenera bindings TypeScript desde Go
+    cmds:
+      - wails3 generate bindings -clean=true -ts
+
+  check:
+    summary: Verificación rápida total (Bindings + Tipos TS + Vite + Go)
+    cmds:
+      - task: bindings
+      - bun run --cwd frontend type-check
+      - bun run --cwd frontend build
+      - go build .
