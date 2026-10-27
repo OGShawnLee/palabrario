@@ -2,7 +2,7 @@
 
 > **Propósito de este documento (Progressive Disclosure Entrypoint):**  
 > Este archivo es el **Punto de Entrada Único y Enrutador Maestro** para cualquier agente de IA o ingeniero que trabaje en **Palabrario**.  
-> En lugar de duplicar miles de líneas de SQL o contratos HTTP que causarían desfase documental (*Context Drift*), este archivo define las **Reglas Globales Inquebrantables**, el **Stack 100% Go**, el **Puente IPC Nativo de Wails + Adaptador Capacitor PWA**, los **Tokens de Diseño** y te indica **exactamente qué documento especializado abrir** según la tarea solicitada.
+> En lugar de duplicar miles de líneas de SQL o contratos HTTP que causarían desfase documental (*Context Drift*), este archivo define las **Reglas Globales Inquebrantables**, el **Stack 100% Go**, el **Monorepo Frontend con Bun Workspaces (`@palabrario/ui` + `local-app` + `web-portal`)**, el **Puente IPC Nativo de Wails + Adaptadores Web/Capacitor/SSR**, los **Tokens de Diseño** y te indica **exactamente qué documento especializado abrir** según la tarea solicitada.
 
 ---
 
@@ -10,17 +10,19 @@
 
 > [!CAUTION]
 > **LEE ESTO ANTES DE ESCRIBIR UNA SOLA LÍNEA DE CÓDIGO:**
-> 1. **Enfoque Backend-First & Contract-First:** El proyecto ha estabilizado el backend completo en Go (Fases 3.3 a 4). Al construir o conectar el frontend en la Fase 5, la UI se adapta estrictamente a los DTOs que retorna el backend (`wailsjs/go/models.ts`), y **nunca al revés**.
-> 2. **Comunicación Cliente $\to$ Backend vía Puente IPC Go de Wails (`local-app/app.go`) y Adaptador Polimórfico (`IPalabrarioAPI`):**
->    - **En Escritorio (Wails V3):** JavaScript/Vue en el WebView **NUNCA** realiza `fetch()`/`axios` directos a `core-service` ni almacena el token JWT en `localStorage`/`sessionStorage`. El proceso nativo Go de Wails ([`local-app/app.go`](../local-app/app.go)) actúa como **BFF (*Backend-For-Frontend*) local y bóveda de sesión en RAM**: importa directamente los structs de [`pkg/models`](../pkg/models) (gracias a [`go.work`](../go.work)), custodia el `sessionToken` JWT en memoria privada de Go (`sync.RWMutex`), ejecuta las llamadas `net/http` o WebSockets hacia los servicios backend (`:8000`, `:8001`, `:8002`) y expone métodos Go públicos que el compilador de Wails transpila automáticamente a funciones y clases TypeScript (`wailsjs/go/main/App.d.ts` y `wailsjs/go/models.ts`).
->    - **En Móvil / PWA (Capacitor):** Las vistas Vue consumen un único contrato `export type IPalabrarioAPI = typeof WailsAppBridge` (cero interfaces escritas a mano y cero `if (isMobile)` en los componentes `.vue`), delegando en `WailsAdapter` (Desktop IPC) o `CapacitorAdapter` (Móvil / PWA con `@capacitor/preferences`).
+> 1. **Enfoque Backend-First & Contract-First:** El proyecto ha estabilizado el backend completo en Go (Fases 3.3 a 4). Al construir o conectar el frontend en la Fase 5 y Fase 6, la UI se adapta estrictamente a los DTOs que retorna el backend (`local-app/frontend/bindings/palabrario/pkg/models`), y **nunca al revés**.
+> 2. **Monorepo Frontend con Bun Workspaces (`packages/ui`) y Comunicación vía `IPalabrarioAPI`:**
+>    - **Paquete Compartido (`packages/ui` $\to$ `@palabrario/ui`):** Aloja la configuración canónica de UnoCSS (`PALETTE.md`), tipografía `Satoshi`, re-exportación de tipos (`export type *` desde los bindings de Go) y **todos los componentes `.vue` reutilizables y agnósticos del router (SSR-Safe)** (`ui/`, `dictionary/`, `studio/`, `arena/`, `editorial/`).
+>    - **En Escritorio (Wails V3 — `local-app/`):** JavaScript/Vue en el WebView **NUNCA** realiza `fetch()`/`axios` directos a `core-service` ni almacena el token JWT en `localStorage`/`sessionStorage`. El proceso nativo Go de Wails ([`local-app/app.go`](../local-app/app.go)) actúa como **BFF (*Backend-For-Frontend*) local y bóveda de sesión en RAM**: importa directamente los structs de [`pkg/models`](../pkg/models) (gracias a [`go.work`](../go.work)), custodia el `sessionToken` JWT en memoria privada de Go (`sync.RWMutex`), ejecuta las llamadas `net/http` o WebSockets hacia los servicios backend (`:8000`, `:8001`, `:8002`) y expone métodos Go públicos que el compilador de Wails transpila automáticamente a funciones y clases TypeScript (`local-app/frontend/bindings/`).
+>    - **En Móvil / Navegador Web SPA (Capacitor & Browser):** Las vistas Vue consumen un único contrato `export type IPalabrarioAPI = typeof WailsAppBridge` (cero interfaces escritas a mano y cero `if (isMobile)` en los componentes `.vue`), delegando en `WailsDesktopAdapter` (Desktop IPC) o `CapacitorMobileAdapter` (Móvil / Web SPA con `@capacitor/preferences` y `WebSocket` nativo hacia `:8001/ws/arena/{roomCode}?token={jwt}`).
+>    - **En Plataforma Web Híbrida (`web-portal/` — Fase 6 con Astro + `@astrojs/vue`):** Consume el mismo `@palabrario/ui` (`workspace:*`) y `IPalabrarioAPI` para entregar **SSR real + OpenGraph/JSON-LD en las rutas públicas (`#3 a #10`)** y montar el **100% de las 23 rutas interactivas en el navegador** (incluyendo Studio SM-2, Arena WebSocket en vivo y Quórum Editorial).
 > 3. **Prohibido Inventar Contratos o Campos JSON:** Todo endpoint HTTP, trama WebSocket, struct Go y consulta `sqlc` debe apegarse 100% a lo especificado en [`INTERFACES.md`](./INTERFACES.md) y [`SCHEMA_FINAL.sql`](../SCHEMA_FINAL.sql).
 > 4. **Fuente Única de Verdad (SSOT) por Responsabilidad:**
 >    - **¿Qué construir ahora y en qué orden?** $\to$ Lee [`.context/PLAN.md`](./PLAN.md).
 >    - **¿Qué significa cada entidad, regla de negocio (`RN01–RN13`), estado editorial o fórmula SM-2?** $\to$ Lee [`DOMAIN.md`](./DOMAIN.md).
 >    - **¿Qué tablas, columnas, índices o triggers existen en PostgreSQL 17?** $\to$ Lee [`SCHEMA_FINAL.sql`](../SCHEMA_FINAL.sql).
 >    - **¿Qué firma Go tiene cada servicio SOA, qué DTO recibe/devuelve cada endpoint HTTP/WS, qué consultas `sqlc` lleva y cómo se expone en Wails IPC?** $\to$ Lee [`INTERFACES.md`](./INTERFACES.md).
->    - **¿Qué paleta de colores, tipografía (`Satoshi`), rutas (`Hash`), vistas `.vue` y mapeo de endpoints/DTOs usar en la UI?** $\to$ Lee [`UI_SPECIFICATION.md`](./UI_SPECIFICATION.md), [`ROUTES_MAP.md`](./ROUTES_MAP.md) y [`PALETTE.md`](./PALETTE.md).
+>    - **¿Cómo se estructura el monorepo Bun (`packages/ui`, `local-app/frontend`, `web-portal`), qué paleta de colores, tipografía (`Satoshi`), rutas (`Hash`), vistas `.vue` y mapeo de endpoints/DTOs usar en la UI?** $\to$ Lee [`UI_SPECIFICATION.md`](./UI_SPECIFICATION.md), [`ROUTES_MAP.md`](./ROUTES_MAP.md) y [`PALETTE.md`](./PALETTE.md).
 >    - **¿Cómo compilar, correr tests o levantar Docker/Vagrant?** $\to$ Lee [`INFRASTRUCTURE.md`](./INFRASTRUCTURE.md).
 >    - **¿Qué contiene `.context/academic/`?** $\to$ Contiene los entregables académicos formales ([`1-PROJECT-SPECIFICATION.md`](./academic/1-PROJECT-SPECIFICATION.md)). Son documentos formales autocontenidos; **nunca recortes ni elimines secciones de ellos**.
 >    - **¿Qué comandos y scripts automatizados usar para compilar, verificar o probar backend y cliente?** $\to$ Consulta el orquestador raíz [`Taskfile.yml`](../Taskfile.yml) (ejecuta `wails3 task --list`), el manual de escritorio en [`learning/WAILS3-STACK.md`](../learning/WAILS3-STACK.md), o los scripts [`scripts/test.ps1`](../scripts/test.ps1) (backend) y [`scripts/client.ps1`](../scripts/client.ps1) (cliente). **Nunca inventes comandos de compilación ni ejecutes flags manuales sueltos.**
@@ -40,16 +42,26 @@ $$\text{Descubrir con humor} \longrightarrow \text{Validar con rigor (Quórum 3)
 
 ---
 
-## 2. Arquitectura de Red, Puente Wails IPC y Stack Tecnológico (100% Go 1.24)
+## 2. Arquitectura de Red, Monorepo Frontend (`@palabrario/ui`) y Stack Tecnológico (100% Go 1.24)
 
-Todo el ecosistema comparte los tipos de [`pkg/models`](../pkg/models) a través del workspace de Go ([`go.work`](../go.work): `.` + `./local-app`). Esto produce **Tipado End-to-End 100% Automático desde PostgreSQL hasta Vue 3** (`SCHEMA_FINAL.sql` $\to$ `sqlc` $\to$ `pkg/models` $\to$ `local-app/app.go` $\to$ `wailsjs/go/models.ts` + `typeof WailsAppBridge` $\to$ Componentes Vue en Desktop y Capacitor PWA):
+Todo el ecosistema comparte los tipos de [`pkg/models`](../pkg/models) a través del workspace de Go ([`go.work`](../go.work): `.` + `./local-app`) y comparte los componentes visuales a través de **Bun Workspaces** ([`package.json`](../package.json) raíz: `packages/ui`, `local-app/frontend`, `web-portal`). Esto produce **Tipado End-to-End 100% Automático e Isomórfico desde PostgreSQL hasta Desktop, Móvil y Web SSR** (`SCHEMA_FINAL.sql` $\to$ `sqlc` $\to$ `pkg/models` $\to$ `local-app/app.go` $\to$ `bindings/` + `typeof WailsAppBridge` $\to$ `@palabrario/ui` $\to$ Shells Desktop/Mobile/Astro Web):
 
 ```mermaid
 flowchart TD
-    subgraph Desktop["Cliente Multiplataforma (Wails V3 Desktop + Capacitor PWA)"]
-        VueUI["WebView Frontend (Vue 3 + TypeScript + UnoCSS + Reka UI)\n• Consume contrato único IPalabrarioAPI = typeof WailsAppBridge\n• Recibe eventos en vivo vía ArenaEventBus"]
+    subgraph UIWorkspace["Monorepo Frontend (Bun Workspaces)"]
+        SharedUI["@palabrario/ui (packages/ui)\n• Componentes .vue puros y SSR-Safe\n• UnoCSS canónico (PALETTE.md) + Satoshi\n• Tipos exportados desde bindings de Go"]
+        VueUI["Shell Desktop & Mobile SPA (local-app/frontend — Fase 5)\n• 23 Vistas + vue-router (Hash) + Layouts\n• Consume @palabrario/ui + IPalabrarioAPI"]
+        AstroWeb["Shell Web Híbrido (web-portal — Fase 6)\n• Astro SSR + OpenGraph/JSON-LD (Rutas #3–#10)\n• Monta las 23 rutas interactivas en navegador (SM-2, Arena WS, Quórum)"]
+        SharedUI --> VueUI
+        SharedUI --> AstroWeb
+    end
+
+    subgraph Desktop["Puente y Adaptadores de Transporte (IPalabrarioAPI)"]
         WailsGo["Puente Nativo Go BFF (local-app/app.go)\n• Custodia el JWT en RAM privada (Inmune a XSS)\n• Importa pkg/models directamente vía go.work\n• Cliente HTTP/WS/Multipart en Go puro"]
-        VueUI <-->|"WailsAdapter (IPC Nativo)\no CapacitorAdapter (PWA Móvil)"| WailsGo
+        WebAdp["CapacitorMobileAdapter & AstroSSRAdapter\n• fetch() tipado (:8000 / :8002)\n• Browser WebSocket (:8001/ws/arena/{code}?token={jwt})"]
+        VueUI <-->|"WailsDesktopAdapter (IPC)"| WailsGo
+        VueUI <-->|"CapacitorMobileAdapter"| WebAdp
+        AstroWeb <-->|"AstroSSR + WebAdapter"| WebAdp
     end
 
     subgraph BackendGo["Servicios de Backend (Monorepo 100% Go 1.24)"]
@@ -65,6 +77,9 @@ flowchart TD
     WailsGo -->|"net/http JSON + Bearer JWT (:8000)"| Core
     WailsGo <-->|"WebSockets Go (:8001)"| Realtime
     WailsGo -->|"net/http Multipart (:8002)"| ImageSvc
+
+    WebAdp -->|"HTTP JSON (:8000) / Multipart (:8002)"| Core
+    WebAdp <-->|"Browser WS (:8001)"| Realtime
 
     Core -->|"pgxpool + sqlc (ACID)"| Postgres
     Realtime -->|"S2S JWT (sha256 sub-key) -> Prepare & Batch Flush"| Core
@@ -101,7 +116,7 @@ Copia y pega este bloque al iniciar una nueva conversación para enrutar al mode
 ```text
 Hola hermano, continuemos con Palabrario bajo enfoque Backend-First & Contract-First.
 1. Lee primero @.context/CONTEXT.md, @.context/PLAN.md y (si toca UI) @.context/UI_SPECIFICATION.md + @.context/ROUTES_MAP.md + @.context/PALETTE.md.
-2. Todo nuestro backend (core-service :8000, realtime-service :8001 e image-service :8002) es 100% Go 1.24 + Chi v5 + sqlc + pgxpool sobre PostgreSQL 17 (@SCHEMA_FINAL.sql), y el cliente (Wails V3 + Capacitor PWA) se comunica a través del puente Go nativo (local-app/app.go -> wailsjs) bajo el contrato IPalabrarioAPI = typeof WailsAppBridge.
+2. Todo nuestro backend (core-service :8000, realtime-service :8001 e image-service :8002) es 100% Go 1.24 + Chi v5 + sqlc + pgxpool sobre PostgreSQL 17 (@SCHEMA_FINAL.sql), y el frontend opera en un Monorepo con Bun Workspaces: `@palabrario/ui` (`packages/ui/` para componentes puros SSR-Safe y UnoCSS), `local-app/` (Wails V3 + Capacitor SPA) y `web-portal/` (Astro SSR + 100% Web en Fase 6), comunicándose bajo el contrato `IPalabrarioAPI = typeof WailsAppBridge`.
 3. Antes de escribir código, consulta los contratos exactos en @.context/INTERFACES.md y las reglas de dominio en @.context/DOMAIN.md. No inventes campos fuera de INTERFACES.md ni colores fuera de PALETTE.md.
 Hoy vamos a implementar: [Indicar Fase o Tarea de .context/PLAN.md].
 ```
