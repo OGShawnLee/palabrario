@@ -17,8 +17,6 @@
 > **Plataforma Colaborativa y Gamificada de Aprendizaje, Descubrimiento y Preservación del Léxico Dialectal Panhispánico.**  
 > *Proyecto desarrollado para la cátedra de Despliegue de Software (Software Deployment).*
 
-$$\text{Descubrir con humor} \longrightarrow \text{Validar con rigor (Quórum 3)} \longrightarrow \text{Estudiar en Studio} \longrightarrow \text{Medir maestría (SM-2)} \longrightarrow \text{Competir en Arena}$$
-
 </div>
 
 ---
