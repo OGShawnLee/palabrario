@@ -22,7 +22,7 @@ Palabrario/
 │
 └── local-app/                        # 🖥️ Shell Nativo de Escritorio y Móvil SPA
     ├── app.go                        # Puente Go BFF (Custodia JWT en RAM con sync.RWMutex)
-    ├── main.go                       # Punto de entrada Wails v3 (Ventana 1280x820 #F6F3EC)
+    ├── main.go                       # Punto de entrada Wails v3 (Ventana 1280x820 #FFFDF5)
     ├── Taskfile.yml                  # Tareas de compilación y verificación (wails3 task check)
     └── frontend/                     # Shell Vue 3 SPA (Capacitor + Wails)
         ├── package.json              # Depende de "@palabrario/ui": "workspace:*"

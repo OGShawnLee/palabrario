@@ -38,7 +38,7 @@ func main() {
 		Height:           820,
 		MinWidth:         390,
 		MinHeight:        680,
-		BackgroundColour: application.NewRGB(246, 243, 236), // #F6F3EC (paper)
+		BackgroundColour: application.NewRGB(255, 253, 245), // #FFFDF5 (paper)
 		URL:              "/",
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,

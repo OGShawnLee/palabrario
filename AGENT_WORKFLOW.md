@@ -1,4 +1,4 @@
-﻿# 🤖 Guía Maestra de Ingeniería Orientada por Agentes (`AGENT_WORKFLOW.md`)
+# 🤖 Guía Maestra de Ingeniería Orientada por Agentes (`AGENT_WORKFLOW.md`)
 
 > **Manual Operativo de Orquestación de Modelos de IA para el Desarrollo de Palabrario**  
 > **Enfoque:** Patrón *Arquitecto-Constructor* (*Architect-Builder*), *Backend-First*, *Contract-First* y *Monorepo Isomórfico (`@palabrario/ui`)*  
@@ -23,7 +23,7 @@ Hemos estructurado el repositorio bajo **Descubrimiento Progresivo (*Progressive
 | **[`.context/DOMAIN.md`](./.context/DOMAIN.md)** | Las 24 entidades (incluyendo `match_rounds` en 3NF), los 5 contextos DDD, estados editoriales y fórmulas matemáticas (`SM-2` y `RN10`). | Arquitecto (Argón) |
 | **[`.context/INTERFACES.md`](./.context/INTERFACES.md)** | **El Contrato Sagrado:** Interfaces SOA en Go, structs JSON exactos (`pkg/models`), catálogo `sqlc`, JWT S2S y endpoints HTTP/WS. | Arquitecto (Argón) |
 | **[`.context/UI_SPECIFICATION.md`](./.context/UI_SPECIFICATION.md)** | **HUD Central del Cliente:** Reglas de Hierro de UI, Monorepo Bun Workspaces (`packages/ui` $\to$ `@palabrario/ui`), Adaptador Polimórfico (`Wails IPC` + `Capacitor/Web` + `Astro SSR`) y catálogo de componentes. | Arquitecto (Argón) |
-| **[`.context/PALETTE.md`](./.context/PALETTE.md)** | **SSOT Visual (*Imprenta Táctil Ilustrada*):** Tokens cromáticos semánticos (`paper`, `surface`, `ink`, `brand`), tipografía `Satoshi`, sombras `tactile` y `uno.config.ts`. | Arquitecto (Argón) |
+| **[`.context/PALETTE.md`](./.context/PALETTE.md)** | **SSOT Visual (*Imprenta Táctil Ilustrada*):** Tokens cromáticos semánticos (`paper`, `surface`, `ink`, `brand`), tipografía `Satoshi`, sombras `soft*` y `uno.config.ts`. | Arquitecto (Argón) |
 | **[`.context/ROUTES_MAP.md`](./.context/ROUTES_MAP.md)** | **Matriz Canónica de Rutas:** Las 23 vistas mapeadas 1:1 contra Casos de Uso, métodos de `IPalabrarioAPI`, endpoints reales y DTOs (`models.*`). | Arquitecto (Argón) |
 | **[`.context/UI_FLOWS.md`](./.context/UI_FLOWS.md)** | **Flujos de Interacción E2E:** 6 diagramas de secuencia Mermaid (Auth dual, Credenciales/Rol en `TopBar`, Diccionario, SM-2, Arena WS y Curaduría). | Arquitecto (Argón) |
 | **[`SCHEMA_FINAL.sql`](./SCHEMA_FINAL.sql)** | Esquema DDL único y ejecutable en PostgreSQL 17 con triggers `RN06` y `RN07`, tablas de Arena/Replay 3NF y sincronización automática de secuencias. | Arquitecto (Argón) |
@@ -129,10 +129,10 @@ Actúa como Ingeniero Frontend/Desktop Senior en Go, Bun Workspaces y Vue 3. Vam
      - `"name": "@palabrario/ui"`, `"private": true`, `"type": "module"`.
      - `"exports"`: `{ ".": "./src/index.ts", "./uno.config": "./src/uno.config.ts", "./styles.css": "./src/assets/main.css" }`.
      - Script `"type-check": "tsc --noEmit"`.
-     - Dependencias: `vue` (^3.5), `reka-ui`, `lucide-vue-next`, `unocss`, `@unocss/preset-uno`, `@unocss/preset-icons`, , `typescript`.
+     - Dependencias: `vue` (^3.5), `reka-ui`, `lucide-vue-next`, `unocss` (incluye `presetWind3`), `@unocss/preset-icons`, `@unocss/reset`, `@iconify-json/lucide`, `typescript`.
    - `packages/ui/tsconfig.json`: Extiende `../../tsconfig.base.json` e incluye `src`.
    - `packages/ui/src/uno.config.ts`:
-     - Copia **exactamente** la paleta y shortcuts de `@.context/PALETTE.md` (`paper`, `surface`, `ink`, `brand`, `brand-soft`, `success`, `warning`, `info`, fuente `Satoshi`, sombras `tactile-*` y shortcuts `card-editorial`, `btn-brand`, `btn-surface`, `badge-pill`, `input-editorial`).
+     - Copia **exactamente** la paleta y shortcuts de `@.context/PALETTE.md` (`paper`, `surface`, `ink`, `brand`, `brand-soft`, `info`, `success`, `warning`, fuente `Satoshi`, sombras `soft`, `soft-lg`, `soft-brand` y shortcuts `card-editorial`, `card-subtle`, `btn-primary`, `btn-secondary`, `btn-ghost`, `badge-pill`, `input-editorial`).
      - Añade `content.filesystem` apuntando con ruta absoluta (`path.resolve(__dirname, './components/**/*.{vue,ts}').replace(/\\/g, '/')`) para que cualquier consumidor del workspace extraiga todas las clases UnoCSS de `@palabrario/ui`.
    - `packages/ui/src/assets/main.css`: Tipografía `Satoshi` (`@font-face` o import limpio), fondo base `bg-paper text-ink font-sans antialiased` y `.tabular-nums { font-variant-numeric: tabular-nums; }`.
    - `packages/ui/src/types/models.ts`: Archivo puente para re-exportar tipos desde `local-app/frontend/bindings`.
@@ -142,7 +142,7 @@ Actúa como Ingeniero Frontend/Desktop Senior en Go, Bun Workspaces y Vue 3. Vam
    - `local-app/go.mod`: Asegurar módulo `palabrario/local-app` (Go 1.24) enlazado al `go.work` raíz e importando `palabrario/pkg/models`.
    - Eliminar el `greetservice.go` de plantilla y crear `local-app/app.go` y `local-app/main.go` (esqueleto base Wails v3 con `github.com/wailsapp/wails/v3/pkg/application`):
      - Estructura `App` registrada como servicio en `application.New(...)`, con `ctx context.Context`, `httpClient *http.Client`, URLs base configurables por entorno (`PALABRARIO_CORE_URL` default `http://localhost:8000`, `PALABRARIO_REALTIME_URL` default `ws://localhost:8001`, `PALABRARIO_IMAGE_URL` default `http://localhost:8002`), y `sessionToken string` privado protegido por `mu sync.RWMutex`.
-     - Ventana configurada a `1280x820` (mínimo `390x680`) con color de fondo `#F6F3EC` (`paper`: RGB `246, 243, 236`).
+     - Ventana configurada a `1280x820` (mínimo `390x680`) con color de fondo `#FFFDF5` (`paper`: RGB `255, 253, 245`).
    - Actualizar `local-app/Taskfile.yml` en la tarea `check` para ejecutar en orden:
      1. `task: bindings`
      2. `bun run --cwd ../packages/ui type-check`
@@ -342,7 +342,7 @@ Actúa como Ingeniero Frontend Senior en Vue 3, Reka UI y UnoCSS. Vamos a ejecut
    - **`PublicCollectionsView.vue` (`/#/collections` — Ruta #7):** Consume `api.ExplorePublicCollections(query, page, pageSize)`, buscador por texto, badge para colecciones oficiales (`is_official`), conteo de barajas (`deck_count`), autor (`author_username`) y paginación.
    - **`CollectionDetailView.vue` (`/#/collections/:id` — Ruta #8):** Consume `api.GetCollectionDetail(id)`, muestra portada editorial y grilla ordenada de barajas (`decks: DeckSummary[]`) navegando a `/#/decks/:id`.
    - **`PublicDecksView.vue` (`/#/decks` — Ruta #9):** Consume `api.ExplorePublicDecks(query, page, pageSize)` mostrando nombre, descripción, autor, `word_count` (`tabular-nums`) y `clone_count`.
-   - **`PublicDeckDetailView.vue` (`/#/decks/:id` — Ruta #10):** Consume `api.GetDeckDetail(id)`, lista sus tarjetas (`cards: SenseSummary[]`) y presenta el botón `btn-brand` **"Clonar a Mi Studio"** (`RN03` $\to$ `api.ClonePublicDeck(id)` $\to$ redirige a `/#/studio/decks/:newId`).
+   - **`PublicDeckDetailView.vue` (`/#/decks/:id` — Ruta #10):** Consume `api.GetDeckDetail(id)`, lista sus tarjetas (`cards: SenseSummary[]`) y presenta el botón `btn-primary` **"Clonar a Mi Studio"** (`RN03` $\to$ `api.ClonePublicDeck(id)` $\to$ redirige a `/#/studio/decks/:newId`).
 
 ### 3. Restricciones Estrictas (Scope Lock)
 - **PROHIBIDO** usar colores fuera de `@.context/PALETTE.md`.

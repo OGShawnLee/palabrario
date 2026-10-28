@@ -1,6 +1,15 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { defineConfig, presetWind3, presetIcons } from 'unocss'
 
+// Absolute glob so any workspace consumer (local-app, web-portal) extracts classes used by shared components.
+const uiRoot = path.dirname(fileURLToPath(import.meta.url))
+const sharedComponentsGlob = path.resolve(uiRoot, 'components/**/*.{vue,ts}').replace(/\\/g, '/')
+
 export default defineConfig({
+  content: {
+    filesystem: [sharedComponentsGlob],
+  },
   presets: [
     presetWind3(),
     presetIcons({

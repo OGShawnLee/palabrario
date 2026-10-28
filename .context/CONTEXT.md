@@ -1,4 +1,4 @@
-﻿# Palabrario — Master Project Context & Enrutador Arquitectónico (`.context/CONTEXT.md`)
+# Palabrario — Master Project Context & Enrutador Arquitectónico (`.context/CONTEXT.md`)
 
 > **Propósito de este documento (Progressive Disclosure Entrypoint):**  
 > Este archivo es el **Punto de Entrada Único y Enrutador Maestro** para cualquier agente de IA o ingeniero que trabaje en **Palabrario**.  
@@ -100,11 +100,11 @@ flowchart TD
 
 ## 4. Sistema de Diseño Consolidado ("Imprenta Táctil Ilustrada" — Ver [`PALETTE.md`](./PALETTE.md))
 
-Documentado a detalle con ilustraciones de referencia y configuración de UnoCSS en [`.context/PALETTE.md`](./PALETTE.md) bajo **4 Pilares Estructurales + 3 Tokens Semánticos**:
-1. **Lienzo (`paper` `#F6F3EC`) y Superficie (`surface` `#FDFBF6`):** Fondos cálidos de papel editorial que eliminan el blanco clínico.
-2. **Tinta Universal (`ink` `#121212`):** Color único para tipografía (`text-ink`, `text-ink/65`, `text-ink/40`), bordes visibles amigables (`border-2 border-ink`) y sombras táctiles desplazadas (`shadow-tactile`: `3px 3px 0px #121212`).
-3. **Marca Bermellón (`brand` `#F23814` / `brand-soft` `#F77F52`):** Naranja editorial vibrante para CTAs primarios, estados activos y acentos hero.
-4. **Tokens Semánticos y Pasteles (`success` `#0E6B5C` Jade, `warning` `#E89B25` Amber, `info` `#B8C7DC` Cobalt):** Reservados estrictamente para estados de quórum, maestría SM-2, alertas de tabú y etiquetas dialectales/CEFR.
+Documentado a detalle con la ilustración de referencia única (`ref-tactile-friendly.png`) y configuración de UnoCSS en [`.context/PALETTE.md`](./PALETTE.md) bajo **4 Pilares Estructurales + 3 Tokens Semánticos**:
+1. **Lienzo (`paper` `#FFFDF5`) y Superficie (`surface` `#FFFFFF`):** Crema mantequilla suave para el lienzo y blanco limpio para tarjetas elevadas.
+2. **Tinta Universal (`ink` `#3B3B39`):** Carbón grafito suave (nunca negro duro) para tipografía (`text-ink`, `text-ink/65`, `text-ink/40`), bordes por opacidad (`border-ink/10`) y sombras difusas (`shadow-soft`). Sin trazos duros.
+3. **Marca Mandarina (`brand` `#F78C56` / `brand-soft` `#FCA374`):** Mandarina pastel para CTAs primarios (`btn-primary` + `shadow-soft-brand`), racha y acentos hero.
+4. **Acentos Pastel Semánticos (`info` `#7C92FF` Lavanda, `success` `#6CBF73` Salvia, `warning` `#F2B84B` Miel):** Reservados estrictamente para regiones/CEFR/XP, aprobaciones y aciertos, y quórum en curso/tabú.
 5. **Tipografía Única:** **`Satoshi`** en todos los pesos (`Regular 400`, `Bold 700`, `Black 900`), usando `tabular-nums` para temporizadores, códigos PIN y marcadores en vivo.
 
 ---
