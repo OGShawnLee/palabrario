@@ -54,7 +54,7 @@ flowchart LR
 | **3. `core-service` (`:8000` — `CU01–CU14, CU16`)** | **100% Completo** | Los 7 servicios SOA implementados, enrutados en `router.go` y con suite de pruebas pasando al 100%. |
 | **4. `realtime-service` (`:8001` — `CU15, CU16`)** | **100% Completo** | `ArenaHub` WebSocket concurrente en RAM con tests pasando con `-race`. |
 | **5. `image-service` (`:8002` — `RN12 / RNF-SEG-04`)** | **100% Completo** | Sanitización EXIF, redimensionado y filtro NSFW en Go puro con tests pasando con `-race`. |
-| **6. Monorepo UI (`packages/ui`) + Cliente (`local-app/`)** | **🚧 En Construcción (Fase 5)** | Inicializado con Wails V3 + Bun; listo para estructurar en **9 sub-fases atómicas (5.1 a 5.9)** bajo la arquitectura de [`.context/UI_SPECIFICATION.md`](./UI_SPECIFICATION.md), [`.context/ROUTES_MAP.md`](./ROUTES_MAP.md), [`.context/UI_FLOWS.md`](./UI_FLOWS.md) y [`.context/PALETTE.md`](./PALETTE.md). |
+| **6. Monorepo UI (`packages/ui`) + Cliente (`local-app/`)** | **🚧 En Construcción (Fase 5)** | Scaffolding Bun Workspaces, `@palabrario/ui` y puente nativo modular completados (5.1 y 5.2 cerradas). Siguiente: Sub-Fase 5.3 (Navegación, Auth y Perfil). |
 | **7. Plataforma Web Híbrida (`web-portal/` — Astro SSR + SPA)** | **⏳ Planificada (Fase 6)** | Consumirá `@palabrario/ui` y `IPalabrarioAPI` para ofrecer SSR/SEO + OpenGraph en rutas públicas (`#3–#10`) y el 100% de las 23 rutas interactivas (incluyendo WebSockets hacia `:8001`) en el navegador. |
 
 ---
@@ -82,44 +82,45 @@ flowchart TD
 
 ---
 
-### 📍 Sub-Fase 5.1: Monorepo Bun Workspaces (`packages/ui` $\to$ `@palabrario/ui`) + Inicialización de `local-app` (Wails V3 + Capacitor + UnoCSS) — **[SIGUIENTE EN COLA]**
+### 📍 Sub-Fase 5.1: Monorepo Bun Workspaces (`packages/ui` $\to$ `@palabrario/ui`) + Inicialización de `local-app` (Wails V3 + Capacitor + UnoCSS) — **[✅ COMPLETADA]**
 
 - **Objetivo:** Plantar los cimientos del monorepo frontend con **Bun Workspaces**, creando el paquete compartido `packages/ui` (`@palabrario/ui`) con el sistema de diseño *"Imprenta Táctil Ilustrada"*, el alias universal `@bindings/*` en TypeScript y configurando `local-app/` (Wails V3 + Capacitor + Vue 3) para consumirlo sin fricción.
 - **Entregables y Checklist:**
-  - [ ] **Raíz del Monorepo Frontend (`package.json` y `tsconfig.base.json`):**
+  - [x] **Raíz del Monorepo Frontend (`package.json` y `tsconfig.base.json`):**
     - `package.json` en la raíz del repositorio con `"workspaces": ["packages/*", "local-app/frontend"]` (listo para añadir `"web-portal"` en Fase 6).
     - `tsconfig.base.json` con configuración TypeScript estricta compartida y mapeo de alias `"paths": { "@bindings/*": ["local-app/frontend/bindings/*"] }`.
-  - [ ] **Paquete Compartido `packages/ui/` (`@palabrario/ui`):**
+  - [x] **Paquete Compartido `packages/ui/` (`@palabrario/ui`):**
     - `packages/ui/package.json` (`name: "@palabrario/ui"`, `exports` para `.`, `./uno.config`, `./styles.css`) con dependencias `vue`, `reka-ui`, `lucide-vue-next`, `unocss`, `@unocss/preset-uno`, `@unocss/preset-icons` y `@iconify-json/lucide`.
     - `packages/ui/src/uno.config.ts`: Configuración canónica exacta de [`.context/PALETTE.md`](./PALETTE.md) (tokens `paper`, `surface`, `ink`, `brand`, `brand-soft`, `success`, `warning`, `info`, sombras `tactile-*` y shortcuts `card-editorial`, `btn-brand`, `btn-surface`, `badge-pill`, `input-editorial`) incluyendo `content.filesystem` apuntando a `packages/ui/src/components/**/*.{vue,ts}` para extracción cross-workspace garantizada.
     - `packages/ui/src/assets/main.css`: Tipografía `Satoshi`, variables editoriales y `.tabular-nums`.
     - Estructura de carpetas en `packages/ui/src/components/`: `ui/`, `dictionary/`, `studio/`, `arena/`, `editorial/` y `packages/ui/src/index.ts` (barrel export de componentes). Los componentes importan directamente sus tipos desde `@bindings/palabrario/pkg/models`.
-  - [ ] **Capa Go de Escritorio (`local-app/go.mod`, `local-app/main.go`, `local-app/app.go` base y `local-app/Taskfile.yml`):**
+  - [x] **Capa Go de Escritorio (`local-app/go.mod`, `local-app/main.go`, `local-app/app.go` base y `local-app/Taskfile.yml`):**
     - Aplicación de escritorio Go Wails V3 vinculada a `palabrario/pkg/models`, ventana nativa (`1280x820`, min `390x680`, color `#F6F3EC` `paper`) y estructura `App` con `sessionToken` privado protegido por `sync.RWMutex` (reemplazando el `GreetService` de plantilla).
     - `local-app/Taskfile.yml` actualizado en la tarea `check` para validar `bindings` $\to$ `type-check` en `../packages/ui` $\to$ `type-check` en `frontend` $\to$ `build` en `frontend` $\to$ `go build .`.
-  - [ ] **Shell Frontend (`local-app/frontend/`):**
+  - [x] **Shell Frontend (`local-app/frontend/`):**
     - `package.json` dependiendo de `"@palabrario/ui": "workspace:*"`, `vue`, `vue-router`, `@wailsio/runtime`, `@capacitor/core`, `@capacitor/cli`, `@capacitor/preferences`, `@vitejs/plugin-vue` y `unocss`.
     - `local-app/frontend/uno.config.ts` re-exportando `@palabrario/ui/uno.config`.
     - `local-app/frontend/vite.config.ts` con alias `@` -> `./src` y `@bindings` -> `./bindings`.
     - `capacitor.config.ts` apuntando a `dist`.
     - Estructura de directorios en `local-app/frontend/src/`: `api/`, `composables/`, `components/ui/`, `layouts/`, `router/`, `views/` (con subcarpetas `auth/`, `profile/`, `community/`, `studio/`, `arena/`, `editorial/`) y un `App.vue` mínimo verificable importando estilos de `@palabrario/ui`.
-  - [ ] **`local-app/README.md`:** Documentación clara de la arquitectura del monorepo (`@palabrario/ui` + `local-app/frontend`), flujo dual (Wails Desktop vs Capacitor/Web) y comandos de verificación.
+  - [x] **`local-app/README.md`:** Documentación clara de la arquitectura del monorepo (`@palabrario/ui` + `local-app/frontend`), flujo dual (Wails Desktop vs Capacitor/Web) y comandos de verificación.
 - **Criterio de Cierre:** `wails3 task client:check` (o `.\scripts\client.ps1 check`) pasa con 0 errores.
 
 ---
 
-### 📍 Sub-Fase 5.2: Puente Nativo Go (`local-app/app.go`), Bindings TypeScript y Adaptador Polimórfico (`IPalabrarioAPI`)
+### 📍 Sub-Fase 5.2: Puente Nativo Go (`local-app/app.go`), Bindings TypeScript y Adaptador Polimórfico (`IPalabrarioAPI`) — **[✅ COMPLETADA]**
 
 - **Objetivo:** Construir la capa de comunicación 100% tipada que conecta el cliente con `core-service (:8000)`, `realtime-service (:8001)` e `image-service (:8002)` y disponibilizar los bindings para todos los paquetes mediante `@bindings/*`.
 - **Entregables y Checklist:**
-  - [ ] **`local-app/app.go` Completo:**
+  - [x] **`local-app/app.go` Modularizado por Dominios:**
+    - Estructura modular en `package main`: `app.go` (núcleo y sesión RAM), `app_auth.go`, `app_governance.go`, `app_dictionary.go`, `app_studio.go`, `app_arena.go`, `app_media.go`.
     - Gestión de sesión en memoria (`HasActiveSession`, `SignOut`, `GetMyProfile` con auto-hidratación).
     - Métodos IPC que envuelven los **7 módulos de `core-service (:8000)`** retornando tipos exactos de `pkg/models` (`auth.go`, `identity.go`, `governance.go`, `dictionary.go`, `curation.go`, `studio.go`, `arena.go`).
     - Método `UploadImage(category, filename string, fileBytes []byte) (*models.ImageUploadResponse, error)` hacia `image-service (:8002)`.
     - Cliente WebSocket Go (`ConnectArenaRoom`, `SubmitArenaAnswer`, `LeaveArenaRoom`) hacia `realtime-service (:8001)` que inyecta el `sessionToken` privado y reenvía cada `models.WSMessage` como evento IPC (`arena:ws_message`, `arena:ws_disconnected`).
-  - [ ] **Generación de Bindings TypeScript (`local-app/frontend/bindings/`):**
+  - [x] **Generación de Bindings TypeScript (`local-app/frontend/bindings/`):**
     - Generados automáticamente con `wails3 task client:bindings` y consumibles directamente por `@palabrario/ui` y `local-app/frontend` vía `@bindings/palabrario/pkg/models`.
-  - [ ] **Adaptador Polimórfico Dual (`local-app/frontend/src/api/`):**
+  - [x] **Adaptador Polimórfico Dual (`local-app/frontend/src/api/`):**
     - `client.ts`: Define `import * as WailsAppBridge from '@bindings/palabrario/local-app/app'; export type IPalabrarioAPI = typeof WailsAppBridge;` y exporta el singleton `api` que selecciona automáticamente entre `WailsDesktopAdapter` y `CapacitorMobileAdapter`.
     - `wails.adapter.ts`: Delega 1:1 en `WailsAppBridge`.
     - `capacitor.adapter.ts`: Implementa exactamente `IPalabrarioAPI` usando `fetch` tipado hacia `:8000` y `:8002`, custodiando el JWT con `@capacitor/preferences` (funcional tanto en Capacitor móvil como en Navegador Web SPA).
@@ -128,7 +129,7 @@ flowchart TD
 
 ---
 
-### 📍 Sub-Fase 5.3: Shell de Navegación (`Layouts` + `Router` con Placeholders), `TopBar` + `CredentialsRolePopover` y Autenticación/Perfil (`Rutas #1, #2, #3` — `CU01, CU02, CU04`)
+### 📍 Sub-Fase 5.3: Shell de Navegación (`Layouts` + `Router` con Placeholders), `TopBar` + `CredentialsRolePopover` y Autenticación/Perfil (`Rutas #1, #2, #3` — `CU01, CU02, CU04`) — **[SIGUIENTE EN COLA]**
 
 - **Objetivo:** Levantar el esqueleto completo de enrutamiento de las 23 rutas, los componentes de navegación en `@palabrario/ui`, el flujo de credenciales/rol en la imprenta, y cerrar las vistas de Autenticación y Perfil Social.
 - **Entregables y Checklist:**
