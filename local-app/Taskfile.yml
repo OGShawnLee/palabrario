@@ -49,6 +49,7 @@ tasks:
     summary: Verificación rápida total (Bindings + Tipos TS + Vite + Go)
     cmds:
       - task: bindings
+      - bun run --cwd ../packages/ui type-check
       - bun run --cwd frontend type-check
       - bun run --cwd frontend build
       - go build .

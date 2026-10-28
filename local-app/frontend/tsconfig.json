@@ -1,28 +1,22 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "allowJs": true,
-
-    "noEmit": true,
-    "skipLibCheck": true,
-
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "verbatimModuleSyntax": true,
-
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@bindings/*": ["bindings/*"]
+    },
     "lib": [
       "DOM",
       "DOM.Iterable",
-      "ESNext",
-    ],
-
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": false,
-    "noImplicitAny": false,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
+      "ESNext"
+    ]
   },
-  "include": ["src", "bindings"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    "bindings/**/*.ts"
+  ]
 }

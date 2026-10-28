@@ -1,8 +1,13 @@
-module changeme
+module palabrario/local-app
 
 go 1.26.0
 
-require github.com/wailsapp/wails/v3 v3.0.0
+require (
+	github.com/wailsapp/wails/v3 v3.0.0
+	palabrario v0.0.0
+)
+
+replace palabrario => ../
 
 require (
 	github.com/adrg/xdg v0.5.3 // indirect

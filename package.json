@@ -1,0 +1,8 @@
+{
+  "name": "palabrario-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "local-app/frontend"
+  ]
+}

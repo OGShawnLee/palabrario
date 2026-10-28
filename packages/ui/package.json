@@ -1,0 +1,28 @@
+{
+  "name": "@palabrario/ui",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./uno.config": "./src/uno.config.ts",
+    "./styles.css": "./src/assets/main.css"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@iconify-json/lucide": "^1.2.65",
+    "@unocss/preset-icons": "^66.0.0",
+    "@unocss/preset-uno": "^66.0.0",
+    "@unocss/reset": "^66.12.0",
+    "lucide-vue-next": "^1.0.0",
+    "reka-ui": "^2.1.0",
+    "unocss": "^66.0.0",
+    "vue": "^3.5.44"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "typescript": "^5.7.3"
+  }
+}
