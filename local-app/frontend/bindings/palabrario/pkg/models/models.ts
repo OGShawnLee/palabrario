@@ -16,6 +16,115 @@ export enum AccountRole {
     RoleAdmin = "ADMIN",
 };
 
+export class AchievementStatus {
+    "id_achievement": string;
+    "code": string;
+    "name": string;
+    "description": string;
+    "category": string;
+
+    /**
+     * 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND'
+     */
+    "tier": string;
+    "icon_name": string;
+    "xp_reward": number;
+    "is_unlocked": boolean;
+    "unlocked_at"?: string | null;
+
+    /** Creates a new AchievementStatus instance. */
+    constructor($$source: Partial<AchievementStatus> = {}) {
+        if (!("id_achievement" in $$source)) {
+            this["id_achievement"] = "";
+        }
+        if (!("code" in $$source)) {
+            this["code"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("description" in $$source)) {
+            this["description"] = "";
+        }
+        if (!("category" in $$source)) {
+            this["category"] = "";
+        }
+        if (!("tier" in $$source)) {
+            this["tier"] = "";
+        }
+        if (!("icon_name" in $$source)) {
+            this["icon_name"] = "";
+        }
+        if (!("xp_reward" in $$source)) {
+            this["xp_reward"] = 0;
+        }
+        if (!("is_unlocked" in $$source)) {
+            this["is_unlocked"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AchievementStatus instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AchievementStatus {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new AchievementStatus($$parsedSource as Partial<AchievementStatus>);
+    }
+}
+
+export class AddDeckItemRequest {
+    "id_sense": number;
+    "sort_order"?: number | null;
+
+    /** Creates a new AddDeckItemRequest instance. */
+    constructor($$source: Partial<AddDeckItemRequest> = {}) {
+        if (!("id_sense" in $$source)) {
+            this["id_sense"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AddDeckItemRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AddDeckItemRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new AddDeckItemRequest($$parsedSource as Partial<AddDeckItemRequest>);
+    }
+}
+
+export class AdminOverrideStateRequest {
+    /**
+     * 'APPROVED' o 'HIDDEN'
+     */
+    "state": string;
+
+    /**
+     * Nota de auditoría
+     */
+    "reason"?: string | null;
+
+    /** Creates a new AdminOverrideStateRequest instance. */
+    constructor($$source: Partial<AdminOverrideStateRequest> = {}) {
+        if (!("state" in $$source)) {
+            this["state"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AdminOverrideStateRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AdminOverrideStateRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new AdminOverrideStateRequest($$parsedSource as Partial<AdminOverrideStateRequest>);
+    }
+}
+
 export class ArenaParticipant {
     "id_user": string;
     "user_name": string;
@@ -73,6 +182,55 @@ export class ArenaParticipant {
     }
 }
 
+export class ArenaQuestion {
+    "round_number": number;
+
+    /**
+     * 'DEFINITION_TO_WORD', 'WORD_TO_DEFINITION', 'WORD_TO_IMAGE', etc.
+     */
+    "modality": string;
+    "prompt": string;
+    "options": string[];
+    "explanation": string;
+    "time_limit_secs": number;
+
+    /** Creates a new ArenaQuestion instance. */
+    constructor($$source: Partial<ArenaQuestion> = {}) {
+        if (!("round_number" in $$source)) {
+            this["round_number"] = 0;
+        }
+        if (!("modality" in $$source)) {
+            this["modality"] = "";
+        }
+        if (!("prompt" in $$source)) {
+            this["prompt"] = "";
+        }
+        if (!("options" in $$source)) {
+            this["options"] = [];
+        }
+        if (!("explanation" in $$source)) {
+            this["explanation"] = "";
+        }
+        if (!("time_limit_secs" in $$source)) {
+            this["time_limit_secs"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ArenaQuestion instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ArenaQuestion {
+        const $$createField3_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("options" in $$parsedSource) {
+            $$parsedSource["options"] = $$createField3_0($$parsedSource["options"]);
+        }
+        return new ArenaQuestion($$parsedSource as Partial<ArenaQuestion>);
+    }
+}
+
 export class ArenaRoomState {
     "room_code": string;
     "deck_id": number;
@@ -117,7 +275,7 @@ export class ArenaRoomState {
      * Creates a new ArenaRoomState instance from a string or object.
      */
     static createFrom($$source: any = {}): ArenaRoomState {
-        const $$createField7_0 = $$createType1;
+        const $$createField7_0 = $$createType2;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("participants" in $$parsedSource) {
             $$parsedSource["participants"] = $$createField7_0($$parsedSource["participants"]);
@@ -146,12 +304,90 @@ export class AuthResponse {
      * Creates a new AuthResponse instance from a string or object.
      */
     static createFrom($$source: any = {}): AuthResponse {
-        const $$createField1_0 = $$createType2;
+        const $$createField1_0 = $$createType3;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("user" in $$parsedSource) {
             $$parsedSource["user"] = $$createField1_0($$parsedSource["user"]);
         }
         return new AuthResponse($$parsedSource as Partial<AuthResponse>);
+    }
+}
+
+export class CardReviewResult {
+    "updated_mastery": UserMastery;
+    "xp_awarded": number;
+    "new_total_xp": number;
+    "new_level": number;
+    "current_streak": number;
+    "newly_unlocked_badges"?: AchievementStatus[];
+
+    /** Creates a new CardReviewResult instance. */
+    constructor($$source: Partial<CardReviewResult> = {}) {
+        if (!("updated_mastery" in $$source)) {
+            this["updated_mastery"] = (new UserMastery());
+        }
+        if (!("xp_awarded" in $$source)) {
+            this["xp_awarded"] = 0;
+        }
+        if (!("new_total_xp" in $$source)) {
+            this["new_total_xp"] = 0;
+        }
+        if (!("new_level" in $$source)) {
+            this["new_level"] = 0;
+        }
+        if (!("current_streak" in $$source)) {
+            this["current_streak"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CardReviewResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CardReviewResult {
+        const $$createField0_0 = $$createType4;
+        const $$createField5_0 = $$createType6;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("updated_mastery" in $$parsedSource) {
+            $$parsedSource["updated_mastery"] = $$createField0_0($$parsedSource["updated_mastery"]);
+        }
+        if ("newly_unlocked_badges" in $$parsedSource) {
+            $$parsedSource["newly_unlocked_badges"] = $$createField5_0($$parsedSource["newly_unlocked_badges"]);
+        }
+        return new CardReviewResult($$parsedSource as Partial<CardReviewResult>);
+    }
+}
+
+export class ChangePasswordRequest {
+    /**
+     * Obligatorio
+     */
+    "current_password": string;
+
+    /**
+     * Obligatorio, mín. 8 caracteres
+     */
+    "new_password": string;
+
+    /** Creates a new ChangePasswordRequest instance. */
+    constructor($$source: Partial<ChangePasswordRequest> = {}) {
+        if (!("current_password" in $$source)) {
+            this["current_password"] = "";
+        }
+        if (!("new_password" in $$source)) {
+            this["new_password"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ChangePasswordRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ChangePasswordRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ChangePasswordRequest($$parsedSource as Partial<ChangePasswordRequest>);
     }
 }
 
@@ -201,12 +437,600 @@ export class Collection {
      * Creates a new Collection instance from a string or object.
      */
     static createFrom($$source: any = {}): Collection {
-        const $$createField7_0 = $$createType4;
+        const $$createField7_0 = $$createType8;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("decks" in $$parsedSource) {
             $$parsedSource["decks"] = $$createField7_0($$parsedSource["decks"]);
         }
         return new Collection($$parsedSource as Partial<Collection>);
+    }
+}
+
+export class ConsolidateMatchRequest {
+    "id_match": string;
+    "room_code": string;
+    "participants": ParticipantFinalResult[];
+
+    /** Creates a new ConsolidateMatchRequest instance. */
+    constructor($$source: Partial<ConsolidateMatchRequest> = {}) {
+        if (!("id_match" in $$source)) {
+            this["id_match"] = "";
+        }
+        if (!("room_code" in $$source)) {
+            this["room_code"] = "";
+        }
+        if (!("participants" in $$source)) {
+            this["participants"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ConsolidateMatchRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ConsolidateMatchRequest {
+        const $$createField2_0 = $$createType10;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("participants" in $$parsedSource) {
+            $$parsedSource["participants"] = $$createField2_0($$parsedSource["participants"]);
+        }
+        return new ConsolidateMatchRequest($$parsedSource as Partial<ConsolidateMatchRequest>);
+    }
+}
+
+export class ContentReport {
+    "id_report": string;
+    "id_reporter": string;
+    "reporter_user_name": string;
+
+    /**
+     * 'WORD', 'SENSE', 'EXAMPLE'
+     */
+    "target_type": string;
+    "id_word"?: number | null;
+    "id_sense"?: number | null;
+    "id_example"?: number | null;
+
+    /**
+     * Lema o texto reportado para inspección rápida
+     */
+    "target_preview": string;
+
+    /**
+     * 'INACCURATE_DEFINITION', 'OFFENSIVE_UNMARKED', 'SPAM_OR_VANDALISM', 'DUPLICATE', 'OTHER'
+     */
+    "reason": string;
+    "details": string;
+
+    /**
+     * 'PENDING', 'RESOLVED_HIDDEN', 'RESOLVED_AMENDED', 'DISMISSED'
+     */
+    "status": string;
+    "resolved_by"?: string | null;
+    "resolution_notes"?: string | null;
+    "created_at": string;
+    "resolved_at"?: string | null;
+
+    /** Creates a new ContentReport instance. */
+    constructor($$source: Partial<ContentReport> = {}) {
+        if (!("id_report" in $$source)) {
+            this["id_report"] = "";
+        }
+        if (!("id_reporter" in $$source)) {
+            this["id_reporter"] = "";
+        }
+        if (!("reporter_user_name" in $$source)) {
+            this["reporter_user_name"] = "";
+        }
+        if (!("target_type" in $$source)) {
+            this["target_type"] = "";
+        }
+        if (!("target_preview" in $$source)) {
+            this["target_preview"] = "";
+        }
+        if (!("reason" in $$source)) {
+            this["reason"] = "";
+        }
+        if (!("details" in $$source)) {
+            this["details"] = "";
+        }
+        if (!("status" in $$source)) {
+            this["status"] = "";
+        }
+        if (!("created_at" in $$source)) {
+            this["created_at"] = "0001-01-01T00:00:00.000Z";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ContentReport instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ContentReport {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ContentReport($$parsedSource as Partial<ContentReport>);
+    }
+}
+
+export class CreateCollectionRequest {
+    "title": string;
+    "description"?: string | null;
+    "is_public": boolean;
+
+    /**
+     * Solo ADMIN/EDITOR
+     */
+    "is_featured": boolean;
+
+    /**
+     * Solo ADMIN/EDITOR (RN05)
+     */
+    "is_official": boolean;
+
+    /**
+     * Ordenados según el arreglo
+     */
+    "deck_ids": number[];
+
+    /** Creates a new CreateCollectionRequest instance. */
+    constructor($$source: Partial<CreateCollectionRequest> = {}) {
+        if (!("title" in $$source)) {
+            this["title"] = "";
+        }
+        if (!("is_public" in $$source)) {
+            this["is_public"] = false;
+        }
+        if (!("is_featured" in $$source)) {
+            this["is_featured"] = false;
+        }
+        if (!("is_official" in $$source)) {
+            this["is_official"] = false;
+        }
+        if (!("deck_ids" in $$source)) {
+            this["deck_ids"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CreateCollectionRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CreateCollectionRequest {
+        const $$createField5_0 = $$createType11;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("deck_ids" in $$parsedSource) {
+            $$parsedSource["deck_ids"] = $$createField5_0($$parsedSource["deck_ids"]);
+        }
+        return new CreateCollectionRequest($$parsedSource as Partial<CreateCollectionRequest>);
+    }
+}
+
+export class CreateConceptRequest {
+    /**
+     * Ej. 'street_market'
+     */
+    "concept_key": string;
+
+    /**
+     * Ej. 'Mercado ambulante tradicional al aire libre'
+     */
+    "universal_description": string;
+
+    /** Creates a new CreateConceptRequest instance. */
+    constructor($$source: Partial<CreateConceptRequest> = {}) {
+        if (!("concept_key" in $$source)) {
+            this["concept_key"] = "";
+        }
+        if (!("universal_description" in $$source)) {
+            this["universal_description"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CreateConceptRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CreateConceptRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CreateConceptRequest($$parsedSource as Partial<CreateConceptRequest>);
+    }
+}
+
+export class CreateDeckRequest {
+    /**
+     * Obligatorio, 3..150 chars
+     */
+    "title": string;
+    "description"?: string | null;
+    "is_public": boolean;
+
+    /**
+     * Solo respetado si role IN ('EDITOR', 'ADMIN') (RN05)
+     */
+    "is_official": boolean;
+
+    /**
+     * Tarjetas iniciales opcionales
+     */
+    "sense_ids"?: number[];
+
+    /** Creates a new CreateDeckRequest instance. */
+    constructor($$source: Partial<CreateDeckRequest> = {}) {
+        if (!("title" in $$source)) {
+            this["title"] = "";
+        }
+        if (!("is_public" in $$source)) {
+            this["is_public"] = false;
+        }
+        if (!("is_official" in $$source)) {
+            this["is_official"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CreateDeckRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CreateDeckRequest {
+        const $$createField4_0 = $$createType11;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("sense_ids" in $$parsedSource) {
+            $$parsedSource["sense_ids"] = $$createField4_0($$parsedSource["sense_ids"]);
+        }
+        return new CreateDeckRequest($$parsedSource as Partial<CreateDeckRequest>);
+    }
+}
+
+export class CreateEditorRequestDTO {
+    /**
+     * Obligatorio, 3..150 chars
+     */
+    "institution_name": string;
+
+    /**
+     * Obligatorio, mín. 20 chars
+     */
+    "justification": string;
+
+    /**
+     * Opcional, URL del comprobante
+     */
+    "credentials_url"?: string | null;
+
+    /** Creates a new CreateEditorRequestDTO instance. */
+    constructor($$source: Partial<CreateEditorRequestDTO> = {}) {
+        if (!("institution_name" in $$source)) {
+            this["institution_name"] = "";
+        }
+        if (!("justification" in $$source)) {
+            this["justification"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CreateEditorRequestDTO instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CreateEditorRequestDTO {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CreateEditorRequestDTO($$parsedSource as Partial<CreateEditorRequestDTO>);
+    }
+}
+
+export class CreateExampleInput {
+    /**
+     * Obligatorio, mín. 5 chars
+     */
+    "sentence": string;
+
+    /**
+     * Opcional
+     */
+    "source"?: string | null;
+
+    /** Creates a new CreateExampleInput instance. */
+    constructor($$source: Partial<CreateExampleInput> = {}) {
+        if (!("sentence" in $$source)) {
+            this["sentence"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CreateExampleInput instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CreateExampleInput {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CreateExampleInput($$parsedSource as Partial<CreateExampleInput>);
+    }
+}
+
+/**
+ * Solicitud del cliente a core-service para preparar una nueva sala (CU14)
+ */
+export class CreateMatchRequest {
+    /**
+     * Obligatorio: Baraja base (mín. 8 sentidos APPROVED y >= TotalRounds)
+     */
+    "id_deck": number;
+
+    /**
+     * 8..20 (default 8)
+     */
+    "total_rounds": number;
+
+    /**
+     * 10..30 segundos por ronda (default 15)
+     */
+    "round_time_sec": number;
+
+    /**
+     * Opcional (default true)
+     */
+    "is_public"?: boolean | null;
+
+    /** Creates a new CreateMatchRequest instance. */
+    constructor($$source: Partial<CreateMatchRequest> = {}) {
+        if (!("id_deck" in $$source)) {
+            this["id_deck"] = 0;
+        }
+        if (!("total_rounds" in $$source)) {
+            this["total_rounds"] = 0;
+        }
+        if (!("round_time_sec" in $$source)) {
+            this["round_time_sec"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CreateMatchRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CreateMatchRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CreateMatchRequest($$parsedSource as Partial<CreateMatchRequest>);
+    }
+}
+
+export class CreateReportRequest {
+    /**
+     * 'WORD', 'SENSE', 'EXAMPLE'
+     */
+    "target_type": string;
+    "id_word"?: number | null;
+    "id_sense"?: number | null;
+    "id_example"?: number | null;
+    "reason": string;
+
+    /**
+     * Obligatorio, mín. 10 chars
+     */
+    "details": string;
+
+    /** Creates a new CreateReportRequest instance. */
+    constructor($$source: Partial<CreateReportRequest> = {}) {
+        if (!("target_type" in $$source)) {
+            this["target_type"] = "";
+        }
+        if (!("reason" in $$source)) {
+            this["reason"] = "";
+        }
+        if (!("details" in $$source)) {
+            this["details"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CreateReportRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CreateReportRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CreateReportRequest($$parsedSource as Partial<CreateReportRequest>);
+    }
+}
+
+export class CreateSenseRequest {
+    /**
+     * Obligatorio ('MX', 'AR', etc.)
+     */
+    "region_code": string;
+
+    /**
+     * Obligatorio, <= 255 chars
+     */
+    "short_definition": string;
+
+    /**
+     * Obligatorio
+     */
+    "definition": string;
+    "is_primary": boolean;
+    "is_taboo_or_vulgar": boolean;
+    "cultural_note"?: string | null;
+
+    /**
+     * Opcional, URL procesada por image-service (RN12)
+     */
+    "image_url"?: string | null;
+
+    /**
+     * Default 'B1'
+     */
+    "cefr_level": string;
+
+    /**
+     * Default 'COMMON'
+     */
+    "usage_frequency": string;
+
+    /**
+     * Opcional: vincular heterónimos
+     */
+    "concept_ids"?: number[];
+
+    /**
+     * Ejemplos iniciales
+     */
+    "examples"?: CreateExampleInput[];
+
+    /** Creates a new CreateSenseRequest instance. */
+    constructor($$source: Partial<CreateSenseRequest> = {}) {
+        if (!("region_code" in $$source)) {
+            this["region_code"] = "";
+        }
+        if (!("short_definition" in $$source)) {
+            this["short_definition"] = "";
+        }
+        if (!("definition" in $$source)) {
+            this["definition"] = "";
+        }
+        if (!("is_primary" in $$source)) {
+            this["is_primary"] = false;
+        }
+        if (!("is_taboo_or_vulgar" in $$source)) {
+            this["is_taboo_or_vulgar"] = false;
+        }
+        if (!("cefr_level" in $$source)) {
+            this["cefr_level"] = "";
+        }
+        if (!("usage_frequency" in $$source)) {
+            this["usage_frequency"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CreateSenseRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CreateSenseRequest {
+        const $$createField9_0 = $$createType11;
+        const $$createField10_0 = $$createType13;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("concept_ids" in $$parsedSource) {
+            $$parsedSource["concept_ids"] = $$createField9_0($$parsedSource["concept_ids"]);
+        }
+        if ("examples" in $$parsedSource) {
+            $$parsedSource["examples"] = $$createField10_0($$parsedSource["examples"]);
+        }
+        return new CreateSenseRequest($$parsedSource as Partial<CreateSenseRequest>);
+    }
+}
+
+export class CreateTicketRequest {
+    /**
+     * Si se omite, el backend genera ej. "PAL-UNAM-2026-X9A2"
+     */
+    "code"?: string | null;
+
+    /**
+     * 'LEARNER' o 'EDITOR' (default 'LEARNER')
+     */
+    "granted_role": AccountRole;
+
+    /**
+     * Ej. "Facultad de Filosofía y Letras UNAM"
+     */
+    "institution_name"?: string | null;
+
+    /**
+     * >= 1 (1 = uniuso, >1 = multiuso)
+     */
+    "max_uses": number;
+
+    /**
+     * Opcional
+     */
+    "expires_at"?: string | null;
+
+    /** Creates a new CreateTicketRequest instance. */
+    constructor($$source: Partial<CreateTicketRequest> = {}) {
+        if (!("granted_role" in $$source)) {
+            this["granted_role"] = AccountRole.$zero;
+        }
+        if (!("max_uses" in $$source)) {
+            this["max_uses"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CreateTicketRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CreateTicketRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CreateTicketRequest($$parsedSource as Partial<CreateTicketRequest>);
+    }
+}
+
+export class CreateWordProposalRequest {
+    /**
+     * Obligatorio
+     */
+    "lemma": string;
+
+    /**
+     * Obligatorio
+     */
+    "part_of_speech": string;
+
+    /**
+     * Default 'NEUTRAL'
+     */
+    "gender": WordGender;
+    "etymology"?: string | null;
+    "friendly_blurb"?: string | null;
+
+    /**
+     * Opcional, URL procesada por image-service (RN12)
+     */
+    "image_url"?: string | null;
+    "origin_region_code"?: string | null;
+
+    /**
+     * Obligatorio
+     */
+    "initial_sense": CreateSenseRequest;
+
+    /** Creates a new CreateWordProposalRequest instance. */
+    constructor($$source: Partial<CreateWordProposalRequest> = {}) {
+        if (!("lemma" in $$source)) {
+            this["lemma"] = "";
+        }
+        if (!("part_of_speech" in $$source)) {
+            this["part_of_speech"] = "";
+        }
+        if (!("gender" in $$source)) {
+            this["gender"] = WordGender.$zero;
+        }
+        if (!("initial_sense" in $$source)) {
+            this["initial_sense"] = (new CreateSenseRequest());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CreateWordProposalRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CreateWordProposalRequest {
+        const $$createField7_0 = $$createType14;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("initial_sense" in $$parsedSource) {
+            $$parsedSource["initial_sense"] = $$createField7_0($$parsedSource["initial_sense"]);
+        }
+        return new CreateWordProposalRequest($$parsedSource as Partial<CreateWordProposalRequest>);
     }
 }
 
@@ -256,7 +1080,7 @@ export class Deck {
      * Creates a new Deck instance from a string or object.
      */
     static createFrom($$source: any = {}): Deck {
-        const $$createField7_0 = $$createType6;
+        const $$createField7_0 = $$createType16;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("items" in $$parsedSource) {
             $$parsedSource["items"] = $$createField7_0($$parsedSource["items"]);
@@ -290,12 +1114,69 @@ export class DeckItem {
      * Creates a new DeckItem instance from a string or object.
      */
     static createFrom($$source: any = {}): DeckItem {
-        const $$createField3_0 = $$createType8;
+        const $$createField3_0 = $$createType18;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("sense" in $$parsedSource) {
             $$parsedSource["sense"] = $$createField3_0($$parsedSource["sense"]);
         }
         return new DeckItem($$parsedSource as Partial<DeckItem>);
+    }
+}
+
+export class EditorRequest {
+    "id_request": string;
+    "id_user": string;
+    "user_name": string;
+    "user_full_name": string;
+    "user_email": string;
+    "institution_name": string;
+    "justification": string;
+    "credentials_url"?: string | null;
+    "status": RequestStatus;
+    "reviewed_by"?: string | null;
+    "review_notes"?: string | null;
+    "created_at": string;
+    "resolved_at"?: string | null;
+
+    /** Creates a new EditorRequest instance. */
+    constructor($$source: Partial<EditorRequest> = {}) {
+        if (!("id_request" in $$source)) {
+            this["id_request"] = "";
+        }
+        if (!("id_user" in $$source)) {
+            this["id_user"] = "";
+        }
+        if (!("user_name" in $$source)) {
+            this["user_name"] = "";
+        }
+        if (!("user_full_name" in $$source)) {
+            this["user_full_name"] = "";
+        }
+        if (!("user_email" in $$source)) {
+            this["user_email"] = "";
+        }
+        if (!("institution_name" in $$source)) {
+            this["institution_name"] = "";
+        }
+        if (!("justification" in $$source)) {
+            this["justification"] = "";
+        }
+        if (!("status" in $$source)) {
+            this["status"] = RequestStatus.$zero;
+        }
+        if (!("created_at" in $$source)) {
+            this["created_at"] = "0001-01-01T00:00:00.000Z";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new EditorRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): EditorRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new EditorRequest($$parsedSource as Partial<EditorRequest>);
     }
 }
 
@@ -408,6 +1289,205 @@ export class ImageUploadResponse {
     }
 }
 
+/**
+ * Reactivo interno completo (incluye CorrectOption para calificación en el servidor y persistencia en match_rounds;
+ * cuando realtime-service emite el evento WS "QUESTION" a los clientes, envía ArenaQuestion omitiendo CorrectOption)
+ */
+export class InternalArenaQuestion {
+    "round_number": number;
+    "id_sense": number;
+    "id_question"?: number | null;
+    "lemma"?: string;
+
+    /**
+     * 'DEFINITION_TO_WORD', 'WORD_TO_DEFINITION', 'WORD_TO_IMAGE', etc.
+     */
+    "modality": string;
+    "prompt": string;
+
+    /**
+     * 4 opciones barajadas (option_a..option_d: 1 correcta + 3 distractores)
+     */
+    "options": string[];
+
+    /**
+     * NUNCA enviado en el evento QUESTION, revelado en ROUND_RESULT
+     */
+    "correct_option": string;
+    "explanation": string;
+    "time_limit_secs": number;
+
+    /** Creates a new InternalArenaQuestion instance. */
+    constructor($$source: Partial<InternalArenaQuestion> = {}) {
+        if (!("round_number" in $$source)) {
+            this["round_number"] = 0;
+        }
+        if (!("id_sense" in $$source)) {
+            this["id_sense"] = 0;
+        }
+        if (!("modality" in $$source)) {
+            this["modality"] = "";
+        }
+        if (!("prompt" in $$source)) {
+            this["prompt"] = "";
+        }
+        if (!("options" in $$source)) {
+            this["options"] = [];
+        }
+        if (!("correct_option" in $$source)) {
+            this["correct_option"] = "";
+        }
+        if (!("explanation" in $$source)) {
+            this["explanation"] = "";
+        }
+        if (!("time_limit_secs" in $$source)) {
+            this["time_limit_secs"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new InternalArenaQuestion instance from a string or object.
+     */
+    static createFrom($$source: any = {}): InternalArenaQuestion {
+        const $$createField6_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("options" in $$parsedSource) {
+            $$parsedSource["options"] = $$createField6_0($$parsedSource["options"]);
+        }
+        return new InternalArenaQuestion($$parsedSource as Partial<InternalArenaQuestion>);
+    }
+}
+
+export class InvitationTicket {
+    "id_ticket": string;
+    "code": string;
+    "created_by": string;
+    "granted_role": AccountRole;
+    "institution_name"?: string | null;
+    "max_uses": number;
+    "current_uses": number;
+    "is_active": boolean;
+    "expires_at"?: string | null;
+    "created_at": string;
+
+    /** Creates a new InvitationTicket instance. */
+    constructor($$source: Partial<InvitationTicket> = {}) {
+        if (!("id_ticket" in $$source)) {
+            this["id_ticket"] = "";
+        }
+        if (!("code" in $$source)) {
+            this["code"] = "";
+        }
+        if (!("created_by" in $$source)) {
+            this["created_by"] = "";
+        }
+        if (!("granted_role" in $$source)) {
+            this["granted_role"] = AccountRole.$zero;
+        }
+        if (!("max_uses" in $$source)) {
+            this["max_uses"] = 0;
+        }
+        if (!("current_uses" in $$source)) {
+            this["current_uses"] = 0;
+        }
+        if (!("is_active" in $$source)) {
+            this["is_active"] = false;
+        }
+        if (!("created_at" in $$source)) {
+            this["created_at"] = "0001-01-01T00:00:00.000Z";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new InvitationTicket instance from a string or object.
+     */
+    static createFrom($$source: any = {}): InvitationTicket {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new InvitationTicket($$parsedSource as Partial<InvitationTicket>);
+    }
+}
+
+export class MasteryDashboard {
+    "total_words_studied": number;
+    "due_today_count": number;
+    "count_new": number;
+    "count_learning": number;
+    "count_reviewing": number;
+    "count_mastered": number;
+    "global_retention": number;
+    "total_xp": number;
+    "current_level": number;
+    "current_streak": number;
+    "longest_streak": number;
+    "recent_xp_transactions": XPTransactionItem[];
+    "achievements": AchievementStatus[];
+
+    /** Creates a new MasteryDashboard instance. */
+    constructor($$source: Partial<MasteryDashboard> = {}) {
+        if (!("total_words_studied" in $$source)) {
+            this["total_words_studied"] = 0;
+        }
+        if (!("due_today_count" in $$source)) {
+            this["due_today_count"] = 0;
+        }
+        if (!("count_new" in $$source)) {
+            this["count_new"] = 0;
+        }
+        if (!("count_learning" in $$source)) {
+            this["count_learning"] = 0;
+        }
+        if (!("count_reviewing" in $$source)) {
+            this["count_reviewing"] = 0;
+        }
+        if (!("count_mastered" in $$source)) {
+            this["count_mastered"] = 0;
+        }
+        if (!("global_retention" in $$source)) {
+            this["global_retention"] = 0;
+        }
+        if (!("total_xp" in $$source)) {
+            this["total_xp"] = 0;
+        }
+        if (!("current_level" in $$source)) {
+            this["current_level"] = 0;
+        }
+        if (!("current_streak" in $$source)) {
+            this["current_streak"] = 0;
+        }
+        if (!("longest_streak" in $$source)) {
+            this["longest_streak"] = 0;
+        }
+        if (!("recent_xp_transactions" in $$source)) {
+            this["recent_xp_transactions"] = [];
+        }
+        if (!("achievements" in $$source)) {
+            this["achievements"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MasteryDashboard instance from a string or object.
+     */
+    static createFrom($$source: any = {}): MasteryDashboard {
+        const $$createField11_0 = $$createType20;
+        const $$createField12_0 = $$createType6;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("recent_xp_transactions" in $$parsedSource) {
+            $$parsedSource["recent_xp_transactions"] = $$createField11_0($$parsedSource["recent_xp_transactions"]);
+        }
+        if ("achievements" in $$parsedSource) {
+            $$parsedSource["achievements"] = $$createField12_0($$parsedSource["achievements"]);
+        }
+        return new MasteryDashboard($$parsedSource as Partial<MasteryDashboard>);
+    }
+}
+
 export enum MasteryStage {
     /**
      * The Go zero value for the underlying type of the enum.
@@ -420,6 +1500,197 @@ export enum MasteryStage {
     StageMastered = "MASTERED",
 };
 
+/**
+ * Paquete devuelto al crear/preparar una sala en core-service y al hidratar realtime-service
+ */
+export class MatchPackage {
+    "id_match": string;
+
+    /**
+     * PIN único de 6 caracteres, ej. "MX8921"
+     */
+    "room_code": string;
+    "host_user_id": string;
+    "id_deck": number;
+    "deck_title": string;
+    "is_public": boolean;
+    "total_rounds": number;
+    "round_time_sec": number;
+    "questions": InternalArenaQuestion[];
+
+    /** Creates a new MatchPackage instance. */
+    constructor($$source: Partial<MatchPackage> = {}) {
+        if (!("id_match" in $$source)) {
+            this["id_match"] = "";
+        }
+        if (!("room_code" in $$source)) {
+            this["room_code"] = "";
+        }
+        if (!("host_user_id" in $$source)) {
+            this["host_user_id"] = "";
+        }
+        if (!("id_deck" in $$source)) {
+            this["id_deck"] = 0;
+        }
+        if (!("deck_title" in $$source)) {
+            this["deck_title"] = "";
+        }
+        if (!("is_public" in $$source)) {
+            this["is_public"] = false;
+        }
+        if (!("total_rounds" in $$source)) {
+            this["total_rounds"] = 0;
+        }
+        if (!("round_time_sec" in $$source)) {
+            this["round_time_sec"] = 0;
+        }
+        if (!("questions" in $$source)) {
+            this["questions"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MatchPackage instance from a string or object.
+     */
+    static createFrom($$source: any = {}): MatchPackage {
+        const $$createField8_0 = $$createType22;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("questions" in $$parsedSource) {
+            $$parsedSource["questions"] = $$createField8_0($$parsedSource["questions"]);
+        }
+        return new MatchPackage($$parsedSource as Partial<MatchPackage>);
+    }
+}
+
+export class MatchReplayDetail {
+    "id_match": string;
+    "room_code": string;
+    "id_deck": number;
+    "deck_title": string;
+    "winner_user_id"?: string | null;
+    "status": MatchStatus;
+    "total_rounds": number;
+    "round_time_sec": number;
+    "podium": ArenaParticipant[];
+    "finished_at": string;
+    "rounds": MatchRoundReplay[];
+
+    /** Creates a new MatchReplayDetail instance. */
+    constructor($$source: Partial<MatchReplayDetail> = {}) {
+        if (!("id_match" in $$source)) {
+            this["id_match"] = "";
+        }
+        if (!("room_code" in $$source)) {
+            this["room_code"] = "";
+        }
+        if (!("id_deck" in $$source)) {
+            this["id_deck"] = 0;
+        }
+        if (!("deck_title" in $$source)) {
+            this["deck_title"] = "";
+        }
+        if (!("status" in $$source)) {
+            this["status"] = MatchStatus.$zero;
+        }
+        if (!("total_rounds" in $$source)) {
+            this["total_rounds"] = 0;
+        }
+        if (!("round_time_sec" in $$source)) {
+            this["round_time_sec"] = 0;
+        }
+        if (!("podium" in $$source)) {
+            this["podium"] = [];
+        }
+        if (!("finished_at" in $$source)) {
+            this["finished_at"] = "";
+        }
+        if (!("rounds" in $$source)) {
+            this["rounds"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MatchReplayDetail instance from a string or object.
+     */
+    static createFrom($$source: any = {}): MatchReplayDetail {
+        const $$createField8_0 = $$createType2;
+        const $$createField10_0 = $$createType24;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("podium" in $$parsedSource) {
+            $$parsedSource["podium"] = $$createField8_0($$parsedSource["podium"]);
+        }
+        if ("rounds" in $$parsedSource) {
+            $$parsedSource["rounds"] = $$createField10_0($$parsedSource["rounds"]);
+        }
+        return new MatchReplayDetail($$parsedSource as Partial<MatchReplayDetail>);
+    }
+}
+
+export class MatchRoundReplay {
+    "round_number": number;
+    "id_sense": number;
+    "lemma": string;
+    "modality": string;
+    "prompt": string;
+    "options": string[];
+    "correct_option": string;
+    "explanation": string;
+    "answers": ParticipantRoundAnswer[];
+
+    /** Creates a new MatchRoundReplay instance. */
+    constructor($$source: Partial<MatchRoundReplay> = {}) {
+        if (!("round_number" in $$source)) {
+            this["round_number"] = 0;
+        }
+        if (!("id_sense" in $$source)) {
+            this["id_sense"] = 0;
+        }
+        if (!("lemma" in $$source)) {
+            this["lemma"] = "";
+        }
+        if (!("modality" in $$source)) {
+            this["modality"] = "";
+        }
+        if (!("prompt" in $$source)) {
+            this["prompt"] = "";
+        }
+        if (!("options" in $$source)) {
+            this["options"] = [];
+        }
+        if (!("correct_option" in $$source)) {
+            this["correct_option"] = "";
+        }
+        if (!("explanation" in $$source)) {
+            this["explanation"] = "";
+        }
+        if (!("answers" in $$source)) {
+            this["answers"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MatchRoundReplay instance from a string or object.
+     */
+    static createFrom($$source: any = {}): MatchRoundReplay {
+        const $$createField5_0 = $$createType0;
+        const $$createField8_0 = $$createType26;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("options" in $$parsedSource) {
+            $$parsedSource["options"] = $$createField5_0($$parsedSource["options"]);
+        }
+        if ("answers" in $$parsedSource) {
+            $$parsedSource["answers"] = $$createField8_0($$parsedSource["answers"]);
+        }
+        return new MatchRoundReplay($$parsedSource as Partial<MatchRoundReplay>);
+    }
+}
+
 export enum MatchStatus {
     /**
      * The Go zero value for the underlying type of the enum.
@@ -430,6 +1701,397 @@ export enum MatchStatus {
     MatchStatusInProgress = "IN_PROGRESS",
     MatchStatusFinished = "FINISHED",
 };
+
+export class MatchSummary {
+    "id_match": string;
+    "room_code": string;
+    "id_deck": number;
+    "deck_title": string;
+    "winner_user_id"?: string | null;
+    "status": MatchStatus;
+    "total_rounds": number;
+    "round_time_sec": number;
+    "podium": ArenaParticipant[];
+    "finished_at": string;
+
+    /** Creates a new MatchSummary instance. */
+    constructor($$source: Partial<MatchSummary> = {}) {
+        if (!("id_match" in $$source)) {
+            this["id_match"] = "";
+        }
+        if (!("room_code" in $$source)) {
+            this["room_code"] = "";
+        }
+        if (!("id_deck" in $$source)) {
+            this["id_deck"] = 0;
+        }
+        if (!("deck_title" in $$source)) {
+            this["deck_title"] = "";
+        }
+        if (!("status" in $$source)) {
+            this["status"] = MatchStatus.$zero;
+        }
+        if (!("total_rounds" in $$source)) {
+            this["total_rounds"] = 0;
+        }
+        if (!("round_time_sec" in $$source)) {
+            this["round_time_sec"] = 0;
+        }
+        if (!("podium" in $$source)) {
+            this["podium"] = [];
+        }
+        if (!("finished_at" in $$source)) {
+            this["finished_at"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MatchSummary instance from a string or object.
+     */
+    static createFrom($$source: any = {}): MatchSummary {
+        const $$createField8_0 = $$createType2;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("podium" in $$parsedSource) {
+            $$parsedSource["podium"] = $$createField8_0($$parsedSource["podium"]);
+        }
+        return new MatchSummary($$parsedSource as Partial<MatchSummary>);
+    }
+}
+
+export class PaginatedWords {
+    "items": WordSummaryCard[];
+    "total_count": number;
+    "page": number;
+    "limit": number;
+
+    /** Creates a new PaginatedWords instance. */
+    constructor($$source: Partial<PaginatedWords> = {}) {
+        if (!("items" in $$source)) {
+            this["items"] = [];
+        }
+        if (!("total_count" in $$source)) {
+            this["total_count"] = 0;
+        }
+        if (!("page" in $$source)) {
+            this["page"] = 0;
+        }
+        if (!("limit" in $$source)) {
+            this["limit"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new PaginatedWords instance from a string or object.
+     */
+    static createFrom($$source: any = {}): PaginatedWords {
+        const $$createField0_0 = $$createType28;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("items" in $$parsedSource) {
+            $$parsedSource["items"] = $$createField0_0($$parsedSource["items"]);
+        }
+        return new PaginatedWords($$parsedSource as Partial<PaginatedWords>);
+    }
+}
+
+/**
+ * Payload de Batch Flush enviado de realtime-service a core-service al concluir la partida (CU16)
+ */
+export class ParticipantFinalResult {
+    "id_user": string;
+    "final_score": number;
+    "accuracy_rate": number;
+    "final_rank": number;
+    "total_time_spent_ms": number;
+    "correct_sense_ids": number[];
+    "wrong_sense_ids": number[];
+    "round_attempts": ParticipantRoundAttempt[];
+
+    /** Creates a new ParticipantFinalResult instance. */
+    constructor($$source: Partial<ParticipantFinalResult> = {}) {
+        if (!("id_user" in $$source)) {
+            this["id_user"] = "";
+        }
+        if (!("final_score" in $$source)) {
+            this["final_score"] = 0;
+        }
+        if (!("accuracy_rate" in $$source)) {
+            this["accuracy_rate"] = 0;
+        }
+        if (!("final_rank" in $$source)) {
+            this["final_rank"] = 0;
+        }
+        if (!("total_time_spent_ms" in $$source)) {
+            this["total_time_spent_ms"] = 0;
+        }
+        if (!("correct_sense_ids" in $$source)) {
+            this["correct_sense_ids"] = [];
+        }
+        if (!("wrong_sense_ids" in $$source)) {
+            this["wrong_sense_ids"] = [];
+        }
+        if (!("round_attempts" in $$source)) {
+            this["round_attempts"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ParticipantFinalResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ParticipantFinalResult {
+        const $$createField5_0 = $$createType11;
+        const $$createField6_0 = $$createType11;
+        const $$createField7_0 = $$createType30;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("correct_sense_ids" in $$parsedSource) {
+            $$parsedSource["correct_sense_ids"] = $$createField5_0($$parsedSource["correct_sense_ids"]);
+        }
+        if ("wrong_sense_ids" in $$parsedSource) {
+            $$parsedSource["wrong_sense_ids"] = $$createField6_0($$parsedSource["wrong_sense_ids"]);
+        }
+        if ("round_attempts" in $$parsedSource) {
+            $$parsedSource["round_attempts"] = $$createField7_0($$parsedSource["round_attempts"]);
+        }
+        return new ParticipantFinalResult($$parsedSource as Partial<ParticipantFinalResult>);
+    }
+}
+
+export class ParticipantRoundAnswer {
+    "id_user": string;
+    "user_name": string;
+    "name": string;
+    "avatar_url"?: string;
+    "dialect_code": string;
+    "flag_emoji": string;
+    "selected_option": string;
+    "is_correct": boolean;
+    "time_spent_ms": number;
+    "points_earned": number;
+
+    /** Creates a new ParticipantRoundAnswer instance. */
+    constructor($$source: Partial<ParticipantRoundAnswer> = {}) {
+        if (!("id_user" in $$source)) {
+            this["id_user"] = "";
+        }
+        if (!("user_name" in $$source)) {
+            this["user_name"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("dialect_code" in $$source)) {
+            this["dialect_code"] = "";
+        }
+        if (!("flag_emoji" in $$source)) {
+            this["flag_emoji"] = "";
+        }
+        if (!("selected_option" in $$source)) {
+            this["selected_option"] = "";
+        }
+        if (!("is_correct" in $$source)) {
+            this["is_correct"] = false;
+        }
+        if (!("time_spent_ms" in $$source)) {
+            this["time_spent_ms"] = 0;
+        }
+        if (!("points_earned" in $$source)) {
+            this["points_earned"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ParticipantRoundAnswer instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ParticipantRoundAnswer {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ParticipantRoundAnswer($$parsedSource as Partial<ParticipantRoundAnswer>);
+    }
+}
+
+/**
+ * Detalle de respuesta de un participante en una ronda específica para persistir en quiz_attempts (CU16 Replay)
+ */
+export class ParticipantRoundAttempt {
+    "round_number": number;
+    "id_sense": number;
+    "id_question"?: number | null;
+
+    /**
+     * "" si no respondió (timeout)
+     */
+    "selected_option": string;
+    "is_correct": boolean;
+
+    /**
+     * ElapsedMs del servidor (o RoundTimeSec*1000 en timeout)
+     */
+    "time_spent_ms": number;
+    "points_earned": number;
+
+    /** Creates a new ParticipantRoundAttempt instance. */
+    constructor($$source: Partial<ParticipantRoundAttempt> = {}) {
+        if (!("round_number" in $$source)) {
+            this["round_number"] = 0;
+        }
+        if (!("id_sense" in $$source)) {
+            this["id_sense"] = 0;
+        }
+        if (!("selected_option" in $$source)) {
+            this["selected_option"] = "";
+        }
+        if (!("is_correct" in $$source)) {
+            this["is_correct"] = false;
+        }
+        if (!("time_spent_ms" in $$source)) {
+            this["time_spent_ms"] = 0;
+        }
+        if (!("points_earned" in $$source)) {
+            this["points_earned"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ParticipantRoundAttempt instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ParticipantRoundAttempt {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ParticipantRoundAttempt($$parsedSource as Partial<ParticipantRoundAttempt>);
+    }
+}
+
+export class PublicUserProfile {
+    "id_user": string;
+    "name": string;
+    "user_name": string;
+    "avatar_url"?: string | null;
+    "anchor_dialect": string;
+    "role": AccountRole;
+    "total_xp": number;
+    "current_level": number;
+    "current_streak": number;
+    "longest_streak": number;
+    "unlocked_badges": AchievementStatus[];
+    "public_decks": Deck[];
+    "public_collections": Collection[];
+    "matches_won": number;
+    "podium_count": number;
+    "is_owner": boolean;
+
+    /**
+     * Campos poblados ÚNICAMENTE cuando IsOwner == true:
+     */
+    "email"?: string | null;
+    "private_decks_count"?: number | null;
+    "due_reviews_today"?: number | null;
+    "created_at": string;
+
+    /** Creates a new PublicUserProfile instance. */
+    constructor($$source: Partial<PublicUserProfile> = {}) {
+        if (!("id_user" in $$source)) {
+            this["id_user"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("user_name" in $$source)) {
+            this["user_name"] = "";
+        }
+        if (!("anchor_dialect" in $$source)) {
+            this["anchor_dialect"] = "";
+        }
+        if (!("role" in $$source)) {
+            this["role"] = AccountRole.$zero;
+        }
+        if (!("total_xp" in $$source)) {
+            this["total_xp"] = 0;
+        }
+        if (!("current_level" in $$source)) {
+            this["current_level"] = 0;
+        }
+        if (!("current_streak" in $$source)) {
+            this["current_streak"] = 0;
+        }
+        if (!("longest_streak" in $$source)) {
+            this["longest_streak"] = 0;
+        }
+        if (!("unlocked_badges" in $$source)) {
+            this["unlocked_badges"] = [];
+        }
+        if (!("public_decks" in $$source)) {
+            this["public_decks"] = [];
+        }
+        if (!("public_collections" in $$source)) {
+            this["public_collections"] = [];
+        }
+        if (!("matches_won" in $$source)) {
+            this["matches_won"] = 0;
+        }
+        if (!("podium_count" in $$source)) {
+            this["podium_count"] = 0;
+        }
+        if (!("is_owner" in $$source)) {
+            this["is_owner"] = false;
+        }
+        if (!("created_at" in $$source)) {
+            this["created_at"] = "0001-01-01T00:00:00.000Z";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new PublicUserProfile instance from a string or object.
+     */
+    static createFrom($$source: any = {}): PublicUserProfile {
+        const $$createField10_0 = $$createType6;
+        const $$createField11_0 = $$createType8;
+        const $$createField12_0 = $$createType32;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("unlocked_badges" in $$parsedSource) {
+            $$parsedSource["unlocked_badges"] = $$createField10_0($$parsedSource["unlocked_badges"]);
+        }
+        if ("public_decks" in $$parsedSource) {
+            $$parsedSource["public_decks"] = $$createField11_0($$parsedSource["public_decks"]);
+        }
+        if ("public_collections" in $$parsedSource) {
+            $$parsedSource["public_collections"] = $$createField12_0($$parsedSource["public_collections"]);
+        }
+        return new PublicUserProfile($$parsedSource as Partial<PublicUserProfile>);
+    }
+}
+
+export class RedeemTicketRequest {
+    /**
+     * Obligatorio
+     */
+    "code": string;
+
+    /** Creates a new RedeemTicketRequest instance. */
+    constructor($$source: Partial<RedeemTicketRequest> = {}) {
+        if (!("code" in $$source)) {
+            this["code"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new RedeemTicketRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): RedeemTicketRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new RedeemTicketRequest($$parsedSource as Partial<RedeemTicketRequest>);
+    }
+}
 
 export class Region {
     "id_region": string;
@@ -489,6 +2151,209 @@ export class Region {
     static createFrom($$source: any = {}): Region {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new Region($$parsedSource as Partial<Region>);
+    }
+}
+
+export enum RequestStatus {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    RequestPending = "PENDING",
+    RequestApproved = "APPROVED",
+    RequestRejected = "REJECTED",
+};
+
+export class ResolveEditorRequestDTO {
+    /**
+     * 'APPROVED' o 'REJECTED'
+     */
+    "status": RequestStatus;
+
+    /**
+     * Motivo del dictamen administrativo
+     */
+    "review_notes"?: string | null;
+
+    /** Creates a new ResolveEditorRequestDTO instance. */
+    constructor($$source: Partial<ResolveEditorRequestDTO> = {}) {
+        if (!("status" in $$source)) {
+            this["status"] = RequestStatus.$zero;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ResolveEditorRequestDTO instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ResolveEditorRequestDTO {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ResolveEditorRequestDTO($$parsedSource as Partial<ResolveEditorRequestDTO>);
+    }
+}
+
+export class ResolveReportRequest {
+    /**
+     * 'RESOLVED_HIDDEN', 'RESOLVED_AMENDED', 'DISMISSED'
+     */
+    "status": string;
+    "resolution_notes"?: string | null;
+
+    /** Creates a new ResolveReportRequest instance. */
+    constructor($$source: Partial<ResolveReportRequest> = {}) {
+        if (!("status" in $$source)) {
+            this["status"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ResolveReportRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ResolveReportRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ResolveReportRequest($$parsedSource as Partial<ResolveReportRequest>);
+    }
+}
+
+export enum ReviewDecision {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    DecisionApprove = "APPROVE",
+    DecisionRequestChanges = "REQUEST_CHANGES",
+    DecisionReject = "REJECT",
+};
+
+/**
+ * Trama difundida por el servidor al cerrar una ronda en el evento WS "ROUND_RESULT"
+ */
+export class RoundResultPayload {
+    "round_number": number;
+    "id_sense": number;
+    "correct_option": string;
+    "explanation": string;
+
+    /**
+     * Ordenado por Score DESC, CorrectAnswers DESC, TotalTimeSpentMs ASC
+     */
+    "leaderboard": ArenaParticipant[];
+
+    /** Creates a new RoundResultPayload instance. */
+    constructor($$source: Partial<RoundResultPayload> = {}) {
+        if (!("round_number" in $$source)) {
+            this["round_number"] = 0;
+        }
+        if (!("id_sense" in $$source)) {
+            this["id_sense"] = 0;
+        }
+        if (!("correct_option" in $$source)) {
+            this["correct_option"] = "";
+        }
+        if (!("explanation" in $$source)) {
+            this["explanation"] = "";
+        }
+        if (!("leaderboard" in $$source)) {
+            this["leaderboard"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new RoundResultPayload instance from a string or object.
+     */
+    static createFrom($$source: any = {}): RoundResultPayload {
+        const $$createField4_0 = $$createType2;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("leaderboard" in $$parsedSource) {
+            $$parsedSource["leaderboard"] = $$createField4_0($$parsedSource["leaderboard"]);
+        }
+        return new RoundResultPayload($$parsedSource as Partial<RoundResultPayload>);
+    }
+}
+
+export class SemanticConcept {
+    "id_concept": number;
+    "concept_key": string;
+    "universal_description": string;
+    "linked_senses_count": number;
+
+    /** Creates a new SemanticConcept instance. */
+    constructor($$source: Partial<SemanticConcept> = {}) {
+        if (!("id_concept" in $$source)) {
+            this["id_concept"] = 0;
+        }
+        if (!("concept_key" in $$source)) {
+            this["concept_key"] = "";
+        }
+        if (!("universal_description" in $$source)) {
+            this["universal_description"] = "";
+        }
+        if (!("linked_senses_count" in $$source)) {
+            this["linked_senses_count"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SemanticConcept instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SemanticConcept {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SemanticConcept($$parsedSource as Partial<SemanticConcept>);
+    }
+}
+
+export class SenseApprovalVote {
+    "id_sense": number;
+    "id_editor": string;
+    "editor_user_name": string;
+    "editor_full_name": string;
+    "editor_dialect": string;
+    "decision": ReviewDecision;
+    "feedback_notes"?: string | null;
+    "approved_at": string;
+
+    /** Creates a new SenseApprovalVote instance. */
+    constructor($$source: Partial<SenseApprovalVote> = {}) {
+        if (!("id_sense" in $$source)) {
+            this["id_sense"] = 0;
+        }
+        if (!("id_editor" in $$source)) {
+            this["id_editor"] = "";
+        }
+        if (!("editor_user_name" in $$source)) {
+            this["editor_user_name"] = "";
+        }
+        if (!("editor_full_name" in $$source)) {
+            this["editor_full_name"] = "";
+        }
+        if (!("editor_dialect" in $$source)) {
+            this["editor_dialect"] = "";
+        }
+        if (!("decision" in $$source)) {
+            this["decision"] = ReviewDecision.$zero;
+        }
+        if (!("approved_at" in $$source)) {
+            this["approved_at"] = "0001-01-01T00:00:00.000Z";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SenseApprovalVote instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SenseApprovalVote {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SenseApprovalVote($$parsedSource as Partial<SenseApprovalVote>);
     }
 }
 
@@ -562,12 +2427,160 @@ export class SenseDetail {
      * Creates a new SenseDetail instance from a string or object.
      */
     static createFrom($$source: any = {}): SenseDetail {
-        const $$createField15_0 = $$createType10;
+        const $$createField15_0 = $$createType34;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("examples" in $$parsedSource) {
             $$parsedSource["examples"] = $$createField15_0($$parsedSource["examples"]);
         }
         return new SenseDetail($$parsedSource as Partial<SenseDetail>);
+    }
+}
+
+export class SenseQuorumDetail {
+    "proposal": SenseQuorumItem;
+    "examples": Example[];
+    "votes": SenseApprovalVote[];
+
+    /** Creates a new SenseQuorumDetail instance. */
+    constructor($$source: Partial<SenseQuorumDetail> = {}) {
+        if (!("proposal" in $$source)) {
+            this["proposal"] = (new SenseQuorumItem());
+        }
+        if (!("examples" in $$source)) {
+            this["examples"] = [];
+        }
+        if (!("votes" in $$source)) {
+            this["votes"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SenseQuorumDetail instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SenseQuorumDetail {
+        const $$createField0_0 = $$createType35;
+        const $$createField1_0 = $$createType34;
+        const $$createField2_0 = $$createType37;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("proposal" in $$parsedSource) {
+            $$parsedSource["proposal"] = $$createField0_0($$parsedSource["proposal"]);
+        }
+        if ("examples" in $$parsedSource) {
+            $$parsedSource["examples"] = $$createField1_0($$parsedSource["examples"]);
+        }
+        if ("votes" in $$parsedSource) {
+            $$parsedSource["votes"] = $$createField2_0($$parsedSource["votes"]);
+        }
+        return new SenseQuorumDetail($$parsedSource as Partial<SenseQuorumDetail>);
+    }
+}
+
+export class SenseQuorumItem {
+    "id_sense": number;
+    "id_word": number;
+    "lemma": string;
+    "part_of_speech": string;
+    "region_code": string;
+    "region_name": string;
+    "flag_emoji": string;
+    "short_definition": string;
+    "definition": string;
+    "cultural_note"?: string | null;
+    "image_url"?: string | null;
+    "cefr_level": string;
+    "usage_frequency": string;
+    "is_taboo_or_vulgar": boolean;
+
+    /**
+     * 'DRAFT', 'APPROVED', 'HIDDEN'
+     */
+    "state": string;
+    "author_id": string;
+    "author_user_name": string;
+    "author_full_name": string;
+
+    /**
+     * Votos con decision = 'APPROVE'
+     */
+    "approvals_count": number;
+
+    /**
+     * Constante: 3 (RN06)
+     */
+    "required_quorum": number;
+    "created_at": string;
+
+    /** Creates a new SenseQuorumItem instance. */
+    constructor($$source: Partial<SenseQuorumItem> = {}) {
+        if (!("id_sense" in $$source)) {
+            this["id_sense"] = 0;
+        }
+        if (!("id_word" in $$source)) {
+            this["id_word"] = 0;
+        }
+        if (!("lemma" in $$source)) {
+            this["lemma"] = "";
+        }
+        if (!("part_of_speech" in $$source)) {
+            this["part_of_speech"] = "";
+        }
+        if (!("region_code" in $$source)) {
+            this["region_code"] = "";
+        }
+        if (!("region_name" in $$source)) {
+            this["region_name"] = "";
+        }
+        if (!("flag_emoji" in $$source)) {
+            this["flag_emoji"] = "";
+        }
+        if (!("short_definition" in $$source)) {
+            this["short_definition"] = "";
+        }
+        if (!("definition" in $$source)) {
+            this["definition"] = "";
+        }
+        if (!("cefr_level" in $$source)) {
+            this["cefr_level"] = "";
+        }
+        if (!("usage_frequency" in $$source)) {
+            this["usage_frequency"] = "";
+        }
+        if (!("is_taboo_or_vulgar" in $$source)) {
+            this["is_taboo_or_vulgar"] = false;
+        }
+        if (!("state" in $$source)) {
+            this["state"] = "";
+        }
+        if (!("author_id" in $$source)) {
+            this["author_id"] = "";
+        }
+        if (!("author_user_name" in $$source)) {
+            this["author_user_name"] = "";
+        }
+        if (!("author_full_name" in $$source)) {
+            this["author_full_name"] = "";
+        }
+        if (!("approvals_count" in $$source)) {
+            this["approvals_count"] = 0;
+        }
+        if (!("required_quorum" in $$source)) {
+            this["required_quorum"] = 0;
+        }
+        if (!("created_at" in $$source)) {
+            this["created_at"] = "0001-01-01T00:00:00.000Z";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SenseQuorumItem instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SenseQuorumItem {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SenseQuorumItem($$parsedSource as Partial<SenseQuorumItem>);
     }
 }
 
@@ -695,7 +2708,7 @@ export class StudioDeckSummary {
      * Creates a new StudioDeckSummary instance from a string or object.
      */
     static createFrom($$source: any = {}): StudioDeckSummary {
-        const $$createField7_0 = $$createType6;
+        const $$createField7_0 = $$createType16;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("items" in $$parsedSource) {
             $$parsedSource["items"] = $$createField7_0($$parsedSource["items"]);
@@ -762,8 +2775,8 @@ export class StudyCardItem {
      * Creates a new StudyCardItem instance from a string or object.
      */
     static createFrom($$source: any = {}): StudyCardItem {
-        const $$createField10_0 = $$createType10;
-        const $$createField11_0 = $$createType12;
+        const $$createField10_0 = $$createType34;
+        const $$createField11_0 = $$createType38;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("examples" in $$parsedSource) {
             $$parsedSource["examples"] = $$createField10_0($$parsedSource["examples"]);
@@ -772,6 +2785,353 @@ export class StudyCardItem {
             $$parsedSource["current_mastery"] = $$createField11_0($$parsedSource["current_mastery"]);
         }
         return new StudyCardItem($$parsedSource as Partial<StudyCardItem>);
+    }
+}
+
+export class StudySessionPayload {
+    "deck_id"?: number | null;
+    "total_due": number;
+    "session_cards": StudyCardItem[];
+
+    /** Creates a new StudySessionPayload instance. */
+    constructor($$source: Partial<StudySessionPayload> = {}) {
+        if (!("total_due" in $$source)) {
+            this["total_due"] = 0;
+        }
+        if (!("session_cards" in $$source)) {
+            this["session_cards"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new StudySessionPayload instance from a string or object.
+     */
+    static createFrom($$source: any = {}): StudySessionPayload {
+        const $$createField2_0 = $$createType40;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("session_cards" in $$parsedSource) {
+            $$parsedSource["session_cards"] = $$createField2_0($$parsedSource["session_cards"]);
+        }
+        return new StudySessionPayload($$parsedSource as Partial<StudySessionPayload>);
+    }
+}
+
+/**
+ * Trama enviada por el jugador en el evento WS "SUBMIT_ANSWER"
+ */
+export class SubmitAnswerPayload {
+    "round_number": number;
+    "selected_option": string;
+
+    /**
+     * Solo telemetría; el servidor califica con su reloj monotónico
+     */
+    "client_elapsed_ms": number;
+
+    /** Creates a new SubmitAnswerPayload instance. */
+    constructor($$source: Partial<SubmitAnswerPayload> = {}) {
+        if (!("round_number" in $$source)) {
+            this["round_number"] = 0;
+        }
+        if (!("selected_option" in $$source)) {
+            this["selected_option"] = "";
+        }
+        if (!("client_elapsed_ms" in $$source)) {
+            this["client_elapsed_ms"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SubmitAnswerPayload instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SubmitAnswerPayload {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SubmitAnswerPayload($$parsedSource as Partial<SubmitAnswerPayload>);
+    }
+}
+
+export class SubmitReviewRequest {
+    /**
+     * Obligatorio
+     */
+    "id_sense": number;
+
+    /**
+     * 1: Otra vez (Fallo), 2: Difícil, 3: Bueno, 4: Fácil
+     */
+    "quality_rating": number;
+
+    /**
+     * Tiempo de respuesta en milisegundos
+     */
+    "time_spent_ms": number;
+
+    /** Creates a new SubmitReviewRequest instance. */
+    constructor($$source: Partial<SubmitReviewRequest> = {}) {
+        if (!("id_sense" in $$source)) {
+            this["id_sense"] = 0;
+        }
+        if (!("quality_rating" in $$source)) {
+            this["quality_rating"] = 0;
+        }
+        if (!("time_spent_ms" in $$source)) {
+            this["time_spent_ms"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SubmitReviewRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SubmitReviewRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SubmitReviewRequest($$parsedSource as Partial<SubmitReviewRequest>);
+    }
+}
+
+export class SubmitVoteRequest {
+    /**
+     * 'APPROVE', 'REQUEST_CHANGES', 'REJECT'
+     */
+    "decision": ReviewDecision;
+
+    /**
+     * Obligatorio si Decision != 'APPROVE'
+     */
+    "feedback_notes"?: string | null;
+
+    /** Creates a new SubmitVoteRequest instance. */
+    constructor($$source: Partial<SubmitVoteRequest> = {}) {
+        if (!("decision" in $$source)) {
+            this["decision"] = ReviewDecision.$zero;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SubmitVoteRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SubmitVoteRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SubmitVoteRequest($$parsedSource as Partial<SubmitVoteRequest>);
+    }
+}
+
+export class UpdateCollectionRequest {
+    "title": string;
+    "description"?: string | null;
+    "is_public": boolean;
+    "is_featured": boolean;
+    "is_official": boolean;
+    "deck_ids"?: number[];
+
+    /** Creates a new UpdateCollectionRequest instance. */
+    constructor($$source: Partial<UpdateCollectionRequest> = {}) {
+        if (!("title" in $$source)) {
+            this["title"] = "";
+        }
+        if (!("is_public" in $$source)) {
+            this["is_public"] = false;
+        }
+        if (!("is_featured" in $$source)) {
+            this["is_featured"] = false;
+        }
+        if (!("is_official" in $$source)) {
+            this["is_official"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new UpdateCollectionRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): UpdateCollectionRequest {
+        const $$createField5_0 = $$createType11;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("deck_ids" in $$parsedSource) {
+            $$parsedSource["deck_ids"] = $$createField5_0($$parsedSource["deck_ids"]);
+        }
+        return new UpdateCollectionRequest($$parsedSource as Partial<UpdateCollectionRequest>);
+    }
+}
+
+export class UpdateDeckRequest {
+    "title": string;
+    "description"?: string | null;
+    "is_public": boolean;
+    "is_official": boolean;
+
+    /** Creates a new UpdateDeckRequest instance. */
+    constructor($$source: Partial<UpdateDeckRequest> = {}) {
+        if (!("title" in $$source)) {
+            this["title"] = "";
+        }
+        if (!("is_public" in $$source)) {
+            this["is_public"] = false;
+        }
+        if (!("is_official" in $$source)) {
+            this["is_official"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new UpdateDeckRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): UpdateDeckRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new UpdateDeckRequest($$parsedSource as Partial<UpdateDeckRequest>);
+    }
+}
+
+export class UpdateProfileRequest {
+    /**
+     * Obligatorio, 2..100 chars
+     */
+    "name": string;
+
+    /**
+     * Obligatorio: 'MX','ES','AR','CO','CL','CU','CAM','PAN'
+     */
+    "anchor_dialect": string;
+
+    /**
+     * Opcional, URL generada por image-service
+     */
+    "avatar_url"?: string | null;
+
+    /** Creates a new UpdateProfileRequest instance. */
+    constructor($$source: Partial<UpdateProfileRequest> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("anchor_dialect" in $$source)) {
+            this["anchor_dialect"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new UpdateProfileRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): UpdateProfileRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new UpdateProfileRequest($$parsedSource as Partial<UpdateProfileRequest>);
+    }
+}
+
+export class UpdateSenseRequest {
+    "region_code": string;
+    "short_definition": string;
+    "definition": string;
+    "is_primary": boolean;
+    "is_taboo_or_vulgar": boolean;
+    "cultural_note"?: string | null;
+    "image_url"?: string | null;
+    "cefr_level": string;
+    "usage_frequency": string;
+
+    /** Creates a new UpdateSenseRequest instance. */
+    constructor($$source: Partial<UpdateSenseRequest> = {}) {
+        if (!("region_code" in $$source)) {
+            this["region_code"] = "";
+        }
+        if (!("short_definition" in $$source)) {
+            this["short_definition"] = "";
+        }
+        if (!("definition" in $$source)) {
+            this["definition"] = "";
+        }
+        if (!("is_primary" in $$source)) {
+            this["is_primary"] = false;
+        }
+        if (!("is_taboo_or_vulgar" in $$source)) {
+            this["is_taboo_or_vulgar"] = false;
+        }
+        if (!("cefr_level" in $$source)) {
+            this["cefr_level"] = "";
+        }
+        if (!("usage_frequency" in $$source)) {
+            this["usage_frequency"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new UpdateSenseRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): UpdateSenseRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new UpdateSenseRequest($$parsedSource as Partial<UpdateSenseRequest>);
+    }
+}
+
+export class UpdateUserRoleOrStatusRequest {
+    /**
+     * 'LEARNER', 'EDITOR', 'ADMIN'
+     */
+    "role"?: AccountRole | null;
+
+    /**
+     * Suspensión / Reactivación de cuenta
+     */
+    "is_active"?: boolean | null;
+
+    /** Creates a new UpdateUserRoleOrStatusRequest instance. */
+    constructor($$source: Partial<UpdateUserRoleOrStatusRequest> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new UpdateUserRoleOrStatusRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): UpdateUserRoleOrStatusRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new UpdateUserRoleOrStatusRequest($$parsedSource as Partial<UpdateUserRoleOrStatusRequest>);
+    }
+}
+
+export class UpdateWordRequest {
+    "lemma": string;
+    "part_of_speech": string;
+    "gender": WordGender;
+    "etymology"?: string | null;
+    "friendly_blurb"?: string | null;
+    "image_url"?: string | null;
+    "origin_region_code"?: string | null;
+
+    /** Creates a new UpdateWordRequest instance. */
+    constructor($$source: Partial<UpdateWordRequest> = {}) {
+        if (!("lemma" in $$source)) {
+            this["lemma"] = "";
+        }
+        if (!("part_of_speech" in $$source)) {
+            this["part_of_speech"] = "";
+        }
+        if (!("gender" in $$source)) {
+            this["gender"] = WordGender.$zero;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new UpdateWordRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): UpdateWordRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new UpdateWordRequest($$parsedSource as Partial<UpdateWordRequest>);
     }
 }
 
@@ -978,9 +3338,9 @@ export class WordDetail {
      * Creates a new WordDetail instance from a string or object.
      */
     static createFrom($$source: any = {}): WordDetail {
-        const $$createField8_0 = $$createType14;
-        const $$createField9_0 = $$createType15;
-        const $$createField10_0 = $$createType17;
+        const $$createField8_0 = $$createType42;
+        const $$createField9_0 = $$createType43;
+        const $$createField10_0 = $$createType45;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("origin_region" in $$parsedSource) {
             $$parsedSource["origin_region"] = $$createField8_0($$parsedSource["origin_region"]);
@@ -995,6 +3355,86 @@ export class WordDetail {
     }
 }
 
+/**
+ * Filtro de exploración paginada (GET /api/v1/words)
+ */
+export class WordExploreFilter {
+    "q": string;
+
+    /**
+     * Ej. 'MX', 'AR', 'ES'
+     */
+    "region": string;
+
+    /**
+     * Ej. 'sustantivo', 'verbo', 'adjetivo', 'modismo'
+     */
+    "pos": string;
+
+    /**
+     * 'A1'..'C2', 'NATIVO'
+     */
+    "cefr": string;
+
+    /**
+     * 'EVERYDAY', 'COMMON', 'RARE', 'SLANG', 'ARCHAIC'
+     */
+    "frequency": string;
+
+    /**
+     * Default true
+     */
+    "include_taboo": boolean;
+
+    /**
+     * Default 1
+     */
+    "page": number;
+
+    /**
+     * Default 20, máx 50
+     */
+    "limit": number;
+
+    /** Creates a new WordExploreFilter instance. */
+    constructor($$source: Partial<WordExploreFilter> = {}) {
+        if (!("q" in $$source)) {
+            this["q"] = "";
+        }
+        if (!("region" in $$source)) {
+            this["region"] = "";
+        }
+        if (!("pos" in $$source)) {
+            this["pos"] = "";
+        }
+        if (!("cefr" in $$source)) {
+            this["cefr"] = "";
+        }
+        if (!("frequency" in $$source)) {
+            this["frequency"] = "";
+        }
+        if (!("include_taboo" in $$source)) {
+            this["include_taboo"] = false;
+        }
+        if (!("page" in $$source)) {
+            this["page"] = 0;
+        }
+        if (!("limit" in $$source)) {
+            this["limit"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WordExploreFilter instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WordExploreFilter {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WordExploreFilter($$parsedSource as Partial<WordExploreFilter>);
+    }
+}
+
 export enum WordGender {
     /**
      * The Go zero value for the underlying type of the enum.
@@ -1006,6 +3446,47 @@ export enum WordGender {
     GenderNeutral = "NEUTRAL",
     GenderAmbiguous = "AMBIGUOUS",
 };
+
+export class WordSearchResult {
+    "id_word": number;
+    "lemma": string;
+    "short_definition": string;
+    "flag_emoji": string;
+    "country_code": string;
+    "similarity": number;
+
+    /** Creates a new WordSearchResult instance. */
+    constructor($$source: Partial<WordSearchResult> = {}) {
+        if (!("id_word" in $$source)) {
+            this["id_word"] = 0;
+        }
+        if (!("lemma" in $$source)) {
+            this["lemma"] = "";
+        }
+        if (!("short_definition" in $$source)) {
+            this["short_definition"] = "";
+        }
+        if (!("flag_emoji" in $$source)) {
+            this["flag_emoji"] = "";
+        }
+        if (!("country_code" in $$source)) {
+            this["country_code"] = "";
+        }
+        if (!("similarity" in $$source)) {
+            this["similarity"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WordSearchResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WordSearchResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WordSearchResult($$parsedSource as Partial<WordSearchResult>);
+    }
+}
 
 export class WordSummaryCard {
     "id_word": number;
@@ -1078,22 +3559,88 @@ export class WordSummaryCard {
     }
 }
 
+export class XPTransactionItem {
+    "id_transaction": string;
+    "amount_xp": number;
+
+    /**
+     * 'QUIZ_CORRECT', 'MATCH_WIN', 'DAILY_STREAK', 'DECK_COMPLETED', 'ACHIEVEMENT_UNLOCKED'
+     */
+    "reason": string;
+    "metadata_id"?: string | null;
+    "created_at": string;
+
+    /** Creates a new XPTransactionItem instance. */
+    constructor($$source: Partial<XPTransactionItem> = {}) {
+        if (!("id_transaction" in $$source)) {
+            this["id_transaction"] = "";
+        }
+        if (!("amount_xp" in $$source)) {
+            this["amount_xp"] = 0;
+        }
+        if (!("reason" in $$source)) {
+            this["reason"] = "";
+        }
+        if (!("created_at" in $$source)) {
+            this["created_at"] = "0001-01-01T00:00:00.000Z";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new XPTransactionItem instance from a string or object.
+     */
+    static createFrom($$source: any = {}): XPTransactionItem {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new XPTransactionItem($$parsedSource as Partial<XPTransactionItem>);
+    }
+}
+
 // Private type creation functions
-const $$createType0 = ArenaParticipant.createFrom;
-const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = UserProfile.createFrom;
-const $$createType3 = Deck.createFrom;
-const $$createType4 = $Create.Array($$createType3);
-const $$createType5 = DeckItem.createFrom;
+const $$createType0 = $Create.Array($Create.Any);
+const $$createType1 = ArenaParticipant.createFrom;
+const $$createType2 = $Create.Array($$createType1);
+const $$createType3 = UserProfile.createFrom;
+const $$createType4 = UserMastery.createFrom;
+const $$createType5 = AchievementStatus.createFrom;
 const $$createType6 = $Create.Array($$createType5);
-const $$createType7 = SenseDetail.createFrom;
-const $$createType8 = $Create.Nullable($$createType7);
-const $$createType9 = Example.createFrom;
+const $$createType7 = Deck.createFrom;
+const $$createType8 = $Create.Array($$createType7);
+const $$createType9 = ParticipantFinalResult.createFrom;
 const $$createType10 = $Create.Array($$createType9);
-const $$createType11 = UserMastery.createFrom;
-const $$createType12 = $Create.Nullable($$createType11);
-const $$createType13 = Region.createFrom;
-const $$createType14 = $Create.Nullable($$createType13);
-const $$createType15 = $Create.Array($$createType7);
-const $$createType16 = HeteronymItem.createFrom;
-const $$createType17 = $Create.Array($$createType16);
+const $$createType11 = $Create.Array($Create.Any);
+const $$createType12 = CreateExampleInput.createFrom;
+const $$createType13 = $Create.Array($$createType12);
+const $$createType14 = CreateSenseRequest.createFrom;
+const $$createType15 = DeckItem.createFrom;
+const $$createType16 = $Create.Array($$createType15);
+const $$createType17 = SenseDetail.createFrom;
+const $$createType18 = $Create.Nullable($$createType17);
+const $$createType19 = XPTransactionItem.createFrom;
+const $$createType20 = $Create.Array($$createType19);
+const $$createType21 = InternalArenaQuestion.createFrom;
+const $$createType22 = $Create.Array($$createType21);
+const $$createType23 = MatchRoundReplay.createFrom;
+const $$createType24 = $Create.Array($$createType23);
+const $$createType25 = ParticipantRoundAnswer.createFrom;
+const $$createType26 = $Create.Array($$createType25);
+const $$createType27 = WordSummaryCard.createFrom;
+const $$createType28 = $Create.Array($$createType27);
+const $$createType29 = ParticipantRoundAttempt.createFrom;
+const $$createType30 = $Create.Array($$createType29);
+const $$createType31 = Collection.createFrom;
+const $$createType32 = $Create.Array($$createType31);
+const $$createType33 = Example.createFrom;
+const $$createType34 = $Create.Array($$createType33);
+const $$createType35 = SenseQuorumItem.createFrom;
+const $$createType36 = SenseApprovalVote.createFrom;
+const $$createType37 = $Create.Array($$createType36);
+const $$createType38 = $Create.Nullable($$createType4);
+const $$createType39 = StudyCardItem.createFrom;
+const $$createType40 = $Create.Array($$createType39);
+const $$createType41 = Region.createFrom;
+const $$createType42 = $Create.Nullable($$createType41);
+const $$createType43 = $Create.Array($$createType17);
+const $$createType44 = HeteronymItem.createFrom;
+const $$createType45 = $Create.Array($$createType44);

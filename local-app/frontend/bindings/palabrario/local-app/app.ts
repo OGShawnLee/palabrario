@@ -15,6 +15,458 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 import * as models$0 from "../pkg/models/models.js";
 
 /**
+ * AddDeckItem añade tarjeta a baraja.
+ */
+export function AddDeckItem(deckId: number, req: models$0.AddDeckItemRequest): $CancellablePromise<models$0.DeckItem | null> {
+    return $Call.ByID(242756006, deckId, req).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
+/**
+ * AddDeckToCollection añade una baraja a una colección temática.
+ */
+export function AddDeckToCollection(collectionID: number, deckID: number): $CancellablePromise<models$0.Collection | null> {
+    return $Call.ByID(3168201448, collectionID, deckID).then(($result: any) => {
+        return $$createType3($result);
+    });
+}
+
+/**
+ * AddSenseExample añade un ejemplo de uso a una acepción.
+ */
+export function AddSenseExample(senseId: number, req: models$0.CreateExampleInput): $CancellablePromise<models$0.Example | null> {
+    return $Call.ByID(2885140716, senseId, req).then(($result: any) => {
+        return $$createType5($result);
+    });
+}
+
+/**
+ * AddSenseToDeck vincula un sentido léxico a una baraja.
+ */
+export function AddSenseToDeck(deckId: number, req: models$0.AddDeckItemRequest): $CancellablePromise<models$0.DeckItem | null> {
+    return $Call.ByID(4151334682, deckId, req).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
+/**
+ * AdminForceResolveProposal resolución ejecutiva administrativa directa (RN08).
+ */
+export function AdminForceResolveProposal(senseId: number, req: models$0.AdminOverrideStateRequest): $CancellablePromise<models$0.SenseDetail | null> {
+    return $Call.ByID(2387729467, senseId, req).then(($result: any) => {
+        return $$createType7($result);
+    });
+}
+
+/**
+ * AdminOverrideState resolución administrativa directa.
+ */
+export function AdminOverrideState(senseId: number, req: models$0.AdminOverrideStateRequest): $CancellablePromise<models$0.SenseDetail | null> {
+    return $Call.ByID(2652743129, senseId, req).then(($result: any) => {
+        return $$createType7($result);
+    });
+}
+
+/**
+ * ChangePassword actualiza la contraseña del usuario autenticado.
+ */
+export function ChangePassword(req: models$0.ChangePasswordRequest): $CancellablePromise<void> {
+    return $Call.ByID(3293624408, req);
+}
+
+/**
+ * ClonePublicDeck guarda una baraja comunitaria en el Studio personal.
+ */
+export function ClonePublicDeck(deckId: number): $CancellablePromise<void> {
+    return $Call.ByID(1176579894, deckId);
+}
+
+/**
+ * ConnectArena alias para conexión a sala de arena.
+ */
+export function ConnectArena(roomCode: string): $CancellablePromise<void> {
+    return $Call.ByID(1097669708, roomCode);
+}
+
+/**
+ * ConnectArenaRoom establece conexión WebSocket hacia realtime-service (:8001).
+ */
+export function ConnectArenaRoom(roomCode: string): $CancellablePromise<void> {
+    return $Call.ByID(3157404919, roomCode);
+}
+
+/**
+ * CreateArenaMatch prepara una nueva partida competitiva en vivo.
+ */
+export function CreateArenaMatch(req: models$0.CreateMatchRequest): $CancellablePromise<models$0.MatchPackage | null> {
+    return $Call.ByID(805008313, req).then(($result: any) => {
+        return $$createType9($result);
+    });
+}
+
+/**
+ * CreateCollection crea una nueva colección temática.
+ */
+export function CreateCollection(req: models$0.CreateCollectionRequest): $CancellablePromise<models$0.Collection | null> {
+    return $Call.ByID(2603031537, req).then(($result: any) => {
+        return $$createType3($result);
+    });
+}
+
+/**
+ * CreateCommunityReport emite un reporte comunitario sobre léxico o sentidos.
+ */
+export function CreateCommunityReport(req: models$0.CreateReportRequest): $CancellablePromise<models$0.ContentReport | null> {
+    return $Call.ByID(1435038876, req).then(($result: any) => {
+        return $$createType11($result);
+    });
+}
+
+/**
+ * CreateConcept registra un concepto semántico.
+ */
+export function CreateConcept(req: models$0.CreateConceptRequest): $CancellablePromise<models$0.SemanticConcept | null> {
+    return $Call.ByID(1090323699, req).then(($result: any) => {
+        return $$createType13($result);
+    });
+}
+
+/**
+ * CreateDeck crea una nueva baraja de estudio.
+ */
+export function CreateDeck(req: models$0.CreateDeckRequest): $CancellablePromise<models$0.Deck | null> {
+    return $Call.ByID(2993157128, req).then(($result: any) => {
+        return $$createType15($result);
+    });
+}
+
+/**
+ * CreateEditorRequest solicita ascenso a Editor con comprobante institucional.
+ */
+export function CreateEditorRequest(req: models$0.CreateEditorRequestDTO): $CancellablePromise<models$0.EditorRequest | null> {
+    return $Call.ByID(888523433, req).then(($result: any) => {
+        return $$createType17($result);
+    });
+}
+
+/**
+ * CreateExample registra un ejemplo en una acepción.
+ */
+export function CreateExample(senseId: number, req: models$0.CreateExampleInput): $CancellablePromise<models$0.Example | null> {
+    return $Call.ByID(3188382337, senseId, req).then(($result: any) => {
+        return $$createType5($result);
+    });
+}
+
+/**
+ * CreateInvitationTicket genera un boleto institucional de acceso/ascenso.
+ */
+export function CreateInvitationTicket(req: models$0.CreateTicketRequest): $CancellablePromise<models$0.InvitationTicket | null> {
+    return $Call.ByID(3803345210, req).then(($result: any) => {
+        return $$createType19($result);
+    });
+}
+
+/**
+ * CreateReport emite un reporte de moderación.
+ */
+export function CreateReport(req: models$0.CreateReportRequest): $CancellablePromise<models$0.ContentReport | null> {
+    return $Call.ByID(2482282059, req).then(($result: any) => {
+        return $$createType11($result);
+    });
+}
+
+/**
+ * CreateSemanticConcept crea un nuevo concepto semántico común.
+ */
+export function CreateSemanticConcept(req: models$0.CreateConceptRequest): $CancellablePromise<models$0.SemanticConcept | null> {
+    return $Call.ByID(8965063, req).then(($result: any) => {
+        return $$createType13($result);
+    });
+}
+
+/**
+ * CreateSense registra una nueva acepción.
+ */
+export function CreateSense(wordId: number, req: models$0.CreateSenseRequest): $CancellablePromise<models$0.SenseDetail | null> {
+    return $Call.ByID(512169337, wordId, req).then(($result: any) => {
+        return $$createType7($result);
+    });
+}
+
+/**
+ * CreateSenseProposal propone una nueva acepción dentro de un lema.
+ */
+export function CreateSenseProposal(wordId: number, req: models$0.CreateSenseRequest): $CancellablePromise<models$0.SenseDetail | null> {
+    return $Call.ByID(635993451, wordId, req).then(($result: any) => {
+        return $$createType7($result);
+    });
+}
+
+/**
+ * CreateWord registra una propuesta de lema.
+ */
+export function CreateWord(req: models$0.CreateWordProposalRequest): $CancellablePromise<models$0.WordDetail | null> {
+    return $Call.ByID(1873533021, req).then(($result: any) => {
+        return $$createType21($result);
+    });
+}
+
+/**
+ * CreateWordProposal registra una nueva propuesta editorial de lema.
+ */
+export function CreateWordProposal(req: models$0.CreateWordProposalRequest): $CancellablePromise<models$0.WordDetail | null> {
+    return $Call.ByID(798246919, req).then(($result: any) => {
+        return $$createType21($result);
+    });
+}
+
+/**
+ * DeleteCollection elimina una colección temática.
+ */
+export function DeleteCollection(id: number): $CancellablePromise<void> {
+    return $Call.ByID(2537942162, id);
+}
+
+/**
+ * DeleteDeck elimina una baraja de autoría propia.
+ */
+export function DeleteDeck(id: number): $CancellablePromise<void> {
+    return $Call.ByID(4230777867, id);
+}
+
+/**
+ * DeleteExample elimina un ejemplo.
+ */
+export function DeleteExample(exampleId: number): $CancellablePromise<void> {
+    return $Call.ByID(2427814204, exampleId);
+}
+
+/**
+ * DeleteSense elimina una acepción si se cuenta con privilegios editoriales.
+ */
+export function DeleteSense(senseId: number): $CancellablePromise<void> {
+    return $Call.ByID(2554666112, senseId);
+}
+
+/**
+ * ExplorePublicCollections lista colecciones públicas con filtro de destacadas.
+ */
+export function ExplorePublicCollections(featured: boolean): $CancellablePromise<models$0.Collection[]> {
+    return $Call.ByID(625084774, featured).then(($result: any) => {
+        return $$createType22($result);
+    });
+}
+
+/**
+ * ExplorePublicDecks busca y lista barajas públicas.
+ */
+export function ExplorePublicDecks(q: string, officialOnly: boolean): $CancellablePromise<models$0.Deck[]> {
+    return $Call.ByID(1055772513, q, officialOnly).then(($result: any) => {
+        return $$createType23($result);
+    });
+}
+
+/**
+ * ExploreWords explora el catálogo léxico con filtros multifacéticos.
+ */
+export function ExploreWords(filter: models$0.WordExploreFilter): $CancellablePromise<models$0.PaginatedWords | null> {
+    return $Call.ByID(862061805, filter).then(($result: any) => {
+        return $$createType25($result);
+    });
+}
+
+/**
+ * GenerateInvitationTickets alias para emisión de boletos institucionales.
+ */
+export function GenerateInvitationTickets(req: models$0.CreateTicketRequest): $CancellablePromise<models$0.InvitationTicket | null> {
+    return $Call.ByID(2847102038, req).then(($result: any) => {
+        return $$createType19($result);
+    });
+}
+
+/**
+ * GetCollection obtiene colección por id.
+ */
+export function GetCollection(id: number): $CancellablePromise<models$0.Collection | null> {
+    return $Call.ByID(1954424815, id).then(($result: any) => {
+        return $$createType3($result);
+    });
+}
+
+/**
+ * GetCollectionDetail obtiene la ficha detallada de una colección.
+ */
+export function GetCollectionDetail(id: number): $CancellablePromise<models$0.Collection | null> {
+    return $Call.ByID(570244494, id).then(($result: any) => {
+        return $$createType3($result);
+    });
+}
+
+/**
+ * GetDeck obtiene baraja por id.
+ */
+export function GetDeck(id: number): $CancellablePromise<models$0.Deck | null> {
+    return $Call.ByID(1974433554, id).then(($result: any) => {
+        return $$createType15($result);
+    });
+}
+
+/**
+ * GetDeckDetail obtiene el detalle y tarjetas de una baraja.
+ */
+export function GetDeckDetail(id: number): $CancellablePromise<models$0.Deck | null> {
+    return $Call.ByID(3582757795, id).then(($result: any) => {
+        return $$createType15($result);
+    });
+}
+
+/**
+ * GetMasteryDashboard obtiene métricas y estado del tablero de maestría.
+ */
+export function GetMasteryDashboard(): $CancellablePromise<models$0.MasteryDashboard | null> {
+    return $Call.ByID(3957313720).then(($result: any) => {
+        return $$createType27($result);
+    });
+}
+
+/**
+ * GetMasterySummary obtiene el resumen integral de maestría, racha y logros.
+ */
+export function GetMasterySummary(): $CancellablePromise<models$0.MasteryDashboard | null> {
+    return $Call.ByID(2237691820).then(($result: any) => {
+        return $$createType27($result);
+    });
+}
+
+/**
+ * GetMatchReplay obtiene replay de partida.
+ */
+export function GetMatchReplay(matchId: string): $CancellablePromise<models$0.MatchReplayDetail | null> {
+    return $Call.ByID(1681044087, matchId).then(($result: any) => {
+        return $$createType29($result);
+    });
+}
+
+/**
+ * GetMatchReplayDetail recupera el replay granular 3NF ronda por ronda.
+ */
+export function GetMatchReplayDetail(matchId: string): $CancellablePromise<models$0.MatchReplayDetail | null> {
+    return $Call.ByID(743635606, matchId).then(($result: any) => {
+        return $$createType29($result);
+    });
+}
+
+/**
+ * GetMe obtiene el perfil del usuario autenticado.
+ */
+export function GetMe(): $CancellablePromise<models$0.UserProfile | null> {
+    return $Call.ByID(112581593).then(($result: any) => {
+        return $$createType31($result);
+    });
+}
+
+/**
+ * GetMyAchievements obtiene el catálogo de logros con estado de desbloqueo.
+ */
+export function GetMyAchievements(): $CancellablePromise<models$0.AchievementStatus[]> {
+    return $Call.ByID(2064353785).then(($result: any) => {
+        return $$createType33($result);
+    });
+}
+
+/**
+ * GetMyMatchHistory consulta el historial de partidas del usuario.
+ */
+export function GetMyMatchHistory(limit: number): $CancellablePromise<models$0.MatchSummary[]> {
+    return $Call.ByID(2804552998, limit).then(($result: any) => {
+        return $$createType35($result);
+    });
+}
+
+/**
+ * GetMyProfile alias canónico para obtener el perfil propio.
+ */
+export function GetMyProfile(): $CancellablePromise<models$0.UserProfile | null> {
+    return $Call.ByID(3724904022).then(($result: any) => {
+        return $$createType31($result);
+    });
+}
+
+/**
+ * GetMyXPTransactions lista transacciones recientes del libro mayor de XP.
+ */
+export function GetMyXPTransactions(limit: number): $CancellablePromise<models$0.XPTransactionItem[]> {
+    return $Call.ByID(1260939480, limit).then(($result: any) => {
+        return $$createType37($result);
+    });
+}
+
+/**
+ * GetProposalDetail obtiene el estado de votación y detalle de una propuesta.
+ */
+export function GetProposalDetail(senseId: number): $CancellablePromise<models$0.SenseQuorumDetail | null> {
+    return $Call.ByID(3728764144, senseId).then(($result: any) => {
+        return $$createType39($result);
+    });
+}
+
+/**
+ * GetPublicProfileByUsername obtiene el perfil público con enriquecimiento de propietario si aplica.
+ */
+export function GetPublicProfileByUsername(username: string): $CancellablePromise<models$0.PublicUserProfile | null> {
+    return $Call.ByID(3852000726, username).then(($result: any) => {
+        return $$createType41($result);
+    });
+}
+
+/**
+ * GetStudySession obtiene tarjetas programadas para repaso hoy.
+ */
+export function GetStudySession(deckId: number, limit: number): $CancellablePromise<models$0.StudySessionPayload | null> {
+    return $Call.ByID(3119551908, deckId, limit).then(($result: any) => {
+        return $$createType43($result);
+    });
+}
+
+/**
+ * GetStudySessionQueue genera una sesión de repaso SM-2.
+ */
+export function GetStudySessionQueue(deckId: number, limit: number): $CancellablePromise<models$0.StudySessionPayload | null> {
+    return $Call.ByID(3020564523, deckId, limit).then(($result: any) => {
+        return $$createType43($result);
+    });
+}
+
+/**
+ * GetWordByID obtiene una palabra por su ID numérico.
+ */
+export function GetWordByID(id: number): $CancellablePromise<models$0.WordDetail | null> {
+    return $Call.ByID(1152328131, id).then(($result: any) => {
+        return $$createType21($result);
+    });
+}
+
+/**
+ * GetWordDetail obtiene la ficha léxica completa de un vocablo.
+ */
+export function GetWordDetail(id: number): $CancellablePromise<models$0.WordDetail | null> {
+    return $Call.ByID(3333962866, id).then(($result: any) => {
+        return $$createType21($result);
+    });
+}
+
+/**
+ * GetWordOfTheDay obtiene la palabra del día según anclaje dialectal.
+ */
+export function GetWordOfTheDay(dialect: string): $CancellablePromise<models$0.WordDetail | null> {
+    return $Call.ByID(3425420197, dialect).then(($result: any) => {
+        return $$createType21($result);
+    });
+}
+
+/**
  * HasActiveSession checks if there is an active session token in memory.
  */
 export function HasActiveSession(): $CancellablePromise<boolean> {
@@ -29,10 +481,354 @@ export function HealthCheck(): $CancellablePromise<string> {
 }
 
 /**
- * ModelBindingsBridge references models from pkg/models to enable Wails CLI binding generation.
+ * JoinArenaMatch valida e inicializa la participación en una sala por código PIN.
  */
-export function ModelBindingsBridge($0: models$0.SignInRequest | null, $1: models$0.SignUpRequest | null, $2: models$0.AuthResponse | null, $3: models$0.UserProfile | null, $4: models$0.WordSummaryCard | null, $5: models$0.WordDetail | null, $6: models$0.SenseDetail | null, $7: models$0.HeteronymItem | null, $8: models$0.StudioDeckSummary | null, $9: models$0.Deck | null, $10: models$0.Collection | null, $11: models$0.StudyCardItem | null, $12: models$0.ArenaRoomState | null, $13: models$0.WSEvent | null, $14: models$0.ImageUploadResponse | null): $CancellablePromise<void> {
-    return $Call.ByID(205049297, $0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
+export function JoinArenaMatch(roomCode: string): $CancellablePromise<models$0.MatchPackage | null> {
+    return $Call.ByID(86065813, roomCode).then(($result: any) => {
+        return $$createType9($result);
+    });
+}
+
+/**
+ * LeaveArena alias para abandonar sala.
+ */
+export function LeaveArena(): $CancellablePromise<void> {
+    return $Call.ByID(2150515271);
+}
+
+/**
+ * LeaveArenaRoom cierra la conexión activa con la sala.
+ */
+export function LeaveArenaRoom(): $CancellablePromise<void> {
+    return $Call.ByID(2237954960);
+}
+
+/**
+ * LinkSenseToConcept vincula un sentido a un concepto (heteronimia).
+ */
+export function LinkSenseToConcept(senseId: number, conceptId: number): $CancellablePromise<void> {
+    return $Call.ByID(3505054184, senseId, conceptId);
+}
+
+/**
+ * ListCollections lista colecciones temáticas públicas.
+ */
+export function ListCollections(featured: boolean): $CancellablePromise<models$0.Collection[]> {
+    return $Call.ByID(556071850, featured).then(($result: any) => {
+        return $$createType22($result);
+    });
+}
+
+/**
+ * ListCommunityReports lista reportes abiertos de la comunidad.
+ */
+export function ListCommunityReports(status: string): $CancellablePromise<models$0.ContentReport[]> {
+    return $Call.ByID(4220102217, status).then(($result: any) => {
+        return $$createType44($result);
+    });
+}
+
+/**
+ * ListConcepts busca conceptos semánticos.
+ */
+export function ListConcepts(q: string): $CancellablePromise<models$0.SemanticConcept[]> {
+    return $Call.ByID(1964254628, q).then(($result: any) => {
+        return $$createType45($result);
+    });
+}
+
+/**
+ * ListDecks busca barajas públicas.
+ */
+export function ListDecks(q: string, officialOnly: boolean): $CancellablePromise<models$0.Deck[]> {
+    return $Call.ByID(201554477, q, officialOnly).then(($result: any) => {
+        return $$createType23($result);
+    });
+}
+
+/**
+ * ListEditorRequests lista solicitudes con filtro opcional de estado.
+ */
+export function ListEditorRequests(status: string): $CancellablePromise<models$0.EditorRequest[]> {
+    return $Call.ByID(4109768162, status).then(($result: any) => {
+        return $$createType46($result);
+    });
+}
+
+/**
+ * ListInvitationTickets lista boletos de invitación emitidos.
+ */
+export function ListInvitationTickets(activeOnly: boolean): $CancellablePromise<models$0.InvitationTicket[]> {
+    return $Call.ByID(341078095, activeOnly).then(($result: any) => {
+        return $$createType47($result);
+    });
+}
+
+/**
+ * ListMasteryItems lista tarjetas estudiadas con filtro opcional de etapa SM-2.
+ */
+export function ListMasteryItems(stage: string): $CancellablePromise<models$0.UserMastery[]> {
+    return $Call.ByID(4216516558, stage).then(($result: any) => {
+        return $$createType49($result);
+    });
+}
+
+/**
+ * ListMatchHistory lista historial de partidas.
+ */
+export function ListMatchHistory(limit: number): $CancellablePromise<models$0.MatchSummary[]> {
+    return $Call.ByID(709060914, limit).then(($result: any) => {
+        return $$createType35($result);
+    });
+}
+
+/**
+ * ListMyCollections lista las colecciones temáticas propias del usuario.
+ */
+export function ListMyCollections(): $CancellablePromise<models$0.Collection[]> {
+    return $Call.ByID(2705990932).then(($result: any) => {
+        return $$createType22($result);
+    });
+}
+
+/**
+ * ListMyDecks lista las barajas del Studio del usuario logueado.
+ */
+export function ListMyDecks(): $CancellablePromise<models$0.StudioDeckSummary[]> {
+    return $Call.ByID(1677503539).then(($result: any) => {
+        return $$createType51($result);
+    });
+}
+
+/**
+ * ListMyEditorRequests lista el historial de solicitudes del usuario actual.
+ */
+export function ListMyEditorRequests(): $CancellablePromise<models$0.EditorRequest[]> {
+    return $Call.ByID(472052084).then(($result: any) => {
+        return $$createType46($result);
+    });
+}
+
+/**
+ * ListMyLexicalProposals lista las propuestas redactadas por el editor logueado.
+ */
+export function ListMyLexicalProposals(state: string): $CancellablePromise<models$0.SenseQuorumItem[]> {
+    return $Call.ByID(822549440, state).then(($result: any) => {
+        return $$createType53($result);
+    });
+}
+
+/**
+ * ListMyProposals lista propuestas propias.
+ */
+export function ListMyProposals(state: string): $CancellablePromise<models$0.SenseQuorumItem[]> {
+    return $Call.ByID(1859392246, state).then(($result: any) => {
+        return $$createType53($result);
+    });
+}
+
+/**
+ * ListPendingEditorRequests lista las solicitudes de editor en estado PENDING para administradores.
+ */
+export function ListPendingEditorRequests(): $CancellablePromise<models$0.EditorRequest[]> {
+    return $Call.ByID(889390487).then(($result: any) => {
+        return $$createType46($result);
+    });
+}
+
+/**
+ * ListPendingQueue lista propuestas pendientes de quórum.
+ */
+export function ListPendingQueue(region: string): $CancellablePromise<models$0.SenseQuorumItem[]> {
+    return $Call.ByID(3280447471, region).then(($result: any) => {
+        return $$createType53($result);
+    });
+}
+
+/**
+ * ListPendingQuorumQueue lista la cola de revisión tripartita para editores.
+ */
+export function ListPendingQuorumQueue(region: string): $CancellablePromise<models$0.SenseQuorumItem[]> {
+    return $Call.ByID(2808677252, region).then(($result: any) => {
+        return $$createType53($result);
+    });
+}
+
+/**
+ * ListRegions lista todas las regiones panhispánicas soportadas.
+ */
+export function ListRegions(): $CancellablePromise<models$0.Region[]> {
+    return $Call.ByID(1083580006).then(($result: any) => {
+        return $$createType55($result);
+    });
+}
+
+/**
+ * ListReports lista reportes con filtro de estado.
+ */
+export function ListReports(status: string): $CancellablePromise<models$0.ContentReport[]> {
+    return $Call.ByID(3820054524, status).then(($result: any) => {
+        return $$createType44($result);
+    });
+}
+
+/**
+ * ListSemanticConcepts lista conceptos semánticos transdialectales.
+ */
+export function ListSemanticConcepts(q: string): $CancellablePromise<models$0.SemanticConcept[]> {
+    return $Call.ByID(4017288480, q).then(($result: any) => {
+        return $$createType45($result);
+    });
+}
+
+/**
+ * ListStudioCollections lista colecciones del Studio.
+ */
+export function ListStudioCollections(): $CancellablePromise<models$0.Collection[]> {
+    return $Call.ByID(1791019756).then(($result: any) => {
+        return $$createType22($result);
+    });
+}
+
+/**
+ * ListStudioDecks lista barajas del Studio.
+ */
+export function ListStudioDecks(): $CancellablePromise<models$0.StudioDeckSummary[]> {
+    return $Call.ByID(4251693499).then(($result: any) => {
+        return $$createType51($result);
+    });
+}
+
+/**
+ * ListUsers busca y lista usuarios con paginación.
+ */
+export function ListUsers(q: string, role: string, limit: number, offset: number): $CancellablePromise<models$0.UserProfile[]> {
+    return $Call.ByID(2023140511, q, role, limit, offset).then(($result: any) => {
+        return $$createType56($result);
+    });
+}
+
+/**
+ * ListUsersForGovernance lista usuarios para moderación y gobierno de roles.
+ */
+export function ListUsersForGovernance(q: string, role: string, limit: number, offset: number): $CancellablePromise<models$0.UserProfile[]> {
+    return $Call.ByID(2019103858, q, role, limit, offset).then(($result: any) => {
+        return $$createType56($result);
+    });
+}
+
+/**
+ * ListXPLedger obtiene historial de XP.
+ */
+export function ListXPLedger(limit: number): $CancellablePromise<models$0.XPTransactionItem[]> {
+    return $Call.ByID(1789567416, limit).then(($result: any) => {
+        return $$createType37($result);
+    });
+}
+
+/**
+ * ModelBindingsBridge garantiza que Wails exporte todos los structs a TypeScript.
+ */
+export function ModelBindingsBridge($0: models$0.SignInRequest | null, $1: models$0.SignUpRequest | null, $2: models$0.AuthResponse | null, $3: models$0.UserProfile | null, $4: models$0.UpdateProfileRequest | null, $5: models$0.ChangePasswordRequest | null, $6: models$0.PublicUserProfile | null, $7: models$0.CreateEditorRequestDTO | null, $8: models$0.ResolveEditorRequestDTO | null, $9: models$0.EditorRequest | null, $10: models$0.UpdateUserRoleOrStatusRequest | null, $11: models$0.CreateTicketRequest | null, $12: models$0.InvitationTicket | null, $13: models$0.RedeemTicketRequest | null, $14: models$0.WordSearchResult | null, $15: models$0.Example | null, $16: models$0.HeteronymItem | null, $17: models$0.SenseDetail | null, $18: models$0.WordDetail | null, $19: models$0.WordExploreFilter | null, $20: models$0.WordSummaryCard | null, $21: models$0.PaginatedWords | null, $22: models$0.CreateExampleInput | null, $23: models$0.CreateSenseRequest | null, $24: models$0.CreateWordProposalRequest | null, $25: models$0.UpdateWordRequest | null, $26: models$0.UpdateSenseRequest | null, $27: models$0.SemanticConcept | null, $28: models$0.CreateConceptRequest | null, $29: models$0.SenseApprovalVote | null, $30: models$0.SenseQuorumItem | null, $31: models$0.SenseQuorumDetail | null, $32: models$0.SubmitVoteRequest | null, $33: models$0.AdminOverrideStateRequest | null, $34: models$0.ContentReport | null, $35: models$0.CreateReportRequest | null, $36: models$0.ResolveReportRequest | null, $37: models$0.DeckItem | null, $38: models$0.Deck | null, $39: models$0.Collection | null, $40: models$0.UserMastery | null, $41: models$0.StudioDeckSummary | null, $42: models$0.CreateDeckRequest | null, $43: models$0.UpdateDeckRequest | null, $44: models$0.AddDeckItemRequest | null, $45: models$0.CreateCollectionRequest | null, $46: models$0.UpdateCollectionRequest | null, $47: models$0.StudyCardItem | null, $48: models$0.StudySessionPayload | null, $49: models$0.SubmitReviewRequest | null, $50: models$0.CardReviewResult | null, $51: models$0.XPTransactionItem | null, $52: models$0.AchievementStatus | null, $53: models$0.MasteryDashboard | null, $54: models$0.ArenaParticipant | null, $55: models$0.ArenaQuestion | null, $56: models$0.ArenaRoomState | null, $57: models$0.WSEvent | null, $58: models$0.CreateMatchRequest | null, $59: models$0.InternalArenaQuestion | null, $60: models$0.MatchPackage | null, $61: models$0.SubmitAnswerPayload | null, $62: models$0.RoundResultPayload | null, $63: models$0.ParticipantRoundAttempt | null, $64: models$0.ParticipantFinalResult | null, $65: models$0.ConsolidateMatchRequest | null, $66: models$0.MatchSummary | null, $67: models$0.ParticipantRoundAnswer | null, $68: models$0.MatchRoundReplay | null, $69: models$0.MatchReplayDetail | null, $70: models$0.ImageUploadResponse | null): $CancellablePromise<void> {
+    return $Call.ByID(205049297, $0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52, $53, $54, $55, $56, $57, $58, $59, $60, $61, $62, $63, $64, $65, $66, $67, $68, $69, $70);
+}
+
+/**
+ * PrepareMatch prepara una partida de arena.
+ */
+export function PrepareMatch(req: models$0.CreateMatchRequest): $CancellablePromise<models$0.MatchPackage | null> {
+    return $Call.ByID(359728269, req).then(($result: any) => {
+        return $$createType9($result);
+    });
+}
+
+/**
+ * RedeemInvitationTicket canjea un boleto institucional para ascenso directo de rol.
+ */
+export function RedeemInvitationTicket(req: models$0.RedeemTicketRequest): $CancellablePromise<models$0.UserProfile | null> {
+    return $Call.ByID(3976356034, req).then(($result: any) => {
+        return $$createType31($result);
+    });
+}
+
+/**
+ * RemoveDeckFromCollection remueve una baraja de una colección temática.
+ */
+export function RemoveDeckFromCollection(collectionID: number, deckID: number): $CancellablePromise<models$0.Collection | null> {
+    return $Call.ByID(2700379700, collectionID, deckID).then(($result: any) => {
+        return $$createType3($result);
+    });
+}
+
+/**
+ * RemoveDeckItem retira tarjeta de baraja.
+ */
+export function RemoveDeckItem(deckId: number, senseId: number): $CancellablePromise<void> {
+    return $Call.ByID(2450902935, deckId, senseId);
+}
+
+/**
+ * RemoveSenseFromDeck retira un sentido de una baraja.
+ */
+export function RemoveSenseFromDeck(deckId: number, senseId: number): $CancellablePromise<void> {
+    return $Call.ByID(557738020, deckId, senseId);
+}
+
+/**
+ * ResolveCommunityReport resuelve formalmente un reporte comunitario.
+ */
+export function ResolveCommunityReport(reportId: string, req: models$0.ResolveReportRequest): $CancellablePromise<models$0.ContentReport | null> {
+    return $Call.ByID(1613463886, reportId, req).then(($result: any) => {
+        return $$createType11($result);
+    });
+}
+
+/**
+ * ResolveEditorRequest dictamina formalmente una solicitud de editor.
+ */
+export function ResolveEditorRequest(id: string, req: models$0.ResolveEditorRequestDTO): $CancellablePromise<models$0.EditorRequest | null> {
+    return $Call.ByID(4209690963, id, req).then(($result: any) => {
+        return $$createType17($result);
+    });
+}
+
+/**
+ * ResolveReport resuelve un reporte de contenido.
+ */
+export function ResolveReport(reportId: string, req: models$0.ResolveReportRequest): $CancellablePromise<models$0.ContentReport | null> {
+    return $Call.ByID(3780939845, reportId, req).then(($result: any) => {
+        return $$createType11($result);
+    });
+}
+
+/**
+ * RevokeInvitationTicket revoca un boleto de invitación.
+ */
+export function RevokeInvitationTicket(id: string): $CancellablePromise<void> {
+    return $Call.ByID(3100878856, id);
+}
+
+/**
+ * SaveCollection guarda una colección comunitaria en el Studio personal.
+ */
+export function SaveCollection(id: number): $CancellablePromise<void> {
+    return $Call.ByID(219545004, id);
+}
+
+/**
+ * SaveDeck guarda baraja en Studio.
+ */
+export function SaveDeck(deckId: number): $CancellablePromise<void> {
+    return $Call.ByID(1364882681, deckId);
+}
+
+/**
+ * SearchWords ejecuta búsqueda difusa FTS de palabras.
+ */
+export function SearchWords(q: string, dialect: string, limit: number): $CancellablePromise<models$0.WordSearchResult[]> {
+    return $Call.ByID(2774597974, q, dialect, limit).then(($result: any) => {
+        return $$createType58($result);
+    });
 }
 
 /**
@@ -43,8 +839,279 @@ export function SetContext(): $CancellablePromise<void> {
 }
 
 /**
- * SignOut clears the in-memory session token.
+ * SignIn autentica credenciales y almacena el JWT en RAM segura.
+ */
+export function SignIn(req: models$0.SignInRequest): $CancellablePromise<models$0.UserProfile | null> {
+    return $Call.ByID(749131203, req).then(($result: any) => {
+        return $$createType31($result);
+    });
+}
+
+/**
+ * SignOut limpia el JWT en memoria y cierra conexiones activas.
  */
 export function SignOut(): $CancellablePromise<void> {
     return $Call.ByID(578162832);
 }
+
+/**
+ * SignUp registra un nuevo aprendiz y custodia su JWT en RAM segura.
+ */
+export function SignUp(req: models$0.SignUpRequest): $CancellablePromise<models$0.UserProfile | null> {
+    return $Call.ByID(584606417, req).then(($result: any) => {
+        return $$createType31($result);
+    });
+}
+
+/**
+ * StartArenaMatch emite el evento para iniciar la partida (Host).
+ */
+export function StartArenaMatch(): $CancellablePromise<void> {
+    return $Call.ByID(3434695903);
+}
+
+/**
+ * SubmitArenaAnswer envía la respuesta del jugador en la ronda actual.
+ */
+export function SubmitArenaAnswer(roundNumber: number, selectedOption: string): $CancellablePromise<void> {
+    return $Call.ByID(379588218, roundNumber, selectedOption);
+}
+
+/**
+ * SubmitCardReview procesa la calificación de repaso aplicando el algoritmo SM-2.
+ */
+export function SubmitCardReview(req: models$0.SubmitReviewRequest): $CancellablePromise<models$0.CardReviewResult | null> {
+    return $Call.ByID(4038425151, req).then(($result: any) => {
+        return $$createType60($result);
+    });
+}
+
+/**
+ * SubmitProposalReview emite voto de revisión tripartita sobre una propuesta.
+ */
+export function SubmitProposalReview(senseId: number, req: models$0.SubmitVoteRequest): $CancellablePromise<models$0.SenseQuorumDetail | null> {
+    return $Call.ByID(1297159215, senseId, req).then(($result: any) => {
+        return $$createType39($result);
+    });
+}
+
+/**
+ * SubmitReview califica una tarjeta y actualiza la maestría.
+ */
+export function SubmitReview(req: models$0.SubmitReviewRequest): $CancellablePromise<models$0.CardReviewResult | null> {
+    return $Call.ByID(2744038041, req).then(($result: any) => {
+        return $$createType60($result);
+    });
+}
+
+/**
+ * SubmitStudyReview alias para calificación de tarjeta.
+ */
+export function SubmitStudyReview(req: models$0.SubmitReviewRequest): $CancellablePromise<models$0.CardReviewResult | null> {
+    return $Call.ByID(2942032638, req).then(($result: any) => {
+        return $$createType60($result);
+    });
+}
+
+/**
+ * SubmitVote emite voto en el quórum.
+ */
+export function SubmitVote(senseId: number, req: models$0.SubmitVoteRequest): $CancellablePromise<models$0.SenseQuorumDetail | null> {
+    return $Call.ByID(4195659821, senseId, req).then(($result: any) => {
+        return $$createType39($result);
+    });
+}
+
+/**
+ * UnlinkSenseFromConcept desvincula un sentido de un concepto.
+ */
+export function UnlinkSenseFromConcept(senseId: number, conceptId: number): $CancellablePromise<void> {
+    return $Call.ByID(2002764020, senseId, conceptId);
+}
+
+/**
+ * UnsaveCollection retira la colección guardada del Studio.
+ */
+export function UnsaveCollection(id: number): $CancellablePromise<void> {
+    return $Call.ByID(2649002239, id);
+}
+
+/**
+ * UnsaveDeck retira la baraja guardada del Studio.
+ */
+export function UnsaveDeck(deckId: number): $CancellablePromise<void> {
+    return $Call.ByID(3969012930, deckId);
+}
+
+/**
+ * UpdateCollection actualiza una colección temática.
+ */
+export function UpdateCollection(id: number, req: models$0.UpdateCollectionRequest): $CancellablePromise<models$0.Collection | null> {
+    return $Call.ByID(1405316192, id, req).then(($result: any) => {
+        return $$createType3($result);
+    });
+}
+
+/**
+ * UpdateDeck actualiza título o visibilidad de una baraja.
+ */
+export function UpdateDeck(id: number, req: models$0.UpdateDeckRequest): $CancellablePromise<models$0.Deck | null> {
+    return $Call.ByID(302356597, id, req).then(($result: any) => {
+        return $$createType15($result);
+    });
+}
+
+/**
+ * UpdateExample actualiza un ejemplo de uso.
+ */
+export function UpdateExample(exampleId: number, req: models$0.CreateExampleInput): $CancellablePromise<models$0.Example | null> {
+    return $Call.ByID(1994754226, exampleId, req).then(($result: any) => {
+        return $$createType5($result);
+    });
+}
+
+/**
+ * UpdateProfile actualiza los metadatos editables del perfil propio.
+ */
+export function UpdateProfile(req: models$0.UpdateProfileRequest): $CancellablePromise<models$0.UserProfile | null> {
+    return $Call.ByID(2148787977, req).then(($result: any) => {
+        return $$createType31($result);
+    });
+}
+
+/**
+ * UpdateSense actualiza la información de una acepción.
+ */
+export function UpdateSense(senseId: number, req: models$0.UpdateSenseRequest): $CancellablePromise<models$0.SenseDetail | null> {
+    return $Call.ByID(4287656482, senseId, req).then(($result: any) => {
+        return $$createType7($result);
+    });
+}
+
+/**
+ * UpdateSenseProposal actualiza una acepción existente.
+ */
+export function UpdateSenseProposal(senseId: number, req: models$0.UpdateSenseRequest): $CancellablePromise<models$0.SenseDetail | null> {
+    return $Call.ByID(2146141112, senseId, req).then(($result: any) => {
+        return $$createType7($result);
+    });
+}
+
+/**
+ * UpdateUserRole modifica el rol de un usuario.
+ */
+export function UpdateUserRole(id: string, role: models$0.AccountRole): $CancellablePromise<models$0.UserProfile | null> {
+    return $Call.ByID(582809067, id, role).then(($result: any) => {
+        return $$createType31($result);
+    });
+}
+
+/**
+ * UpdateUserRoleOrStatus actualiza rol y/o estado de activación de usuario.
+ */
+export function UpdateUserRoleOrStatus(id: string, req: models$0.UpdateUserRoleOrStatusRequest): $CancellablePromise<models$0.UserProfile | null> {
+    return $Call.ByID(212502404, id, req).then(($result: any) => {
+        return $$createType31($result);
+    });
+}
+
+/**
+ * UpdateUserStatus activa o suspende la cuenta de un usuario.
+ */
+export function UpdateUserStatus(id: string, isActive: boolean): $CancellablePromise<models$0.UserProfile | null> {
+    return $Call.ByID(4164097513, id, isActive).then(($result: any) => {
+        return $$createType31($result);
+    });
+}
+
+/**
+ * UpdateWord actualiza metadatos de lema existente.
+ */
+export function UpdateWord(id: number, req: models$0.UpdateWordRequest): $CancellablePromise<models$0.WordDetail | null> {
+    return $Call.ByID(77205812, id, req).then(($result: any) => {
+        return $$createType21($result);
+    });
+}
+
+/**
+ * UpdateWordProposal actualiza los metadatos de un lema.
+ */
+export function UpdateWordProposal(id: number, req: models$0.UpdateWordRequest): $CancellablePromise<models$0.WordDetail | null> {
+    return $Call.ByID(3546069810, id, req).then(($result: any) => {
+        return $$createType21($result);
+    });
+}
+
+/**
+ * UploadImage envía un archivo multipart/form-data a image-service (:8002).
+ */
+export function UploadImage(category: string, filename: string, fileBytes: string): $CancellablePromise<models$0.ImageUploadResponse | null> {
+    return $Call.ByID(3459446289, category, filename, fileBytes).then(($result: any) => {
+        return $$createType62($result);
+    });
+}
+
+// Private type creation functions
+const $$createType0 = models$0.DeckItem.createFrom;
+const $$createType1 = $Create.Nullable($$createType0);
+const $$createType2 = models$0.Collection.createFrom;
+const $$createType3 = $Create.Nullable($$createType2);
+const $$createType4 = models$0.Example.createFrom;
+const $$createType5 = $Create.Nullable($$createType4);
+const $$createType6 = models$0.SenseDetail.createFrom;
+const $$createType7 = $Create.Nullable($$createType6);
+const $$createType8 = models$0.MatchPackage.createFrom;
+const $$createType9 = $Create.Nullable($$createType8);
+const $$createType10 = models$0.ContentReport.createFrom;
+const $$createType11 = $Create.Nullable($$createType10);
+const $$createType12 = models$0.SemanticConcept.createFrom;
+const $$createType13 = $Create.Nullable($$createType12);
+const $$createType14 = models$0.Deck.createFrom;
+const $$createType15 = $Create.Nullable($$createType14);
+const $$createType16 = models$0.EditorRequest.createFrom;
+const $$createType17 = $Create.Nullable($$createType16);
+const $$createType18 = models$0.InvitationTicket.createFrom;
+const $$createType19 = $Create.Nullable($$createType18);
+const $$createType20 = models$0.WordDetail.createFrom;
+const $$createType21 = $Create.Nullable($$createType20);
+const $$createType22 = $Create.Array($$createType2);
+const $$createType23 = $Create.Array($$createType14);
+const $$createType24 = models$0.PaginatedWords.createFrom;
+const $$createType25 = $Create.Nullable($$createType24);
+const $$createType26 = models$0.MasteryDashboard.createFrom;
+const $$createType27 = $Create.Nullable($$createType26);
+const $$createType28 = models$0.MatchReplayDetail.createFrom;
+const $$createType29 = $Create.Nullable($$createType28);
+const $$createType30 = models$0.UserProfile.createFrom;
+const $$createType31 = $Create.Nullable($$createType30);
+const $$createType32 = models$0.AchievementStatus.createFrom;
+const $$createType33 = $Create.Array($$createType32);
+const $$createType34 = models$0.MatchSummary.createFrom;
+const $$createType35 = $Create.Array($$createType34);
+const $$createType36 = models$0.XPTransactionItem.createFrom;
+const $$createType37 = $Create.Array($$createType36);
+const $$createType38 = models$0.SenseQuorumDetail.createFrom;
+const $$createType39 = $Create.Nullable($$createType38);
+const $$createType40 = models$0.PublicUserProfile.createFrom;
+const $$createType41 = $Create.Nullable($$createType40);
+const $$createType42 = models$0.StudySessionPayload.createFrom;
+const $$createType43 = $Create.Nullable($$createType42);
+const $$createType44 = $Create.Array($$createType10);
+const $$createType45 = $Create.Array($$createType12);
+const $$createType46 = $Create.Array($$createType16);
+const $$createType47 = $Create.Array($$createType18);
+const $$createType48 = models$0.UserMastery.createFrom;
+const $$createType49 = $Create.Array($$createType48);
+const $$createType50 = models$0.StudioDeckSummary.createFrom;
+const $$createType51 = $Create.Array($$createType50);
+const $$createType52 = models$0.SenseQuorumItem.createFrom;
+const $$createType53 = $Create.Array($$createType52);
+const $$createType54 = models$0.Region.createFrom;
+const $$createType55 = $Create.Array($$createType54);
+const $$createType56 = $Create.Array($$createType30);
+const $$createType57 = models$0.WordSearchResult.createFrom;
+const $$createType58 = $Create.Array($$createType57);
+const $$createType59 = models$0.CardReviewResult.createFrom;
+const $$createType60 = $Create.Nullable($$createType59);
+const $$createType61 = models$0.ImageUploadResponse.createFrom;
+const $$createType62 = $Create.Nullable($$createType61);
