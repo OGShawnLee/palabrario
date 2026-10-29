@@ -37,7 +37,7 @@ Antes de modificar o crear cualquier archivo dentro de `packages/ui/`, `local-ap
 > 7. **Frontera Estricta `@palabrario/ui` (SSR-Safe) vs Shells de Aplicación (`local-app/frontend` y `web-portal`):**
 >    - Todos los componentes reutilizables viven en `packages/ui/src/components/` (`@palabrario/ui`).
 >    - **PROHIBIDO** importar `vue-router` (`useRouter`, `useRoute`, `<router-link>`), `useAuth()`, `api.*` o acceder a `window`/`document` fuera de `onMounted` dentro de `packages/ui/`.
->    - Todo componente en `@palabrario/ui` es **100% presentacional e isomórfico (SSR-Safe)**: recibe datos tipados vía `defineProps<...>()` y emite intenciones al padre vía `defineEmits<...>()` (`@navigate`, `@select-word`, `@add-to-deck`, `@report`, `@open-image`, `@select-file`). Así, el mismo componente funciona sin tocar una sola línea tanto en `local-app/frontend` (SPA Desktop/Móvil) como en `web-portal` (Astro SSR + 100% Web en Fase 6).
+>    - Todo componente en `@palabrario/ui` es **100% presentacional e isomórfico (SSR-Safe)**: recibe datos tipados vía `defineProps<...>()` y emite intenciones al padre vía `defineEmits<...>()` (`@navigate`, `@select-term`, `@add-to-deck`, `@report`, `@open-image`, `@select-file`). Así, el mismo componente funciona sin tocar una sola línea tanto en `local-app/frontend` (SPA Desktop/Móvil) como en `web-portal` (Astro SSR + 100% Web en Fase 6).
 
 ---
 
@@ -195,11 +195,11 @@ Todos los componentes reutilizables de interfaz se construyen en **`packages/ui/
   3. Emite `@open-image` al hacer click en la ilustración opcional.
 - **`SenseItem.vue` *(Inspirado en el bloque "Definitions of..." de Vocabulary.com)*:** Ítem numerado (`1.`, `2.`, ...) dentro del contenedor de acepciones (`card-editorial` coronado por un listón `badge-pill bg-brand text-surface` con *"Acepciones de {lemma}"*). Cada `SenseItem` renderiza un `models.SenseDetail` con:
   1. **Línea Principal:** Índice numérico + píldora de categoría/región (`badge-pill` con `flag_emoji`, `region_code`, `part_of_speech` y `cefr_level`) + definición directa (`definition` / `short_definition`).
-  2. **Línea de Equivalencias y Alertas:** Integra `HeteronymPills.vue` (*"¿Cómo se dice allá?"*) emitiendo `@select-word(idWord)` y badge de advertencia si `is_taboo_or_vulgar == true` (`bg-warning/20 border-warning`).
-  3. **Desplegable `"Ver más ⌄"` (`see more ⌄`):** Sección colapsable accesible (**Reka UI `Collapsible`**) que revela la nota cultural (`usage_note` / `cultural_note`), las oraciones de ejemplo (`examples[]`), la imagen opcional del sentido (`image_url`) y las acciones contextuales que emiten `@add-to-deck(sense)` y `@report(sense)`.
-- **`HeteronymPills.vue`:** Lista interactiva de equivalencias transdialectales (`models.HeteronymItem[]`, *"¿Cómo se dice allá?"*) que emite `@select-word(idWord)`.
+  2. **Alertas de Contenido:** Badge de advertencia si `is_taboo_or_vulgar == true` (`bg-warning/20 border-warning/40`).
+  3. **Desplegable `"Ver más ⌄"` (`see more ⌄`):** Sección colapsable accesible (**Reka UI `Collapsible`**) que revela la nota cultural (`cultural_note`), las oraciones de ejemplo (`examples[]`), la imagen opcional del sentido (`image_url`) y las acciones contextuales que emiten `@add-to-deck(sense)` y `@report(sense)`.
+- **`HeteronymPills.vue`:** Lista interactiva de equivalencias transdialectales a nivel lema (`models.HeteronymItem[]`, *"¿Cómo se dice allá?"*) que emite `@select-term(term)`.
 - **`QuorumStepper.vue` (`packages/ui/src/components/editorial/`):** Indicador visual del quórum tripartito (**RN06**, `reviews_count / 3`), bloqueo de auto-aprobación (**RN07**) y badge de veto administrativo (**RN08**).
-- **`ProposalDiffCard.vue` (`packages/ui/src/components/editorial/`):** Inspector detallado de una propuesta léxica mostrando lema, `friendly_blurb`, `etymology`, sentidos, ejemplos e ilustraciones con atribuciones (**RN12**).
+- **`ProposalDiffCard.vue` (`packages/ui/src/components/editorial/`):** Inspector detallado de una propuesta léxica mostrando lema, `friendly_blurb`, `etymology`, sentidos, ejemplos e ilustraciones (**RN12**).
 
 ### 3.3. Componentes de Studio y Motor SM-2 (`packages/ui/src/components/studio/`)
 - **`DeckCard.vue` y `CollectionCard.vue`:** Tarjetas con borde de tinta y sombra táctil para mazos y colecciones temáticas.
@@ -216,7 +216,7 @@ Todos los componentes reutilizables de interfaz se construyen en **`packages/ui/
 - **`SearchModal.vue` (`packages/ui/src/components/ui/` — `Ctrl + K`):** Omnibox flotante (**Reka UI `Dialog`**) que recibe `results` y `isLoading` por props y emite `@search(query)` (con debounce) y `@select(idWord)`.
 - **`ReportModal.vue` (`packages/ui/src/components/dictionary/`):** Diálogo para reportar un lema o sentido (**CU09**), emitiendo `@submit(reportPayload)`.
 - **`TabooWarningDialog.vue` (`packages/ui/src/components/dictionary/`):** Alerta de confirmación accesible cuando `is_taboo == true`.
-- **`ImageLightboxModal.vue` (`packages/ui/src/components/ui/`):** Visor ampliado para inspeccionar `image_url`, `alt_text` e `image_credit`.
+- **`ImageLightboxModal.vue` (`packages/ui/src/components/ui/`):** Visor ampliado para inspeccionar `image_url` con soporte de texto descriptivo.
 - **`MediaDropzone.vue` (`packages/ui/src/components/ui/`):** Zona de arrastre de archivos (`.png`, `.jpg`, `.webp`, máx 5 MB, **RN12**) que valida formato/tamaño y recibe una función `uploadFn` o emite el archivo validado hacia la vista padre.
 
 ---

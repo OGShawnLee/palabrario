@@ -290,13 +290,13 @@ Actúa como Ingeniero Frontend Senior en Vue 3, Reka UI y UnoCSS. Vamos a ejecut
      - Inspirado en la columna narrativa de apertura de Vocabulary.com (ver `@.context/PALETTE.md` Sección 5.1).
      - Párrafo 1 (`word.friendly_blurb`): Gancho conversacional empático en `text-lg md:text-xl leading-relaxed text-ink max-w-68ch mb-4`.
      - Párrafo 2 (`word.etymology`): Contexto cultural e historia etimológica en `text-base leading-relaxed text-ink/80 max-w-68ch`.
-     - Si existe `word.image_url`, muestra su marco ilustrado con atribución `word.image_credit` emitiendo `@open-image`.
+     - Si existe `word.image_url`, muestra su marco ilustrado emitiendo `@open-image`.
    - `dictionary/HeteronymPills.vue`:
-     - Renderiza los equivalentes dialectales (`models.HeteronymItem[]`) agrupados por concepto semántico con su bandera regional; al hacer click emite `@select-word(idWord)` (sin acoplarse a `vue-router`).
+     - Renderiza los equivalentes dialectales (`models.HeteronymItem[]`) agrupados por concepto semántico con su bandera regional; al hacer click emite `@select-term(term)` (sin acoplarse a `vue-router`).
    - `dictionary/SenseItem.vue`:
      - Inspirado en el bloque numerado de Vocabulary.com (ver `@.context/PALETTE.md` Sección 5.2).
      - Muestra índice (`1.`, `2.`), badge en contorno `success` (`bg-success/15 text-success border border-success font-bold`) con categoría gramatical, región y nivel CEFR (`A1–C2`), seguido de la definición (`sense.definition`).
-     - Debajo incluye `HeteronymPills` (re-emitiendo `@select-word`) y un desplegable `Collapsible` de Reka UI (**`Ver más ⌄`**) que revela: citas de uso (`sense.examples`), nota pragmática (`sense.usage_note`), miniatura de `sense.image_url` y botones **"Guardar en Deck"** y **"Reportar"** que emiten `@add-to-deck(sense)` y `@report(sense)`.
+     - Incluye un desplegable `Collapsible` de Reka UI (**`Ver más ⌄`**) que revela: citas de uso (`sense.examples`), nota cultural (`sense.cultural_note`), miniatura de `sense.image_url` y botones **"Guardar en Deck"** y **"Reportar"** que emiten `@add-to-deck(sense)` y `@report(sense)`.
    - `dictionary/TabooWarningDialog.vue`: `AlertDialog` de Reka UI cuando `word.is_taboo == true`.
    - `dictionary/ReportModal.vue` (`CU09`): `Dialog` de Reka UI que recibe el objetivo a denunciar (`target_type: 'WORD' | 'SENSE'`) y emite `@submit(payload)`.
    - `studio/AddToDeckModal.vue` (`CU10`): `Dialog` de Reka UI que recibe la lista de mazos (`decks`) y emite `@add({ idDeck, idSense })` o `@create-deck(payload)` respetando el límite de 100 cartas (`RN04`).
@@ -534,7 +534,7 @@ Actúa como Ingeniero Frontend Senior en Vue 3, Reka UI y UnoCSS. Vamos a ejecut
      - Si `currentUserId === proposal.created_by`, muestra insignia de bloqueo de voto por **`RN07` (Anti-Autoaprobación)**.
      - Si `isAdmin === true`, habilita controles de resolución forzada (**`RN08` Veto Administrativo**).
    - `ProposalDiffCard.vue`:
-     - Ficha de inspección detallada de una propuesta léxica mostrando lema, `friendly_blurb`, `etymology`, `is_taboo`, acepciones propuestas, ejemplos, notas culturales e ilustraciones con sus metadatos (`image_url`, `alt_text`, `image_credit`).
+     - Ficha de inspección detallada de una propuesta léxica mostrando lema, `friendly_blurb`, `etymology`, `is_taboo`, acepciones propuestas, ejemplos, notas culturales e ilustraciones (`image_url`).
 
 2. **Reemplazo de Placeholders por Vistas Reales en `local-app/frontend/src/views/editorial/` (`Rutas #21, #22 y #23`):**
    - `EditorDashboardView.vue` (`/#/editor` — Ruta #21, `EDITOR` / `ADMIN`):
@@ -542,7 +542,7 @@ Actúa como Ingeniero Frontend Senior en Vue 3, Reka UI y UnoCSS. Vamos a ejecut
      - **Tab 2 — Mis Propuestas (`CU06/CU07`):** Lista `api.ListMyLexicalProposals()` con su estado (`DRAFT`, `PENDING_QUORUM`, `CHANGES_REQUESTED`, `APPROVED`, `REJECTED`, `ARCHIVED`) y botón para editar o crear nueva propuesta (`/#/editor/words/new`).
    - `EditorWordFormView.vue` (`/#/editor/words/new` y `/#/editor/words/:id` — Ruta #22, `EDITOR` / `ADMIN`):
      - Sigue el **Flujo 6 de `@.context/UI_FLOWS.md`**.
-     - Permite crear o actualizar el lema (`api.CreateWordProposal`, `api.UpdateWordProposal`) incluyendo `MediaDropzone(category='general')` para `image_url` + `alt_text` + `image_credit` (`RN12`).
+     - Permite crear o actualizar el lema (`api.CreateWordProposal`, `api.UpdateWordProposal`) incluyendo `MediaDropzone(category='general')` para `image_url` (`RN12`).
      - Permite añadir/editar acepciones (`api.CreateSenseProposal`, `api.UpdateSenseProposal`), agregar ejemplos contextuales (`api.AddSenseExample`) y vincular la acepción a un concepto semántico (`api.ListSemanticConcepts`, `api.CreateSemanticConcept`, `api.LinkSenseToConcept`) para nutrir la red de heterónimos.
    - `GovernanceDashboardView.vue` (`/#/editor/governance` — Ruta #23, exclusivo `ADMIN`):
      - **Tab 1 — Solicitudes de Editor (`CU02`):** Consume `api.ListPendingEditorRequests()`, muestra bio académica, visor de `credentials_url` y botones para aprobar/rechazar (`api.ResolveEditorRequest`).

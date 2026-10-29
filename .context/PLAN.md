@@ -20,7 +20,7 @@ Palabrario sigue una metodología estricta de construcción en cascada tipada so
 
 ## 1. Diagnóstico Ejecutivo e Histórico: ¿Dónde Estamos Hoy?
 
-El proyecto ha completado y verificado al **100% toda la arquitectura de Backend (Fases 1 a 4)** cubriendo los **16 Casos de Uso (`CU01–CU16`)** y las **13 Reglas de Negocio (`RN01–RN13`)**. Actualmente nos encontramos en el arranque de la **Fase 5 (Monorepo `@palabrario/ui` + Cliente Wails V3 / Capacitor PWA)**, con la **Fase 6 (Plataforma Web 100% Híbrida: Astro SSR SEO + 23 Rutas Interactivas con WebSockets)** y la **Fase 7 (Eventos Culturales de Temporada)** planificadas en la hoja de ruta.
+El proyecto ha completado y verificado al **100% toda la arquitectura de Backend (Fases 1 a 4)** cubriendo los **16 Casos de Uso (`CU01–CU16`)** y las **13 Reglas de Negocio (`RN01–RN13`)**. Actualmente nos encontramos en la **Fase 5 (Monorepo `@palabrario/ui` + Cliente Wails V3 / Capacitor PWA)** con las sub-fases 5.1 a 5.4 completadas, con la **Fase 6 (Plataforma Web 100% Híbrida: Astro SSR SEO + 23 Rutas Interactivas con WebSockets)** y la **Fase 7 (Eventos Culturales de Temporada)** planificadas en la hoja de ruta.
 
 ```mermaid
 flowchart LR
@@ -54,7 +54,7 @@ flowchart LR
 | **3. `core-service` (`:8000` — `CU01–CU14, CU16`)** | **100% Completo** | Los 7 servicios SOA implementados, enrutados en `router.go` y con suite de pruebas pasando al 100%. |
 | **4. `realtime-service` (`:8001` — `CU15, CU16`)** | **100% Completo** | `ArenaHub` WebSocket concurrente en RAM con tests pasando con `-race`. |
 | **5. `image-service` (`:8002` — `RN12 / RNF-SEG-04`)** | **100% Completo** | Sanitización EXIF, redimensionado y filtro NSFW en Go puro con tests pasando con `-race`. |
-| **6. Monorepo UI (`packages/ui`) + Cliente (`local-app/`)** | **🚧 En Construcción (Fase 5)** | Scaffolding Bun Workspaces, puente nativo y Shell de navegación completados (5.1, 5.2 y 5.3 cerradas). Siguiente: Sub-Fase 5.4 (Portal Home, Buscador FTS y Ficha Léxica). |
+| **6. Monorepo UI (`packages/ui`) + Cliente (`local-app/`)** | **🚧 En Construcción (Fase 5)** | Sub-Fases 5.1, 5.2, 5.3 y 5.4 completadas (0 errores). Siguiente: Sub-Fase 5.5 (Catálogos Públicos de Colecciones y Barajas + Clonación). |
 | **7. Plataforma Web Híbrida (`web-portal/` — Astro SSR + SPA)** | **⏳ Planificada (Fase 6)** | Consumirá `@palabrario/ui` y `IPalabrarioAPI` para ofrecer SSR/SEO + OpenGraph en rutas públicas (`#3–#10`) y el 100% de las 23 rutas interactivas (incluyendo WebSockets hacia `:8001`) en el navegador. |
 
 ---
@@ -150,28 +150,28 @@ flowchart TD
 
 ---
 
-### 📍 Sub-Fase 5.4: Portal Comunitario, Buscador FTS y Ficha Léxica Estilo Vocabulary.com (`Rutas #4, #5, #6` + Modales — `CU05, CU09, CU10`) — **[SIGUIENTE EN COLA]**
+### 📍 Sub-Fase 5.4: Portal Comunitario, Buscador FTS y Ficha Léxica Estilo Vocabulary.com (`Rutas #4, #5, #6` + Modales — `CU05, CU09, CU10`) — **[✅ COMPLETADA]**
 
 - **Objetivo:** Construir en `@palabrario/ui` los componentes del diccionario panhispánico (100% SSR-Safe, importando directamente `@bindings/palabrario/pkg/models`) y reemplazar en `local-app/frontend` los placeholders de las rutas `#4, #5 y #6`.
 - **Entregables y Checklist:**
-  - [ ] **Componentes de Diccionario y Modales en `packages/ui/src/components/` (SSR-Safe, exportados en `packages/ui/src/index.ts`):**
+  - [x] **Componentes de Diccionario y Modales en `packages/ui/src/components/` (SSR-Safe, exportados en `packages/ui/src/index.ts`):**
     - `dictionary/WordCard.vue`: Tarjeta táctil editorial (`models.WordSummaryCard`) que emite `@select(idWord)`.
     - `dictionary/FriendlyBlurb.vue`: Apertura narrativa estilo Vocabulary.com (Párrafo 1 con `word.friendly_blurb` en `text-lg/xl leading-relaxed`, Párrafo 2 con `word.etymology` e ilustración opcional `word.image_url` que emite `@open-image`).
-    - `dictionary/HeteronymPills.vue`: Píldoras de equivalentes dialectales (`models.HeteronymItem[]`) que emiten `@select-word(idWord)` (sin acoplarse a `vue-router`).
-    - `dictionary/SenseItem.vue`: Ficha numerada dentro del contenedor con listón `bg-brand` (*"Acepciones de {lemma}"*), pills de región/categoría/CEFR (`bg-success/15 text-success border-success`), definición, `HeteronymPills` y desplegable `Collapsible` de Reka UI (*"Ver más ⌄"*) con citas de uso (`examples`), `usage_note`, miniatura clicable y botones que emiten `@add-to-deck(sense)` y `@report(sense)`.
+    - `dictionary/HeteronymPills.vue`: Píldoras de equivalentes dialectales (`models.HeteronymItem[]`) que emiten `@select-term(term)` hacia el buscador (sin acoplarse a `vue-router`).
+    - `dictionary/SenseItem.vue`: Ficha numerada dentro del contenedor con listón `bg-brand` (*"Acepciones de {lemma}"*), pills de región/categoría/CEFR (`bg-success/15 text-success border-success/40`), definición y desplegable `Collapsible` de Reka UI (*"Ver más ⌄"*) con citas de uso (`examples`), `cultural_note`, miniatura clicable (`image_url`) y botones que emiten `@add-to-deck(sense)` y `@report(sense)`.
     - `dictionary/TabooWarningDialog.vue`: `AlertDialog` preventivo cuando `word.is_taboo == true`.
     - `dictionary/ReportModal.vue` (`CU09`): Modal Reka `Dialog` para denunciar `WORD` o `SENSE` (`reason_category`: `SPAM`, `OFFENSIVE`, `INCORRECT`, `DUPLICATE`, `OTHER`) emitiendo `@submit(payload)`.
     - `studio/AddToDeckModal.vue` (`CU10`): Modal rápido que recibe `decks` por prop y emite `@add` o `@create-deck` respetando `RN04`.
     - `ui/ImageLightboxModal.vue` y `ui/SearchModal.vue` (`Ctrl + K` con debounce de 250ms).
-  - [ ] **Vistas Funcionales en `local-app/frontend/src/views/community/` (`Rutas #4, #5 y #6`):**
-    - `HomeView.vue` (`/#/`): Palabra del Día (`GetWordOfTheDay`), accesos rápidos y escaparates de colecciones/decks públicos.
+  - [x] **Vistas Funcionales en `local-app/frontend/src/views/community/` (`Rutas #4, #5 y #6`):**
+    - `HomeView.vue` (`/#/`): Palabra del Día (`GetWordOfTheDay`), accesos rápidos, escaparates de colecciones/decks públicos y mini-preview de Arena.
     - `DictionaryView.vue` (`/#/dictionary`): Buscador FTS + `pg_trgm` (`SearchWords`) y explorador paginado (`ExploreWords`) con filtros por país (`ListRegions`), categoría gramatical y nivel CEFR.
-    - `WordDetailView.vue` (`/#/dictionary/:id`): Ficha completa integrando `FriendlyBlurb`, lista de `SenseItem` y modales según el **Flujo 3 de [`.context/UI_FLOWS.md`](./UI_FLOWS.md)**.
+    - `WordDetailView.vue` (`/#/dictionary/:id` y `/#/dictionary/word/:id`): Ficha completa integrando `FriendlyBlurb`, lista de `SenseItem` y modales según el **Flujo 3 de [`.context/UI_FLOWS.md`](./UI_FLOWS.md)**.
 - **Criterio de Cierre:** `wails3 task client:check` pasa con 0 errores; trazabilidad completa de `CU05`, `CU09` y `CU10`.
 
 ---
 
-### 📍 Sub-Fase 5.5: Catálogos Públicos de Colecciones y Barajas + Clonación (`Rutas #7, #8, #9, #10` — `CU10, CU11, RN03`)
+### 📍 Sub-Fase 5.5: Catálogos Públicos de Colecciones y Barajas + Clonación (`Rutas #7, #8, #9, #10` — `CU10, CU11, RN03`) — **[SIGUIENTE EN COLA]**
 
 - **Objetivo:** Crear las tarjetas reutilizables de barajas/colecciones en `@palabrario/ui` y reemplazar los placeholders de las rutas `#7 a #10` en `local-app/frontend`.
 - **Entregables y Checklist:**
@@ -241,7 +241,7 @@ flowchart TD
 - **Entregables y Checklist:**
   - [ ] **Componentes Editoriales en `packages/ui/src/components/editorial/` (exportados en `packages/ui/src/index.ts`):**
     - `QuorumStepper.vue`: Indicador visual de los 3 slots de revisión (`RN06`) mostrando votos emitidos (`APPROVE`, `REQUEST_CHANGES`, `REJECT`), bloqueo de auto-aprobación (`RN07` cuando `currentUser.id_user == proposal.created_by`) y badge de veto administrativo (`RN08`).
-    - `ProposalDiffCard.vue`: Inspector de propuesta léxica mostrando lema, etimología, sentidos, notas culturales, ejemplos e imágenes con atribuciones (`RN12`).
+    - `ProposalDiffCard.vue`: Inspector de propuesta léxica mostrando lema, etimología, sentidos, notas culturales, ejemplos e ilustraciones (`RN12`).
   - [ ] **`local-app/frontend/src/views/editorial/EditorDashboardView.vue` (`/#/editor` — Ruta #21, `EDITOR`/`ADMIN`):**
     - Cola paginada de propuestas en `PENDING_QUORUM` (`ListPendingQuorumQueue`), pestaña de *"Mis Propuestas"* (`ListMyLexicalProposals`), inspección con `ProposalDiffCard` + `QuorumStepper`, formulario de dictamen (`SubmitProposalReview`) y botón de resolución forzada exclusivo para `ADMIN` (`AdminForceResolveProposal` — `RN08`).
   - [ ] **`local-app/frontend/src/views/editorial/EditorWordFormView.vue` (`/#/editor/words/new` y `/#/editor/words/:id` — Ruta #22, `EDITOR`/`ADMIN`):**

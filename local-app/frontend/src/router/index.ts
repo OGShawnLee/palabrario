@@ -19,6 +19,9 @@ declare module 'vue-router' {
 const SignInView = () => import('@/views/auth/SignInView.vue')
 const SignUpView = () => import('@/views/auth/SignUpView.vue')
 const UserProfileView = () => import('@/views/profile/UserProfileView.vue')
+const HomeView = () => import('@/views/community/HomeView.vue')
+const DictionaryView = () => import('@/views/community/DictionaryView.vue')
+const WordDetailView = () => import('@/views/community/WordDetailView.vue')
 const PlaceholderView = () => import('@/views/PlaceholderView.vue')
 
 const EDITORIAL: Array<'EDITOR' | 'ADMIN'> = ['EDITOR', 'ADMIN']
@@ -43,10 +46,10 @@ const routes: RouteRecordRaw[] = [
   { path: '/auth/sign-up', name: 'auth-sign-up', component: SignUpView, meta: { layout: 'auth', auth: 'guestOnly' } },
   { path: '/u/:username', name: 'user-profile', component: UserProfileView, meta: { layout: 'default', auth: 'public' } },
 
-  // Comunidad y Diccionario (5.4 / 5.5)
-  placeholder('/', 'home', '5.4'),
-  placeholder('/dictionary', 'dictionary-explore', '5.4'),
-  placeholder('/dictionary/word/:id', 'word-detail', '5.4'),
+  // Comunidad y Diccionario (Sub-Fase 5.4 funcional / 5.5)
+  { path: '/', name: 'home', component: HomeView, meta: { layout: 'default', auth: 'public' } },
+  { path: '/dictionary', name: 'dictionary-explore', component: DictionaryView, meta: { layout: 'default', auth: 'public' } },
+  { path: '/dictionary/word/:id', name: 'word-detail', component: WordDetailView, alias: '/dictionary/:id', meta: { layout: 'default', auth: 'public' } },
   placeholder('/collections', 'collections-catalog', '5.5'),
   placeholder('/collections/:id', 'collection-detail', '5.5'),
   placeholder('/decks', 'decks-catalog', '5.5'),
@@ -98,9 +101,11 @@ router.beforeEach(async (to, from) => {
     if (!role || !to.meta.roles?.includes(role as 'EDITOR' | 'ADMIN')) {
       // Un aprendiz abre el Popover de Credenciales y Rol (CU02 / CU04) en lugar de ver un 403.
       useOverlays().openCredentials()
-      return from.matched.length > 0 ? false : '/'
+      return false
     }
   }
+
+  return true
 })
 
 export default router
