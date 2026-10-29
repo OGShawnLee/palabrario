@@ -19,3 +19,5 @@ export { default as ReportModal } from './components/dictionary/ReportModal.vue'
 
 // Studio
 export { default as AddToDeckModal } from './components/studio/AddToDeckModal.vue'
+export { default as DeckCard } from './components/studio/DeckCard.vue'
+export { default as CollectionCard } from './components/studio/CollectionCard.vue'

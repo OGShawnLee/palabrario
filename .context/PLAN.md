@@ -20,7 +20,7 @@ Palabrario sigue una metodología estricta de construcción en cascada tipada so
 
 ## 1. Diagnóstico Ejecutivo e Histórico: ¿Dónde Estamos Hoy?
 
-El proyecto ha completado y verificado al **100% toda la arquitectura de Backend (Fases 1 a 4)** cubriendo los **16 Casos de Uso (`CU01–CU16`)** y las **13 Reglas de Negocio (`RN01–RN13`)**. Actualmente nos encontramos en la **Fase 5 (Monorepo `@palabrario/ui` + Cliente Wails V3 / Capacitor PWA)** con las sub-fases 5.1 a 5.4 completadas, con la **Fase 6 (Plataforma Web 100% Híbrida: Astro SSR SEO + 23 Rutas Interactivas con WebSockets)** y la **Fase 7 (Eventos Culturales de Temporada)** planificadas en la hoja de ruta.
+El proyecto ha completado y verificado al **100% toda la arquitectura de Backend (Fases 1 a 4)** cubriendo los **16 Casos de Uso (`CU01–CU16`)** y las **13 Reglas de Negocio (`RN01–RN13`)**. Actualmente nos encontramos en la **Fase 5 (Monorepo `@palabrario/ui` + Cliente Wails V3 / Capacitor PWA)** con las sub-fases 5.1 a 5.5 completadas, con la **Fase 6 (Plataforma Web 100% Híbrida: Astro SSR SEO + 23 Rutas Interactivas con WebSockets)** y la **Fase 7 (Eventos Culturales de Temporada)** planificadas en la hoja de ruta.
 
 ```mermaid
 flowchart LR
@@ -171,20 +171,20 @@ flowchart TD
 
 ---
 
-### 📍 Sub-Fase 5.5: Catálogos Públicos de Colecciones y Barajas + Clonación (`Rutas #7, #8, #9, #10` — `CU10, CU11, RN03`) — **[SIGUIENTE EN COLA]**
+### 📍 Sub-Fase 5.5: Catálogos Públicos de Colecciones y Barajas + Clonación (`Rutas #7, #8, #9, #10` — `CU10, CU11, RN03`) — **[✅ COMPLETADA]**
 
 - **Objetivo:** Crear las tarjetas reutilizables de barajas/colecciones en `@palabrario/ui` y reemplazar los placeholders de las rutas `#7 a #10` en `local-app/frontend`.
 - **Entregables y Checklist:**
-  - [ ] **Componentes en `packages/ui/src/components/studio/`:** `DeckCard.vue` y `CollectionCard.vue` (agnósticos del router, emitiendo `@select`).
-  - [ ] **`local-app/frontend/src/views/community/PublicCollectionsView.vue` (`/#/collections` — Ruta #7):** Catálogo paginado de colecciones públicas (`ExplorePublicCollections`) con buscador y filtro de oficiales (`is_official`).
-  - [ ] **`local-app/frontend/src/views/community/CollectionDetailView.vue` (`/#/collections/:id` — Ruta #8):** Portada editorial de la colección (`GetCollectionDetail`), descripción y grilla de barajas que la componen con enlace a cada una.
-  - [ ] **`local-app/frontend/src/views/community/PublicDecksView.vue` (`/#/decks` — Ruta #9):** Catálogo paginado de barajas comunitarias (`ExplorePublicDecks`) mostrando autor, conteo de tarjetas (`word_count`) y contador de clones (`clone_count`).
-  - [ ] **`local-app/frontend/src/views/community/PublicDeckDetailView.vue` (`/#/decks/:id` — Ruta #10):** Vista previa de las tarjetas (`SenseSummary`) de una baraja pública (`GetDeckDetail`) y botón táctil **"Clonar a Mi Studio"** (`ClonePublicDeck` — `RN03`) que redirige al nuevo deck clonado o inicia repaso.
+  - [x] **Componentes en `packages/ui/src/components/studio/`:** `DeckCard.vue` y `CollectionCard.vue` (agnósticos del router, emitiendo `@select`).
+  - [x] **`local-app/frontend/src/views/community/PublicCollectionsView.vue` (`/#/collections` — Ruta #7):** Catálogo paginado de colecciones públicas (`ExplorePublicCollections`) con buscador y filtro de oficiales (`is_official`).
+  - [x] **`local-app/frontend/src/views/community/CollectionDetailView.vue` (`/#/collections/:id` — Ruta #8):** Portada editorial de la colección (`GetCollectionDetail`), descripción y grilla de barajas que la componen con enlace a cada una.
+  - [x] **`local-app/frontend/src/views/community/PublicDecksView.vue` (`/#/decks` — Ruta #9):** Catálogo paginado de barajas comunitarias (`ExplorePublicDecks`) con buscador reactivo con debounce y filtro de barajas oficiales.
+  - [x] **`local-app/frontend/src/views/community/PublicDeckDetailView.vue` (`/#/decks/:id` — Ruta #10):** Vista previa de las tarjetas de una baraja pública (`GetDeckDetail`) y botón táctil **"Clonar a Mi Studio"** (`ClonePublicDeck` — `RN03`) con `useCloneDeck` que redirige a `/#/studio/decks`.
 - **Criterio de Cierre:** `wails3 task client:check` limpio (0 errores); clonación de decks públicos verificada contra `IPalabrarioAPI`.
 
 ---
 
-### 📍 Sub-Fase 5.6: Studio Personal — Gestores y Editores de Barajas y Colecciones (`Rutas #11, #13, #14, #15, #16` — `CU10, CU11`)
+### 📍 Sub-Fase 5.6: Studio Personal — Gestores y Editores de Barajas y Colecciones (`Rutas #11, #13, #14, #15, #16` — `CU10, CU11`) — **[SIGUIENTE EN COLA]**
 
 - **Objetivo:** Construir en `local-app/frontend/src/views/studio/` el taller privado del aprendiz para administrar sus barajas de estudio (`RN04`) y colecciones (`RN05`).
 - **Entregables y Checklist:**
