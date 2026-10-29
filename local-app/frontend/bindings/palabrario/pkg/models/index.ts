@@ -3,14 +3,6 @@
 
 export {
     AccountRole,
-    MasteryStage,
-    MatchStatus,
-    RequestStatus,
-    ReviewDecision,
-    WordGender
-} from "./models.js";
-
-export type {
     AchievementStatus,
     AddDeckItemRequest,
     AdminOverrideStateRequest,
@@ -42,9 +34,11 @@ export type {
     InternalArenaQuestion,
     InvitationTicket,
     MasteryDashboard,
+    MasteryStage,
     MatchPackage,
     MatchReplayDetail,
     MatchRoundReplay,
+    MatchStatus,
     MatchSummary,
     PaginatedWords,
     ParticipantFinalResult,
@@ -53,8 +47,10 @@ export type {
     PublicUserProfile,
     RedeemTicketRequest,
     Region,
+    RequestStatus,
     ResolveEditorRequestDTO,
     ResolveReportRequest,
+    ReviewDecision,
     RoundResultPayload,
     SemanticConcept,
     SenseApprovalVote,
@@ -80,6 +76,7 @@ export type {
     WSEvent,
     WordDetail,
     WordExploreFilter,
+    WordGender,
     WordSearchResult,
     WordSummaryCard,
     XPTransactionItem

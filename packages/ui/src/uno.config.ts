@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { defineConfig, presetWind3, presetIcons } from 'unocss'
+import { defineConfig, presetWind3, presetIcons, transformerVariantGroup } from 'unocss'
 
 // Absolute glob so any workspace consumer (local-app, web-portal) extracts classes used by shared components.
 const uiRoot = path.dirname(fileURLToPath(import.meta.url))
@@ -10,6 +10,9 @@ export default defineConfig({
   content: {
     filesystem: [sharedComponentsGlob],
   },
+  transformers: [
+    transformerVariantGroup()
+  ],
   presets: [
     presetWind3(),
     presetIcons({
@@ -56,7 +59,7 @@ export default defineConfig({
     'btn-ghost': 'inline-flex items-center justify-center gap-2 bg-transparent text-ink/70 font-semibold px-4 py-2 rounded-xl hover:(bg-ink/6 text-ink) transition-all cursor-pointer',
 
     // Inputs y píldoras con jerarquía de opacidad
-    'input-editorial': 'w-full bg-surface text-ink placeholder:text-ink/40 rounded-2xl border border-ink/12 px-4 py-3 shadow-soft focus:(outline-none border-brand ring-3 ring-brand/15) transition-all',
+    'input-editorial': 'w-full bg-surface text-ink placeholder:text-ink/40 rounded-2xl border border-ink/12 h-12 px-4 shadow-soft focus:(outline-none border-brand ring-3 ring-brand/15) transition-all',
     'badge-pill': 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide',
   },
 })

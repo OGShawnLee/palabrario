@@ -54,7 +54,7 @@ flowchart LR
 | **3. `core-service` (`:8000` — `CU01–CU14, CU16`)** | **100% Completo** | Los 7 servicios SOA implementados, enrutados en `router.go` y con suite de pruebas pasando al 100%. |
 | **4. `realtime-service` (`:8001` — `CU15, CU16`)** | **100% Completo** | `ArenaHub` WebSocket concurrente en RAM con tests pasando con `-race`. |
 | **5. `image-service` (`:8002` — `RN12 / RNF-SEG-04`)** | **100% Completo** | Sanitización EXIF, redimensionado y filtro NSFW en Go puro con tests pasando con `-race`. |
-| **6. Monorepo UI (`packages/ui`) + Cliente (`local-app/`)** | **🚧 En Construcción (Fase 5)** | Scaffolding Bun Workspaces, `@palabrario/ui` y puente nativo modular completados (5.1 y 5.2 cerradas). Siguiente: Sub-Fase 5.3 (Navegación, Auth y Perfil). |
+| **6. Monorepo UI (`packages/ui`) + Cliente (`local-app/`)** | **🚧 En Construcción (Fase 5)** | Scaffolding Bun Workspaces, puente nativo y Shell de navegación completados (5.1, 5.2 y 5.3 cerradas). Siguiente: Sub-Fase 5.4 (Portal Home, Buscador FTS y Ficha Léxica). |
 | **7. Plataforma Web Híbrida (`web-portal/` — Astro SSR + SPA)** | **⏳ Planificada (Fase 6)** | Consumirá `@palabrario/ui` y `IPalabrarioAPI` para ofrecer SSR/SEO + OpenGraph en rutas públicas (`#3–#10`) y el 100% de las 23 rutas interactivas (incluyendo WebSockets hacia `:8001`) en el navegador. |
 
 ---
@@ -129,20 +129,20 @@ flowchart TD
 
 ---
 
-### 📍 Sub-Fase 5.3: Shell de Navegación (`Layouts` + `Router` con Placeholders), `TopBar` + `CredentialsRolePopover` y Autenticación/Perfil (`Rutas #1, #2, #3` — `CU01, CU02, CU04`) — **[SIGUIENTE EN COLA]**
+### 📍 Sub-Fase 5.3: Shell de Navegación (`Layouts` + `Router` con Placeholders), `TopBar` + `CredentialsRolePopover` y Autenticación/Perfil (`Rutas #1, #2, #3` — `CU01, CU02, CU04`) — **[✅ COMPLETADA]**
 
 - **Objetivo:** Levantar el esqueleto completo de enrutamiento de las 23 rutas, los componentes de navegación en `@palabrario/ui`, el flujo de credenciales/rol en la imprenta, y cerrar las vistas de Autenticación y Perfil Social.
 - **Entregables y Checklist:**
-  - [ ] **Componentes Compartidos en `packages/ui/src/components/ui/` (SSR-Safe, exportados en `packages/ui/src/index.ts`):**
+  - [x] **Componentes Compartidos en `packages/ui/src/components/ui/` (SSR-Safe, exportados en `packages/ui/src/index.ts`):**
     - `TopBar.vue`: Recibe `currentUser`, `activeSpace` y contadores por props; incluye conmutador de espacio, racha (`🔥`), nivel, disparador `Ctrl + K` y **`DropdownMenu` de Reka UI** en el avatar/estado del usuario emitiendo `@navigate(path)`, `@open-search`, `@open-credentials` y `@sign-out`.
     - `BottomNav.vue`: Barra inferior responsiva para móvil/ventana estrecha que emite `@navigate(path)`.
     - `MediaDropzone.vue`: Dropzone reutilizable (`category: 'avatar' | 'credentials' | 'general'`, validación máx 5 MB y formatos `JPG/PNG/WEBP`).
-  - [ ] **Estado, Layouts y Enrutador en `local-app/frontend/src/`:**
+  - [x] **Estado, Layouts y Enrutador en `local-app/frontend/src/`:**
     - `src/composables/useAuth.ts`: Estado reactivo global (`currentUser`, `isAuthenticated`, `isEditor`, `isAdmin`, `hydrateSession`, `signIn`, `signUp`, `signOut`, `refreshProfile`) siguiendo el **Flujo 1 de [`.context/UI_FLOWS.md`](./UI_FLOWS.md)**.
     - `src/components/ui/CredentialsRolePopover.vue`: Popover/Dialog invocado desde `AppLayout.vue` al recibir `@open-credentials` de `TopBar.vue` siguiendo el **Flujo 2 de [`.context/UI_FLOWS.md`](./UI_FLOWS.md)** (muestra rol actual, pestaña *Canjear Boleto VIP* `CU04`, pestaña *Solicitar Ascenso a Editor* `CU02` con bloqueo `RN02` si `xp < 500 && !is_verified` y subida de credencial `RN12`, e historial `ListMyEditorRequests`).
     - `src/layouts/AppLayout.vue`, `AuthLayout.vue` e `ImmersiveLayout.vue`.
     - Vistas Placeholder (`Rutas #4 a #23`) en `local-app/frontend/src/views/` y `src/router/index.ts` con `createWebHashHistory()` y guardias (`OptionalAuth`, `guestOnly`, `requireAuth`, `requireRole`).
-  - [ ] **Vistas Funcionales en `local-app/frontend/src/views/` (`Rutas #1, #2 y #3`):**
+  - [x] **Vistas Funcionales en `local-app/frontend/src/views/` (`Rutas #1, #2 y #3`):**
     - `views/auth/SignInView.vue` (`/#/auth/sign-in` — `RF01`).
     - `views/auth/SignUpView.vue` (`/#/auth/sign-up` — selector `ListRegions`).
     - `views/profile/UserProfileView.vue` (`/#/u/:username` — `CU01`): Ficha pública + panel de edición de perfil (`UpdateProfile` + `MediaDropzone(category='avatar')`) y cambio de contraseña (`ChangePassword`) cuando `is_owner == true`.
@@ -150,7 +150,7 @@ flowchart TD
 
 ---
 
-### 📍 Sub-Fase 5.4: Portal Comunitario, Buscador FTS y Ficha Léxica Estilo Vocabulary.com (`Rutas #4, #5, #6` + Modales — `CU05, CU09, CU10`)
+### 📍 Sub-Fase 5.4: Portal Comunitario, Buscador FTS y Ficha Léxica Estilo Vocabulary.com (`Rutas #4, #5, #6` + Modales — `CU05, CU09, CU10`) — **[SIGUIENTE EN COLA]**
 
 - **Objetivo:** Construir en `@palabrario/ui` los componentes del diccionario panhispánico (100% SSR-Safe, importando directamente `@bindings/palabrario/pkg/models`) y reemplazar en `local-app/frontend` los placeholders de las rutas `#4, #5 y #6`.
 - **Entregables y Checklist:**
