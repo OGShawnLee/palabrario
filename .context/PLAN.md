@@ -13,14 +13,13 @@ Palabrario sigue una metodología estricta de construcción en cascada tipada so
 2. **Consultas Estrictamente Tipadas (`sqlc`) y Servicios SOA (`:8000`, `:8001`, `:8002`):** Cero strings SQL sueltos y 100% de lógica de negocio verificada en el backend (Go 1.24 + Chi v5).
 3. **Puente Nativo IPC de Wails V3 (`local-app/app.go`):** El proceso Go de escritorio importa `pkg/models`, custodia el `sessionToken` JWT en memoria privada (`sync.RWMutex`) y expone los métodos de los 7 módulos SOA + subida multimedia.
 4. **Autogeneración de Tipos y Contrato Polimórfico (`IPalabrarioAPI`):** Wails genera `local-app/frontend/bindings/` (accesible en todo el monorepo vía alias universal `@bindings/*`), de donde se deriva `export type IPalabrarioAPI = typeof WailsAppBridge` para gobernar tanto a `WailsDesktopAdapter` (Desktop IPC), como a `CapacitorMobileAdapter` (Móvil / Navegador Web SPA con `fetch` + `WebSocket` nativo a `:8001`) y `AstroSSRAdapter` (SSR en Fase 6).
-5. **Paquete Compartido de Diseño y Componentes (`packages/ui` $\to$ `@palabrario/ui`):** Aloja la configuración canónica de UnoCSS ([`.context/PALETTE.md`](./PALETTE.md)), la tipografía `Satoshi` y **todos los componentes `.vue` reutilizables y agnósticos del router (SSR-Safe)**, importando tipos directamente desde `@bindings/palabrario/pkg/models`.
-6. **Shells Multiplataforma (`local-app/frontend` en Fase 5 y `web-portal` con Astro en Fase 6):** Consumen `@palabrario/ui` (`workspace:*`) y `IPalabrarioAPI`, cumpliendo las rutas de [`.context/ROUTES_MAP.md`](./ROUTES_MAP.md) y los flujos de [`.context/UI_FLOWS.md`](./UI_FLOWS.md).
+5. **Paquete Compartido de Diseño y Componentes (`packages/ui` $\to$ `@palabrario/ui`):** Aloja la configuración canónica de UnoCSS ([`.context/PALETTE.md`](./PALETTE.md)), la tipografía `Satoshi` y **todos los componentes `.vue` reutilizables y agnósticos del router (SSR-Safe)**, importando tipos directamente desde `@bindings/palabrario/pkg/models`.\n6. **Shells Multiplataforma (`local-app/frontend` en Fase 5 y `web-portal` con Astro en Fase 6):** Consumen `@palabrario/ui` (`workspace:*`) y `IPalabrarioAPI`, cumpliendo las rutas de [`.context/ROUTES_MAP.md`](./ROUTES_MAP.md) y los flujos de [`.context/UI_FLOWS.md`](./UI_FLOWS.md).
 
 ---
 
 ## 1. Diagnóstico Ejecutivo e Histórico: ¿Dónde Estamos Hoy?
 
-El proyecto ha completado y verificado al **100% toda la arquitectura de Backend (Fases 1 a 4)** cubriendo los **16 Casos de Uso (`CU01–CU16`)** y las **13 Reglas de Negocio (`RN01–RN13`)**. Actualmente nos encontramos en la **Fase 5 (Monorepo `@palabrario/ui` + Cliente Wails V3 / Capacitor PWA)** con las sub-fases 5.1 a 5.5 completadas, con la **Fase 6 (Plataforma Web 100% Híbrida: Astro SSR SEO + 23 Rutas Interactivas con WebSockets)** y la **Fase 7 (Eventos Culturales de Temporada)** planificadas en la hoja de ruta.
+El proyecto ha completado y verificado al **100% toda la arquitectura de Backend (Fases 1 a 4)** cubriendo los **16 Casos de Uso (`CU01–CU16`)** y las **13 Reglas de Negocio (`RN01–RN13`)**. Actualmente nos encontramos en la **Fase 5 (Monorepo `@palabrario/ui` + Cliente Wails V3 / Capacitor PWA)** con las sub-fases 5.1 a 5.6 completadas, con la **Fase 6 (Plataforma Web 100% Híbrida: Astro SSR SEO + 23 Rutas Interactivas con WebSockets)** y la **Fase 7 (Eventos Culturales de Temporada)** planificadas en la hoja de ruta.
 
 ```mermaid
 flowchart LR
@@ -54,7 +53,7 @@ flowchart LR
 | **3. `core-service` (`:8000` — `CU01–CU14, CU16`)** | **100% Completo** | Los 7 servicios SOA implementados, enrutados en `router.go` y con suite de pruebas pasando al 100%. |
 | **4. `realtime-service` (`:8001` — `CU15, CU16`)** | **100% Completo** | `ArenaHub` WebSocket concurrente en RAM con tests pasando con `-race`. |
 | **5. `image-service` (`:8002` — `RN12 / RNF-SEG-04`)** | **100% Completo** | Sanitización EXIF, redimensionado y filtro NSFW en Go puro con tests pasando con `-race`. |
-| **6. Monorepo UI (`packages/ui`) + Cliente (`local-app/`)** | **🚧 En Construcción (Fase 5)** | Sub-Fases 5.1, 5.2, 5.3 y 5.4 completadas (0 errores). Siguiente: Sub-Fase 5.5 (Catálogos Públicos de Colecciones y Barajas + Clonación). |
+| **6. Monorepo UI (`packages/ui`) + Cliente (`local-app/`)** | **🚧 En Construcción (Fase 5)** | Sub-Fases 5.1 a 5.6 completadas (0 errores). Siguiente: Sub-Fase 5.7 (Sesión Inmersiva de Repaso SM-2 y Tablero de Maestría). |
 | **7. Plataforma Web Híbrida (`web-portal/` — Astro SSR + SPA)** | **⏳ Planificada (Fase 6)** | Consumirá `@palabrario/ui` y `IPalabrarioAPI` para ofrecer SSR/SEO + OpenGraph en rutas públicas (`#3–#10`) y el 100% de las 23 rutas interactivas (incluyendo WebSockets hacia `:8001`) en el navegador. |
 
 ---
@@ -184,20 +183,20 @@ flowchart TD
 
 ---
 
-### 📍 Sub-Fase 5.6: Studio Personal — Gestores y Editores de Barajas y Colecciones (`Rutas #11, #13, #14, #15, #16` — `CU10, CU11`) — **[SIGUIENTE EN COLA]**
+### 📍 Sub-Fase 5.6: Studio Personal — Gestores y Editores de Barajas y Colecciones (`Rutas #11, #13, #14, #15, #16` — `CU10, CU11`) — **[✅ COMPLETADA]**
 
 - **Objetivo:** Construir en `local-app/frontend/src/views/studio/` el taller privado del aprendiz para administrar sus barajas de estudio (`RN04`) y colecciones (`RN05`).
 - **Entregables y Checklist:**
-  - [ ] **`views/studio/StudioDashboardView.vue` (`/#/studio` — Ruta #11):** Resumen ejecutivo del aprendiz (`GetMasterySummary` con conteo `due_for_review_today`, botón directo a `/#/studio/session`, racha activa y carruseles de mis decks y colecciones recientes usando `@palabrario/ui`).
-  - [ ] **`views/studio/StudioDecksView.vue` (`/#/studio/decks` — Ruta #13):** Listado de barajas propias y clonadas (`ListMyDecks`), modal para crear baraja (`CreateDeck`) y eliminación con confirmación (`DeleteDeck`).
-  - [ ] **`views/studio/StudioDeckEditorView.vue` (`/#/studio/decks/:id` — Ruta #14):** Editor de metadatos (`UpdateDeck`: nombre, descripción, switch `is_public`), buscador integrado para añadir acepciones (`AddSenseToDeck` respetando tope de 100 cartas `RN04`), remoción de cartas (`RemoveSenseFromDeck`) y botón *"Estudiar este Deck"* (`/#/studio/session?deckId=:id`).
-  - [ ] **`views/studio/StudioCollectionsView.vue` (`/#/studio/collections` — Ruta #15):** Listado de colecciones propias (`ListMyCollections`), creación (`CreateCollection`) y borrado (`DeleteCollection`).
-  - [ ] **`views/studio/StudioCollectionEditorView.vue` (`/#/studio/collections/:id` — Ruta #16):** Editor de colección (`UpdateCollection`), vinculación ordenada de barajas (`AddDeckToCollection` validando `RN05`: colecciones públicas solo admiten decks públicos) y desvinculación (`RemoveDeckFromCollection`).
+  - [x] **`views/studio/StudioDashboardView.vue` (`/#/studio` — Ruta #11):** Resumen ejecutivo del aprendiz (`GetMasterySummary` con conteo `due_for_review_today`, botón directo a `/#/studio/session`, racha activa y carruseles de mis decks y colecciones recientes usando `@palabrario/ui`).
+  - [x] **`views/studio/StudioDecksView.vue` (`/#/studio/decks` — Ruta #13):** Listado de barajas propias y clonadas (`ListMyDecks`), modal para crear baraja (`CreateDeck`) y eliminación con confirmación (`DeleteDeck`).
+  - [x] **`views/studio/StudioDeckEditorView.vue` (`/#/studio/decks/:id` — Ruta #14):** Editor de metadatos (`UpdateDeck`: nombre, descripción, switch `is_public`), buscador integrado para añadir acepciones (`AddSenseToDeck` respetando tope de 100 cartas `RN04`), remoción de cartas (`RemoveSenseFromDeck`) y botón *"Estudiar este Deck"* (`/#/studio/session?deckId=:id`).
+  - [x] **`views/studio/StudioCollectionsView.vue` (`/#/studio/collections` — Ruta #15):** Listado de colecciones propias (`ListMyCollections`), creación (`CreateCollection`) y borrado (`DeleteCollection`).
+  - [x] **`views/studio/StudioCollectionEditorView.vue` (`/#/studio/collections/:id` — Ruta #16):** Editor de colección (`UpdateCollection`), vinculación ordenada de barajas (`AddDeckToCollection` validando `RN05`: colecciones públicas solo admiten decks públicos) y desvinculación (`RemoveDeckFromCollection`).
 - **Criterio de Cierre:** `wails3 task client:check` limpio (0 errores); reglas `RN04` y `RN05` reflejadas en la UI.
 
 ---
 
-### 📍 Sub-Fase 5.7: Sesión Inmersiva de Repaso SM-2 y Tablero de Maestría (`Rutas #12, #17` — `CU12, CU13, RN09, RN11`)
+### 📍 Sub-Fase 5.7: Sesión Inmersiva de Repaso SM-2 y Tablero de Maestría (`Rutas #12, #17` — `CU12, CU13, RN09, RN11`) — **[SIGUIENTE EN COLA]**
 
 - **Objetivo:** Implementar en `@palabrario/ui` los componentes de flashcards SM-2 y barra de maestría, y construir en `local-app/frontend` la sesión inmersiva y el libro mayor de XP.
 - **Entregables y Checklist:**
@@ -221,8 +220,7 @@ flowchart TD
   - [ ] **Componentes de Arena en `packages/ui/src/components/arena/` (exportados en `packages/ui/src/index.ts`):**
     - `ArenaTimer.vue`: Cronómetro regresivo con `font-variant-numeric: tabular-nums` y alerta visual en los últimos 3 segundos.
     - `ImageChoiceGrid.vue`: Cuadrícula táctil 2x2 de opciones ilustradas para rondas `WORD_TO_IMAGE` (`RN13`).
-    - `PodiumCard.vue`: Tarjeta de podio final (`1°`, `2°`, `3°`) con desglose de puntos, aciertos, tiempo total (`TotalTimeSpentMs`) y XP otorgado.
-  - [ ] **`local-app/frontend/src/views/arena/ArenaLobbyView.vue` (`/#/arena` — Ruta #18):**
+    - `PodiumCard.vue`: Tarjeta de podio final (`1°`, `2°`, `3°`) con desglose de puntos, aciertos, tiempo total (`TotalTimeSpentMs`) y XP otorgado.\n  - [ ] **`local-app/frontend/src/views/arena/ArenaLobbyView.vue` (`/#/arena` — Ruta #18):**
     - Formulario para crear partida (`CreateArenaMatch`: selección de Deck o Colección con validación de mínimo 8 sentidos, rondas, tiempo por ronda, modos permitidos incluyendo `WORD_TO_IMAGE`) o unirse con código PIN de 6 caracteres (`JoinArenaMatch`).
     - Tabla de historial de partidas recientes (`GetMyMatchHistory`) con acceso directo al Replay.
   - [ ] **`local-app/frontend/src/views/arena/ArenaGameView.vue` (`/#/arena/room/:code` — Ruta #19, Layout `immersive`):**

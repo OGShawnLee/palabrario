@@ -26,6 +26,11 @@ const PublicCollectionsView = () => import('@/views/community/PublicCollectionsV
 const CollectionDetailView = () => import('@/views/community/CollectionDetailView.vue')
 const PublicDecksView = () => import('@/views/community/PublicDecksView.vue')
 const PublicDeckDetailView = () => import('@/views/community/PublicDeckDetailView.vue')
+const StudioDashboardView = () => import('@/views/studio/StudioDashboardView.vue')
+const StudioDecksView = () => import('@/views/studio/StudioDecksView.vue')
+const StudioDeckEditorView = () => import('@/views/studio/StudioDeckEditorView.vue')
+const StudioCollectionsView = () => import('@/views/studio/StudioCollectionsView.vue')
+const StudioCollectionEditorView = () => import('@/views/studio/StudioCollectionEditorView.vue')
 const PlaceholderView = () => import('@/views/PlaceholderView.vue')
 
 const EDITORIAL: Array<'EDITOR' | 'ADMIN'> = ['EDITOR', 'ADMIN']
@@ -64,13 +69,13 @@ const routes: RouteRecordRaw[] = [
   { path: '/decks', name: 'decks-catalog', component: PublicDecksView, meta: { layout: 'default', auth: 'public' } },
   { path: '/decks/:id', name: 'deck-detail', component: PublicDeckDetailView, meta: { layout: 'default', auth: 'public' } },
 
-  // Studio (5.6 / 5.7)
-  placeholder('/studio', 'studio-dashboard', '5.6', { auth: 'requireAuth' }),
-  placeholder('/studio/study', 'studio-study-session', '5.7', { auth: 'requireAuth', layout: 'immersive' }),
-  placeholder('/studio/decks', 'studio-decks', '5.6', { auth: 'requireAuth' }),
-  placeholder('/studio/decks/:id/edit', 'studio-deck-editor', '5.6', { auth: 'requireAuth', alias: '/studio/decks/:id' }),
-  placeholder('/studio/collections', 'studio-collections', '5.6', { auth: 'requireAuth' }),
-  placeholder('/studio/collections/:id/edit', 'studio-collection-editor', '5.6', { auth: 'requireAuth', alias: '/studio/collections/:id' }),
+  // Studio Personal (Sub-Fase 5.6 funcional / 5.7)
+  { path: '/studio', name: 'studio-dashboard', component: StudioDashboardView, meta: { layout: 'default', auth: 'requireAuth' } },
+  placeholder('/studio/study', 'studio-study-session', '5.7', { auth: 'requireAuth', layout: 'immersive', alias: '/studio/session' }),
+  { path: '/studio/decks', name: 'studio-decks', component: StudioDecksView, meta: { layout: 'default', auth: 'requireAuth' } },
+  { path: '/studio/decks/:id/edit', name: 'studio-deck-editor', component: StudioDeckEditorView, alias: '/studio/decks/:id', meta: { layout: 'default', auth: 'requireAuth' } },
+  { path: '/studio/collections', name: 'studio-collections', component: StudioCollectionsView, meta: { layout: 'default', auth: 'requireAuth' } },
+  { path: '/studio/collections/:id/edit', name: 'studio-collection-editor', component: StudioCollectionEditorView, alias: '/studio/collections/:id', meta: { layout: 'default', auth: 'requireAuth' } },
   placeholder('/studio/mastery', 'studio-mastery', '5.7', { auth: 'requireAuth' }),
 
   // Arena (5.8)
@@ -86,7 +91,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
 
-export const router = createRouter({
+const router = createRouter({
   history: createWebHashHistory(),
   routes,
 })
@@ -107,14 +112,16 @@ router.beforeEach(async (to, from) => {
 
   if (guard === 'requireRole') {
     const role = auth.currentUser.value?.role as string | undefined
-    if (!role || !to.meta.roles?.includes(role as 'EDITOR' | 'ADMIN')) {
-      // Un aprendiz abre el Popover de Credenciales y Rol (CU02 / CU04) en lugar de ver un 403.
-      useOverlays().openCredentials()
-      return false
+    const allowed = to.meta.roles ?? []
+    if (!role || !allowed.includes(role as 'EDITOR' | 'ADMIN')) {
+      const overlays = useOverlays()
+      overlays.openCredentials()
+      return from.path ? false : '/'
     }
   }
 
   return true
 })
 
+export { router }
 export default router
