@@ -33,6 +33,9 @@ const StudioDeckEditorView = () => import('@/views/studio/StudioDeckEditorView.v
 const StudioCollectionsView = () => import('@/views/studio/StudioCollectionsView.vue')
 const StudioCollectionEditorView = () => import('@/views/studio/StudioCollectionEditorView.vue')
 const StudioMasteryView = () => import('@/views/studio/StudioMasteryView.vue')
+const ArenaLobbyView = () => import('@/views/arena/ArenaLobbyView.vue')
+const ArenaGameView = () => import('@/views/arena/ArenaGameView.vue')
+const ArenaReplayView = () => import('@/views/arena/ArenaReplayView.vue')
 const PlaceholderView = () => import('@/views/PlaceholderView.vue')
 
 const EDITORIAL: Array<'EDITOR' | 'ADMIN'> = ['EDITOR', 'ADMIN']
@@ -41,31 +44,35 @@ function placeholder(
   path: string,
   name: string,
   phase: string,
-  meta: { layout?: LayoutName; auth?: AuthGuard; roles?: Array<'EDITOR' | 'ADMIN'>; alias?: string | string[] } = {},
+  meta?: { layout?: LayoutName; auth?: AuthGuard; roles?: Array<'EDITOR' | 'ADMIN'> },
 ): RouteRecordRaw {
-  const { alias, ...restMeta } = meta
-  const record: RouteRecordRaw = {
+  return {
     path,
     name,
     component: PlaceholderView,
-    meta: { layout: 'default', auth: 'public', phase, ...restMeta },
+    meta: {
+      layout: meta?.layout ?? 'default',
+      auth: meta?.auth ?? 'public',
+      roles: meta?.roles,
+      phase,
+    },
   }
-  if (alias) {
-    record.alias = alias
-  }
-  return record
 }
 
-const routes: RouteRecordRaw[] = [
-  // Auth & Perfil (funcionales — Sub-Fase 5.3)
-  { path: '/auth/sign-in', name: 'auth-sign-in', component: SignInView, meta: { layout: 'auth', auth: 'guestOnly' } },
-  { path: '/auth/sign-up', name: 'auth-sign-up', component: SignUpView, meta: { layout: 'auth', auth: 'guestOnly' } },
-  { path: '/u/:username', name: 'user-profile', component: UserProfileView, meta: { layout: 'default', auth: 'public' } },
+export const routes: RouteRecordRaw[] = [
+  // Auth
+  { path: '/auth/sign-in', name: 'sign-in', component: SignInView, meta: { layout: 'auth', auth: 'guestOnly' } },
+  { path: '/auth/sign-up', name: 'sign-up', component: SignUpView, meta: { layout: 'auth', auth: 'guestOnly' } },
 
-  // Comunidad y Diccionario (Sub-Fases 5.4 y 5.5 funcionales)
+  // Perfil
+  { path: '/profile', name: 'user-profile', component: UserProfileView, meta: { layout: 'default', auth: 'requireAuth' } },
+
+  // Portal Público y Diccionario
   { path: '/', name: 'home', component: HomeView, meta: { layout: 'default', auth: 'public' } },
   { path: '/dictionary', name: 'dictionary-explore', component: DictionaryView, meta: { layout: 'default', auth: 'public' } },
-  { path: '/dictionary/word/:id', name: 'word-detail', component: WordDetailView, alias: '/dictionary/:id', meta: { layout: 'default', auth: 'public' } },
+  { path: '/dictionary/word/:id', name: 'word-detail', component: WordDetailView, meta: { layout: 'default', auth: 'public' } },
+
+  // Catálogos Públicos de Colecciones y Barajas
   { path: '/collections', name: 'collections-catalog', component: PublicCollectionsView, meta: { layout: 'default', auth: 'public' } },
   { path: '/collections/:id', name: 'collection-detail', component: CollectionDetailView, meta: { layout: 'default', auth: 'public' } },
   { path: '/decks', name: 'decks-catalog', component: PublicDecksView, meta: { layout: 'default', auth: 'public' } },
@@ -80,10 +87,10 @@ const routes: RouteRecordRaw[] = [
   { path: '/studio/collections/:id/edit', name: 'studio-collection-editor', component: StudioCollectionEditorView, alias: '/studio/collections/:id', meta: { layout: 'default', auth: 'requireAuth' } },
   { path: '/studio/mastery', name: 'studio-mastery', component: StudioMasteryView, meta: { layout: 'default', auth: 'requireAuth' } },
 
-  // Arena (5.8)
-  placeholder('/play', 'arena-lobby', '5.8', { auth: 'requireAuth' }),
-  placeholder('/game/:roomCode', 'arena-game-room', '5.8', { auth: 'requireAuth', layout: 'immersive' }),
-  placeholder('/game/:matchId/replay', 'arena-replay', '5.8', { auth: 'requireAuth' }),
+  // Arena Multijugador en Vivo y Replay 3NF (Sub-Fase 5.8 funcional)
+  { path: '/play', name: 'arena-lobby', component: ArenaLobbyView, alias: '/arena', meta: { layout: 'default', auth: 'requireAuth' } },
+  { path: '/game/:roomCode', name: 'arena-game-room', component: ArenaGameView, alias: '/arena/room/:roomCode', meta: { layout: 'immersive', auth: 'requireAuth' } },
+  { path: '/game/:matchId/replay', name: 'arena-replay', component: ArenaReplayView, alias: '/arena/matches/:matchId', meta: { layout: 'default', auth: 'requireAuth' } },
 
   // Editorial y Gobernanza (5.9)
   placeholder('/editor', 'editor-dashboard', '5.9', { auth: 'requireRole', roles: EDITORIAL }),

@@ -23,3 +23,8 @@ export { default as DeckCard } from './components/studio/DeckCard.vue'
 export { default as CollectionCard } from './components/studio/CollectionCard.vue'
 export { default as StudyCard } from './components/studio/StudyCard.vue'
 export { default as MasteryProgressBar } from './components/studio/MasteryProgressBar.vue'
+
+// Arena Multijugador
+export { default as ArenaTimer } from './components/arena/ArenaTimer.vue'
+export { default as ImageChoiceGrid } from './components/arena/ImageChoiceGrid.vue'
+export { default as PodiumCard } from './components/arena/PodiumCard.vue'
