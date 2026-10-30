@@ -36,28 +36,11 @@ const StudioMasteryView = () => import('@/views/studio/StudioMasteryView.vue')
 const ArenaLobbyView = () => import('@/views/arena/ArenaLobbyView.vue')
 const ArenaGameView = () => import('@/views/arena/ArenaGameView.vue')
 const ArenaReplayView = () => import('@/views/arena/ArenaReplayView.vue')
-const PlaceholderView = () => import('@/views/PlaceholderView.vue')
+const EditorDashboardView = () => import('@/views/editorial/EditorDashboardView.vue')
+const EditorWordFormView = () => import('@/views/editorial/EditorWordFormView.vue')
+const GovernanceDashboardView = () => import('@/views/editorial/GovernanceDashboardView.vue')
 
 const EDITORIAL: Array<'EDITOR' | 'ADMIN'> = ['EDITOR', 'ADMIN']
-
-function placeholder(
-  path: string,
-  name: string,
-  phase: string,
-  meta?: { layout?: LayoutName; auth?: AuthGuard; roles?: Array<'EDITOR' | 'ADMIN'> },
-): RouteRecordRaw {
-  return {
-    path,
-    name,
-    component: PlaceholderView,
-    meta: {
-      layout: meta?.layout ?? 'default',
-      auth: meta?.auth ?? 'public',
-      roles: meta?.roles,
-      phase,
-    },
-  }
-}
 
 export const routes: RouteRecordRaw[] = [
   // Auth
@@ -92,10 +75,27 @@ export const routes: RouteRecordRaw[] = [
   { path: '/game/:roomCode', name: 'arena-game-room', component: ArenaGameView, alias: '/arena/room/:roomCode', meta: { layout: 'immersive', auth: 'requireAuth' } },
   { path: '/game/:matchId/replay', name: 'arena-replay', component: ArenaReplayView, alias: '/arena/matches/:matchId', meta: { layout: 'default', auth: 'requireAuth' } },
 
-  // Editorial y Gobernanza (5.9)
-  placeholder('/editor', 'editor-dashboard', '5.9', { auth: 'requireRole', roles: EDITORIAL }),
-  placeholder('/editor/word/:id?', 'editor-word-form', '5.9', { auth: 'requireRole', roles: EDITORIAL }),
-  placeholder('/admin/governance', 'admin-governance', '5.9', { auth: 'requireRole', roles: ['ADMIN'] }),
+  // Editorial y Gobernanza (Sub-Fase 5.9 funcional)
+  {
+    path: '/editor',
+    name: 'editor-dashboard',
+    component: EditorDashboardView,
+    meta: { layout: 'default', auth: 'requireRole', roles: EDITORIAL },
+  },
+  {
+    path: '/editor/word/:id?',
+    name: 'editor-word-form',
+    component: EditorWordFormView,
+    alias: ['/editor/words/new', '/editor/words/:id'],
+    meta: { layout: 'default', auth: 'requireRole', roles: EDITORIAL },
+  },
+  {
+    path: '/admin/governance',
+    name: 'admin-governance',
+    component: GovernanceDashboardView,
+    alias: '/editor/governance',
+    meta: { layout: 'default', auth: 'requireRole', roles: ['ADMIN'] },
+  },
 
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]

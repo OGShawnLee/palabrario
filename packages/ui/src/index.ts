@@ -28,3 +28,7 @@ export { default as MasteryProgressBar } from './components/studio/MasteryProgre
 export { default as ArenaTimer } from './components/arena/ArenaTimer.vue'
 export { default as ImageChoiceGrid } from './components/arena/ImageChoiceGrid.vue'
 export { default as PodiumCard } from './components/arena/PodiumCard.vue'
+
+// Editorial & Gobernanza
+export { default as QuorumStepper } from './components/editorial/QuorumStepper.vue'
+export { default as ProposalDiffCard } from './components/editorial/ProposalDiffCard.vue'

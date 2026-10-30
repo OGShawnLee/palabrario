@@ -20,15 +20,15 @@ Palabrario sigue una metodología estricta de construcción en cascada tipada so
 
 ## 1. Diagnóstico Ejecutivo e Histórico: ¿Dónde Estamos Hoy?
 
-El proyecto ha completado y verificado al **100% toda la arquitectura de Backend (Fases 1 a 4)** cubriendo los **16 Casos de Uso (`CU01–CU16`)** y las **13 Reglas de Negocio (`RN01–RN13`)**. Actualmente nos encontramos en la **Fase 5 (Monorepo `@palabrario/ui` + Cliente Wails V3 / Capacitor PWA)** con las sub-fases 5.1 a 5.7 completadas, con la **Fase 6 (Plataforma Web 100% Híbrida: Astro SSR SEO + 23 Rutas Interactivas con WebSockets)** y la **Fase 7 (Eventos Culturales de Temporada)** planificadas en la hoja de ruta.
+El proyecto ha completado y verificado al **100% toda la arquitectura de Backend (Fases 1 a 4)** cubriendo los **16 Casos de Uso (`CU01–CU16`)** y las **13 Reglas de Negocio (`RN01–RN13`)**, así como la **Fase 5 (Monorepo `@palabrario/ui` + Cliente Wails V3 / Capacitor PWA, con sus 9 sub-fases atómicas 5.1 a 5.9 completadas y auditadas)**. El siguiente hito en la hoja de ruta es la **Fase 6 (Plataforma Web 100% Híbrida: Astro SSR SEO + 23 Rutas Interactivas con WebSockets)**, seguida a largo plazo por la **Fase 7 (Eventos Culturales de Temporada)**.
 
 ```mermaid
 flowchart LR
     F1["✅ Fase 1\nEsquema SQL + Triggers\n(100%)"] --> F2["✅ Fase 2\nMonorepo Go + Contratos\n(100%)"]
     F2 --> F3["✅ Fase 3 (3.1 a 3.5)\nCore SOA Completo\n(100%)"]
     F3 --> F4["✅ Fase 4 (4.1 a 4.5)\nArena 3NF + WS + Media\n(100%)"]
-    F4 --> F5["🚧 Fase 5 (5.1 a 5.9)\n@palabrario/ui + Wails V3\n+ Capacitor SPA"]
-    F5 --> F6["🌐 Fase 6\nPlataforma Web 100%\n(Astro SSR SEO + SPA WS)"]
+    F4 --> F5["✅ Fase 5 (5.1 a 5.9)\n@palabrario/ui + Wails V3\n+ Capacitor SPA\n(100%)"]
+    F5 --> F6["🚀 Fase 6\nPlataforma Web 100%\n(Astro SSR SEO + SPA WS)"]
     F6 --> F7["🌱 Fase 7 (Largo Plazo)\nEventos de Temporada"]
 ```
 
@@ -54,8 +54,8 @@ flowchart LR
 | **3. `core-service` (`:8000` — `CU01–CU14, CU16`)** | **100% Completo** | Los 7 servicios SOA implementados, enrutados en `router.go` y con suite de pruebas pasando al 100%. |
 | **4. `realtime-service` (`:8001` — `CU15, CU16`)** | **100% Completo** | `ArenaHub` WebSocket concurrente en RAM con tests pasando con `-race`. |
 | **5. `image-service` (`:8002` — `RN12 / RNF-SEG-04`)** | **100% Completo** | Sanitización EXIF, redimensionado y filtro NSFW en Go puro con tests pasando con `-race`. |
-| **6. Monorepo UI (`packages/ui`) + Cliente (`local-app/`)** | **🚧 En Construcción (Fase 5)** | Sub-Fases 5.1 a 5.8 completadas (0 errores). Siguiente: Sub-Fase 5.9 (Portal Editorial Quorum Tripartito y Gobernanza Institucional). |
-| **7. Plataforma Web Híbrida (`web-portal/` — Astro SSR + SPA)** | **⏳ Planificada (Fase 6)** | Consumirá `@palabrario/ui` y `IPalabrarioAPI` para ofrecer SSR/SEO + OpenGraph en rutas públicas (`#3–#10`) y el 100% de las 23 rutas interactivas (incluyendo WebSockets hacia `:8001`) en el navegador. |
+| **6. Monorepo UI (`packages/ui`) + Cliente (`local-app/`)** | **✅ 100% Completo (Fase 5)** | Las 9 Sub-Fases (5.1 a 5.9) completadas y auditadas (0 errores de tipos, 0 `as any`, Wails V3 + Capacitor + Vite build + Go build pasando limpio). Las 23 rutas están 100% implementadas y verificadas. |
+| **7. Plataforma Web Híbrida (`web-portal/` — Astro SSR + SPA)** | **🚀 Siguiente en Cola (Fase 6)** | Consumirá `@palabrario/ui` y `IPalabrarioAPI` para ofrecer SSR/SEO + OpenGraph en rutas públicas (`#3–#10`) y el 100% de las 23 rutas interactivas (incluyendo WebSockets hacia `:8001`) en el navegador. |
 
 ---
 
@@ -214,7 +214,7 @@ flowchart TD
 
 ---
 
-### 📍 Sub-Fase 5.8: Arena Multijugador en Vivo (WebSockets), `WORD_TO_IMAGE` y Replay 3NF (`Rutas #18, #19, #20` — `CU14, CU15, CU16`) — **[SIGUIENTE EN COLA]**
+### 📍 Sub-Fase 5.8: Arena Multijugador en Vivo (WebSockets), `WORD_TO_IMAGE` y Replay 3NF (`Rutas #18, #19, #20` — `CU14, CU15, CU16`) — **[✅ COMPLETADA]**
 
 - **Objetivo:** Construir en `@palabrario/ui` los componentes competitivos de Arena y en `local-app/frontend` la experiencia síncrona en tiempo real conectada a `ArenaEventBus` junto al visor de Replay 3NF.
 - **Entregables y Checklist:**
@@ -222,31 +222,31 @@ flowchart TD
     - `ArenaTimer.vue`: Cronómetro regresivo con `font-variant-numeric: tabular-nums` y alerta visual en los últimos 3 segundos.
     - `ImageChoiceGrid.vue`: Cuadrícula táctil 2x2 de opciones ilustradas para rondas `WORD_TO_IMAGE` (`RN13`).
     - `PodiumCard.vue`: Tarjeta de podio final (`1°`, `2°`, `3°`) con desglose de puntos, aciertos, tiempo total (`TotalTimeSpentMs`) y XP otorgado.
-  - [ ] **`local-app/frontend/src/views/arena/ArenaLobbyView.vue` (`/#/arena` — Ruta #18):**
+  - [x] **`local-app/frontend/src/views/arena/ArenaLobbyView.vue` (`/#/arena` — Ruta #18):**
     - Formulario para crear partida (`CreateArenaMatch`: selección de Deck o Colección con validación de mínimo 8 sentidos, rondas, tiempo por ronda, modos permitidos incluyendo `WORD_TO_IMAGE`) o unirse con código PIN de 6 caracteres (`JoinArenaMatch`).
     - Tabla de historial de partidas recientes (`GetMyMatchHistory`) con acceso directo al Replay.
-  - [ ] **`local-app/frontend/src/views/arena/ArenaGameView.vue` (`/#/arena/room/:code` — Ruta #19, Layout `immersive`):**
+  - [x] **`local-app/frontend/src/views/arena/ArenaGameView.vue` (`/#/arena/room/:code` — Ruta #19, Layout `immersive`):**
     - Implementa el **Flujo 5 de [`.context/UI_FLOWS.md`](./UI_FLOWS.md)** suscribiéndose a `ArenaEventBus`.
     - Maneja todas las fases de la sala: `WAITING`, `COUNTDOWN`, `PLAYING` (renderizado condicional de opciones de texto o `ImageChoiceGrid` 2x2 + `SubmitArenaAnswer`), `ROUND_RESULT` y `FINISHED` (`PodiumCard` + enlace a `/#/arena/matches/:matchId`).
     - Maneja desconexión temporal / reconexión en ventana de gracia de 10s (`RNF-CON-02`) y salida limpia en `onUnmounted` (`LeaveArenaRoom`).
-  - [ ] **`local-app/frontend/src/views/arena/ArenaReplayView.vue` (`/#/arena/matches/:matchId` — Ruta #20):**
+  - [x] **`local-app/frontend/src/views/arena/ArenaReplayView.vue` (`/#/arena/matches/:matchId` — Ruta #20):**
     - Consume `GetMatchReplayDetail(matchId)` para mostrar el podio histórico y un acordeón/pestañas ronda por ronda (`MatchRoundReplay`) detallando la pregunta, respuesta correcta y qué contestó cada jugador con su tiempo en milisegundos (`time_spent_ms`).
 - **Criterio de Cierre:** `wails3 task client:check` limpio (0 errores); manejo completo de las tramas WS (`ROOM_STATE`, `COUNTDOWN`, `QUESTION`, `ROUND_RESULT`, `PODIUM`, `ERROR`).
 
 ---
 
-### 📍 Sub-Fase 5.9: Portal Editorial de Quórum Tripartito y Gobernanza Institucional (`Rutas #21, #22, #23` — `CU02–CU04, CU06–CU09`)
+### 📍 Sub-Fase 5.9: Portal Editorial de Quórum Tripartito y Gobernanza Institucional (`Rutas #21, #22, #23` — `CU02–CU04, CU06–CU09`) — **[✅ COMPLETADA]**
 
 - **Objetivo:** Construir en `@palabrario/ui` los componentes de inspección de quórum y cerrar en `local-app/frontend` las herramientas de curaduría lexicográfica y gobernanza administrativa.
 - **Entregables y Checklist:**
-  - [ ] **Componentes Editoriales en `packages/ui/src/components/editorial/` (exportados en `packages/ui/src/index.ts`):**
+  - [x] **Componentes Editoriales en `packages/ui/src/components/editorial/` (exportados en `packages/ui/src/index.ts`):**
     - `QuorumStepper.vue`: Indicador visual de los 3 slots de revisión (`RN06`) mostrando votos emitidos (`APPROVE`, `REQUEST_CHANGES`, `REJECT`), bloqueo de auto-aprobación (`RN07` cuando `currentUser.id_user == proposal.created_by`) y badge de veto administrativo (`RN08`).
     - `ProposalDiffCard.vue`: Inspector de propuesta léxica mostrando lema, etimología, sentidos, notas culturales, ejemplos e ilustraciones (`RN12`).
-  - [ ] **`local-app/frontend/src/views/editorial/EditorDashboardView.vue` (`/#/editor` — Ruta #21, `EDITOR`/`ADMIN`):**
+  - [x] **`local-app/frontend/src/views/editorial/EditorDashboardView.vue` (`/#/editor` — Ruta #21, `EDITOR`/`ADMIN`):**
     - Cola paginada de propuestas en `PENDING_QUORUM` (`ListPendingQuorumQueue`), pestaña de *"Mis Propuestas"* (`ListMyLexicalProposals`), inspección con `ProposalDiffCard` + `QuorumStepper`, formulario de dictamen (`SubmitProposalReview`) y botón de resolución forzada exclusivo para `ADMIN` (`AdminForceResolveProposal` — `RN08`).
-  - [ ] **`local-app/frontend/src/views/editorial/EditorWordFormView.vue` (`/#/editor/words/new` y `/#/editor/words/:id` — Ruta #22, `EDITOR`/`ADMIN`):**
+  - [x] **`local-app/frontend/src/views/editorial/EditorWordFormView.vue` (`/#/editor/words/new` y `/#/editor/words/:id` — Ruta #22, `EDITOR`/`ADMIN`):**
     - Formulario asistido para crear/editar propuestas de lemas (`CreateWordProposal`, `UpdateWordProposal`), agregar/editar acepciones (`CreateSenseProposal`, `UpdateSenseProposal`), añadir ejemplos contextuales (`AddSenseExample`), vincular conceptos semánticos para heterónimos (`ListSemanticConcepts`, `CreateSemanticConcept`, `LinkSenseToConcept`) y subir ilustraciones con `MediaDropzone(category='general')` (`RN12`), siguiendo el **Flujo 6 de [`.context/UI_FLOWS.md`](./UI_FLOWS.md)**.
-  - [ ] **`local-app/frontend/src/views/editorial/GovernanceDashboardView.vue` (`/#/editor/governance` — Ruta #23, exclusivo `ADMIN`):**
+  - [x] **`local-app/frontend/src/views/editorial/GovernanceDashboardView.vue` (`/#/editor/governance` — Ruta #23, exclusivo `ADMIN`):**
     - **Tab 1 — Solicitudes de Editor (`CU02`):** Lista `ListPendingEditorRequests`, visor de documento institucional (`credentials_url`) y botones de dictamen (`ResolveEditorRequest`).
     - **Tab 2 — Boletos de Invitación (`CU04`):** Generador de boletos VIP (`GenerateInvitationTickets`) y listado con estado (`ACTIVE`, `REDEEMED`, `EXPIRED`).
     - **Tab 3 — Moderación de Reportes (`CU09`):** Cola de denuncias (`ListCommunityReports`) y resolución (`ResolveCommunityReport`: `DISMISSED`, `RESOLVED` o `CONTENT_ARCHIVED` con archivado en cascada).
