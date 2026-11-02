@@ -106,7 +106,7 @@ async function handleCreateDeck() {
       newDescription.value = ''
       newIsPublic.value = false
       isCreateOpen.value = false
-      router.push(`/studio/decks/${created.id_deck}`)
+      router.push(`/studio/decks/${created.id_deck}/edit`)
     } else {
       await loadDecks()
       isCreateOpen.value = false
@@ -148,7 +148,7 @@ async function handleConfirmDelete() {
 }
 
 function goToDeckEditor(id: number) {
-  router.push(`/studio/decks/${id}`)
+  router.push(`/studio/decks/${id}/edit`)
 }
 
 function goToStudy(id: number) {

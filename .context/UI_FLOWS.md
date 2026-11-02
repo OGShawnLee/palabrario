@@ -1,8 +1,8 @@
 # 🔄 Palabrario — Flujos Interactivos y Diagramas de Secuencia UI $\leftrightarrow$ Puente $\leftrightarrow$ Backend (`.context/UI_FLOWS.md`)
 
 > **Propósito de este documento (SSOT de Comportamiento y Estado Reactivo en Frontend):**  
-> Este documento especifica mediante **6 Diagramas de Secuencia y Flujo de Estado** las interacciones más críticas del cliente multiplataforma (`Vue 3 + Reka UI` $\to$ `IPalabrarioAPI` $\to$ `Wails Go BFF / Capacitor` $\to$ `:8000 / :8001 / :8002`).  
-> Ningún agente constructor debe improvisar cómo se abren los menús, cómo se hidrata la sesión o cómo fluyen las tramas WebSocket: debe seguir estrictamente estos 6 flujos canónicos.
+> Este documento especifica mediante **7 Diagramas de Secuencia y Flujo de Estado** las interacciones más críticas del cliente multiplataforma (`Vue 3 + Reka UI` $\to$ `IPalabrarioAPI` $\to$ `Wails Go BFF / Capacitor` $\to$ `:8000 / :8001 / :8002`).  
+> Ningún agente constructor debe improvisar cómo se abren los menús, cómo se hidrata la sesión o cómo fluyen las tramas WebSocket: debe seguir estrictamente estos 7 flujos canónicos.
 
 ---
 
@@ -51,7 +51,7 @@ sequenceDiagram
 > **Decisión de Diseño UX:**  
 > En lugar de esconder la promoción editorial en el fondo de una página, al hacer clic sobre el avatar/indicador del usuario en el extremo superior derecho de **`TopBar.vue`**, se despliega un **`DropdownMenu` de Reka UI** con:
 > 1. **Mi Perfil Público** (`/#/u/:username`)
-> 2. **Configuración de Cuenta** (abre modal/drawer de ajustes de perfil y contraseña `CU01`)
+> 2. **Configuración de Cuenta** (en el propio perfil si `is_owner == true`, `CU01`)
 > 3. **Credenciales y Rol en la Imprenta** $\to$ Al seleccionarlo, despliega un **`Popover` / `Dialog` interactivo de Reka UI (`CredentialsRolePopover.vue`)** desde la barra superior que gestiona tanto el **Canje de Boleto (`CU04`)** como la **Solicitud de Ascenso a Editor (`CU02`)**.
 > 4. **Panel Editorial (`/#/editor`)** / **Gobernanza Admin (`/#/admin/governance`)** *(visibles dinámicamente según `user.role`)*.
 > 5. **Cerrar Sesión (`SignOut`)**.
@@ -67,7 +67,7 @@ sequenceDiagram
     participant Core as core-service (:8000)
 
     U->>TB: Clic en Avatar / Barra de Estado de Usuario
-    TB-->>U: Despliega Reka UI DropdownMenu (Perfil, Config, Credenciales y Rol, Cerrar Sesión)
+    TB-->>U: Despliega Reka UI DropdownMenu (Perfil, Credenciales y Rol, Cerrar Sesión)
     U->>TB: Clic en ítem "Credenciales y Rol en la Imprenta"
     TB->>Pop: Abre Popover anclado a TopBar y consulta estado actual
     Pop->>API: ListMyEditorRequests()
@@ -88,7 +88,7 @@ sequenceDiagram
             Pop-->>U: Muestra tarjeta de estado "Solicitud en Revisión Institucional" (Formulario bloqueado)
         else Sin solicitud pendiente
             U->>Pop: Pestaña "Solicitar Acreditación" -> Arrastra comprobante en MediaDropzone
-            Pop->>API: UploadImage(file, 'credentials')
+            Pop->>API: UploadImage('credentials', filename, fileBytes)
             API->>Img: POST :8002/api/v1/images/upload (Multipart + Bearer JWT)
             Img-->>Pop: 201 Created -> ImageUploadResponse { url: "/uploads/credentials/..." }
             U->>Pop: Completa institution_name + justification (>= 20 chars) y envía
@@ -118,7 +118,7 @@ sequenceDiagram
     participant Core as core-service (:8000)
 
     U->>Omni: Presiona Ctrl+K y escribe término dialectal
-    Omni->>API: SearchWords(q, region, 10)
+    Omni->>API: SearchWords(q, dialect, 10)
     API->>Core: GET /api/v1/words/search?q=...
     Core-->>Omni: WordSearchResult[] (FTS + Trigramas)
     U->>Omni: Selecciona resultado -> Navega a /#/dictionary/word/:id
@@ -130,14 +130,14 @@ sequenceDiagram
 
     opt Guardar Acepción en Baraja Personal (CU10)
         U->>WD: Clic en "+ Guardar en mi baraja" dentro de SenseItem (id_sense)
-        WD->>DeckM: Abre modal pasando id_sense
+        WD->>DeckM: Abre modal pasando sense
         DeckM->>API: ListStudioDecks()
         API->>Core: GET /api/v1/studio/decks
         Core-->>DeckM: StudioDeckSummary[] (Barajas propias del usuario)
-        U->>DeckM: Selecciona baraja destino (id_deck)
-        DeckM->>API: AddDeckItem(id_deck, { id_sense })
+        U->>DeckM: Selecciona baraja destino -> Emite @add({ idDeck, idSense })
+        WD->>API: AddDeckItem(idDeck, { id_sense: idSense })
         API->>Core: POST /api/v1/decks/{id}/items
-        Core-->>DeckM: 201 Created -> Toast de confirmación
+        Core-->>WD: 201 Created -> Feedback de confirmación
     end
 
     opt Reportar Contenido Inexacto u Ofensivo (CU09)
@@ -152,9 +152,9 @@ sequenceDiagram
 
 ---
 
-## Flujo 4: Sesión de Estudio Inmersiva con Motor Matemático SuperMemo SM-2 y Ledger de XP (`CU12, CU13, RN09, RN11`)
+## Flujo 4: Sesión de Estudio Inmersiva con Motor Matemático SuperMemo SM-2 y Auditoría de Maestría / XP Ledger (`CU12, CU13, RN09, RN11`)
 
-Ejecuta el ciclo de tarjetas en `/#/studio/study` (`layout: immersive`), midiendo el tiempo de respuesta en cliente y consolidando cada repaso en una transacción ACID en el backend:
+Ejecuta el ciclo de tarjetas en `/#/studio/study` (`layout: immersive`), midiendo el tiempo de respuesta en la vista y consolidando cada repaso en una transacción ACID en el backend, así como la consulta detallada del progreso y libro mayor en `/#/studio/mastery`:
 
 ```mermaid
 sequenceDiagram
@@ -162,26 +162,40 @@ sequenceDiagram
     actor U as Aprendiz
     participant SV as StudySessionView.vue
     participant Card as StudyCard.vue
+    participant MV as StudioMasteryView.vue
     participant API as IPalabrarioAPI
     participant Core as core-service (:8000)
 
-    SV->>API: GetStudySession(deckId?, 20)
+    Note over U,Core: A. Sesión de Repaso Inmersivo SM-2 (/#/studio/study — CU12)
+    SV->>API: GetStudySessionQueue(deckId?, 20)
     API->>Core: GET /api/v1/studio/study-session
     Core-->>SV: StudySessionPayload { total_due, session_cards: StudyCardItem[] }
 
     loop Por cada StudyCardItem en session_cards
-        SV->>Card: Muestra Anverso (Lema + Bandera + Categoría) e inicia cronómetro local (t0)
+        SV->>Card: Muestra Anverso (Lema + Bandera + Categoría) e inicia cronómetro local (cardStartTime)
         U->>Card: Pulsa "Revelar Respuesta" (o barra espaciadora)
         Card-->>U: Muestra Reverso (Definición, Nota Cultural, Ejemplos) y 4 botones SM-2
-        U->>Card: Califica recuerdo: 1 (Otra vez), 2 (Difícil), 3 (Bien) o 4 (Fácil)
-        Card->>SV: Emite { id_sense, quality_rating, time_spent_ms: now - t0 }
-        SV->>API: SubmitStudyReview(SubmitReviewRequest)
+        U->>Card: Califica recuerdo: 1 (Olvidado), 2 (Difícil), 3 (Bien) o 4 (Fácil)
+        Card->>SV: Emite @rate({ qualityRating })
+        SV->>API: SubmitCardReview({ id_sense, quality_rating: qualityRating, time_spent_ms: elapsedMs })
         API->>Core: POST /api/v1/studio/study-session/review (Tx ACID: SM-2 + xp_transactions + racha)
         Core-->>SV: CardReviewResult { updated_mastery, xp_awarded, new_total_xp, newly_unlocked_badges }
         SV-->>U: Animación "+XP", actualiza barra de progreso y muestra medalla si newly_unlocked_badges != empty
     end
 
-    SV-->>U: Muestra Resumen de Sesión Completada y botón "Volver al Studio" (/#/studio)
+    SV-->>U: Muestra Resumen de Sesión Completada y botón "Volver a Mi Studio" (/#/studio)
+
+    Note over U,Core: B. Desglose de Maestría por Etapa y Libro Mayor Auditable (/#/studio/mastery — CU13 + RN11)
+    U->>MV: Abre /#/studio/mastery
+    MV->>API: GetMasteryDashboard()
+    API->>Core: GET /api/v1/studio/mastery
+    Core-->>MV: MasteryDashboard (MasteryProgressBar: NEW, LEARNING, REVIEWING, MASTERED + achievements[])
+    MV->>API: ListMasteryItems(stage, page, limit)
+    API->>Core: GET /api/v1/studio/mastery/items
+    Core-->>MV: UserMastery[] (Detalle de easiness_factor, current_interval_days y next_review_at)
+    MV->>API: ListXPLedger(page, limit)
+    API->>Core: GET /api/v1/studio/xp-ledger
+    Core-->>MV: XPTransactionItem[] (Historial inmutable de xp_transactions)
 ```
 
 ---
@@ -208,7 +222,7 @@ sequenceDiagram
     Lobby->>Game: Redirige a /#/game/MX8921
 
     Note over Host,RT: 2. Conexión WebSocket y Ciclo de Rondas en Vivo (CU15 + RN10)
-    Game->>Bus: ConnectArena("MX8921") + onArenaEvent(handler)
+    Game->>Bus: ArenaEventBus.onMessage(handler) + ConnectArenaRoom("MX8921")
     Bus->>RT: WS /ws/arena/MX8921?token={jwt}
     RT-->>Bus: WSEvent { type: "ROOM_STATE", payload: ArenaRoomState }
     Host->>Game: Anfitrión pulsa "Iniciar Contienda"
@@ -223,8 +237,8 @@ sequenceDiagram
             Game-->>Host: Renderiza 4 tarjetas de texto + ArenaTimer
         end
         Host->>Game: Selecciona opción (clic o tecla 1..4)
-        Game->>Bus: SubmitArenaAnswer({ round_number, selected_option, client_elapsed_ms })
-        Bus->>RT: WS { type: "SUBMIT_ANSWER", payload }
+        Game->>Bus: SubmitArenaAnswer(roundNumber, selectedOption)
+        Bus->>RT: WS { type: "SUBMIT_ANSWER", payload: SubmitAnswerPayload }
         RT-->>Bus: WSEvent { type: "ROUND_RESULT", payload: RoundResultPayload (revela correct_option + leaderboard) }
     end
 
@@ -255,14 +269,14 @@ sequenceDiagram
     participant Core as core-service (:8000)
 
     Note over Ed,Core: 1. Propuesta de Palabra o Acepción con Imagen Validada (CU06 + RN12)
-    Ed->>Form: Arrastra ilustración en MediaDropzone (category='general')
-    Form->>Img: POST :8002/api/v1/images/upload (Limpieza EXIF + Filtro NSFW + Resize 800px)
-    Img-->>Form: 201 Created -> { url: "/uploads/general/uuid.webp" }
+    Ed->>Form: Arrastra ilustración en MediaDropzone (category='word' o 'sense')
+    Form->>Img: UploadImage(category, filename, fileBytes) -> POST :8002/api/v1/images/upload
+    Img-->>Form: 201 Created -> { url: "/uploads/word/uuid.webp" }
     Ed->>Form: Envía CreateWordProposalRequest (o CreateSenseRequest)
     Form->>Core: POST /api/v1/words (El sentido nace en state = 'DRAFT')
 
     Note over Ed,Core: 2. Votación por Quórum Tripartito (CU07, CU08 + Triggers RN06 y RN07)
-    Ed->>Dash: Abre /#/editor -> ListPendingQueue()
+    Ed->>Dash: Abre /#/editor -> ListPendingQueue(region)
     Dash->>Core: GET /api/v1/curation/queue
     Core-->>Dash: SenseQuorumItem[] (Muestra QuorumStepper: approvals_count / 3)
     Ed->>Dash: Inspecciona propuesta ajena (author_id != currentUser.id_user por RN07) y vota
@@ -274,4 +288,46 @@ sequenceDiagram
     Dash->>Core: PUT /api/v1/curation/senses/{senseId}/state
     Adm->>Gov: Abre /#/admin/governance -> Resuelve reporte comunitario (ResolveReportRequest)
     Gov->>Core: PUT /api/v1/reports/{reportId}/resolve (Oculta recurso en cascada si RESOLVED_HIDDEN)
+```
+
+---
+
+## Flujo 7: Gestión de Colecciones Temáticas en Studio y Suscripción Comunitaria (`CU11, RN03, RN04, RN05`)
+
+Coordina la creación y edición de colecciones temáticas en `/#/studio/collections` y `/#/studio/collections/:id/edit` (validando la regla **RN05** de visibilidad pública de barajas contenidas), así como la exploración y guardado comunitario en `/#/collections` y `/#/collections/:id`:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Usuario Autenticado
+    participant SCV as StudioCollectionsView.vue
+    participant SCE as StudioCollectionEditorView.vue
+    participant PCV as PublicCollectionsView / CollectionDetailView
+    participant API as IPalabrarioAPI
+    participant Core as core-service (:8000)
+
+    Note over U,Core: A. Creación y Edición de Colección en Studio Personal (CU11 + RN03 + RN05)
+    U->>SCV: Abre /#/studio/collections y crea nueva colección
+    SCV->>API: CreateCollection({ title, description, is_public, deck_ids: [] })
+    API->>Core: POST /api/v1/collections
+    Core-->>SCV: 201 Created -> Collection { id_collection }
+    SCV->>SCE: Navega a /#/studio/collections/:id/edit
+
+    SCE->>API: GetCollectionDetail(id) + ListMyDecks()
+    API->>Core: GET /api/v1/collections/{id} + GET /api/v1/studio/decks
+    Core-->>SCE: Collection (con decks[]) + StudioDeckSummary[]
+    U->>SCE: Selecciona baraja compatible (RN05: si colección es pública, la baraja debe ser pública)
+    SCE->>API: AddDeckToCollection(collectionId, deckId)
+    API->>Core: POST /api/v1/collections/{id}/decks/{deckId}
+    Core-->>SCE: 200 OK -> Collection actualizada
+
+    Note over U,Core: B. Descubrimiento y Guardado de Colección Comunitaria (CU11 1a + RN04)
+    U->>PCV: Explora /#/collections o /#/collections/:id
+    PCV->>API: ListCollections(featured, page, limit) / GetCollection(id)
+    API->>Core: GET /api/v1/collections
+    Core-->>PCV: Collection[] (Solo colecciones con is_public = true por RN04)
+    U->>PCV: Pulsa "Guardar Colección en mi Studio"
+    PCV->>API: SaveCollection(idCollection)
+    API->>Core: POST /api/v1/collections/{id}/save
+    Core-->>PCV: 201 Created -> Colección vinculada en saved_collections
 ```

@@ -90,11 +90,11 @@ const recentCollections = computed(() => {
 })
 
 function goToDeck(id: number) {
-  router.push(`/studio/decks/${id}`)
+  router.push(`/studio/decks/${id}/edit`)
 }
 
 function goToCollection(id: number) {
-  router.push(`/studio/collections/${id}`)
+  router.push(`/studio/collections/${id}/edit`)
 }
 
 function startReview() {

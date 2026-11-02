@@ -93,7 +93,7 @@ async function handleCreateCollection() {
       newDescription.value = ''
       newIsPublic.value = false
       isCreateOpen.value = false
-      router.push(`/studio/collections/${created.id_collection}`)
+      router.push(`/studio/collections/${created.id_collection}/edit`)
     } else {
       await loadCollections()
       isCreateOpen.value = false
@@ -132,7 +132,7 @@ async function handleConfirmDelete() {
 }
 
 function goToCollectionEditor(id: number) {
-  router.push(`/studio/collections/${id}`)
+  router.push(`/studio/collections/${id}/edit`)
 }
 
 onMounted(() => {

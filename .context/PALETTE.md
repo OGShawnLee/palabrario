@@ -44,7 +44,7 @@ La identidad visual de **Palabrario** nace de la **ilustración editorial amigab
 | :--- | :---: | :--- | :--- | :--- |
 | **`info`** | `#7C92FF` | Azul lavanda del estambre y la corona | **Regiones, XP y Nivel CEFR:** Etiquetas dialectales, contador de XP, estado `NEW` en Studio, citas de ejemplo (borde de `blockquote`). | `bg-info/15 text-info border border-info/25` |
 | **`success`** | `#6CBF73` | Verde salvia del pasto | **Aprobación y Acierto:** Sentidos `APPROVED` por Quórum (**RN06**), respuestas correctas en Arena (**CU15**) y nivel `MASTERED` en SM-2 (**CU13**). | `bg-success/12`–`/15 text-success border-success/50`; sólido `bg-success text-surface` para el indicador seleccionado. |
-| **`warning`** | `#F2B84B` | Miel cálido | **Atención, Quórum en Curso y Tabú:** Propuestas en `PENDING_QUORUM`, advertencias de tabú/vulgaridad, medallas de podio y estado `LEARNING`. | `bg-warning/20 text-ink border border-warning/40` *(texto en `ink` por contraste).* |
+| **`warning`** | `#F2B84B` | Miel cálido | **Atención, Quórum en Curso y Tabú:** Propuestas en estado `DRAFT` sometidas a revisión de quórum, advertencias de tabú/vulgaridad, medallas de podio y estado `LEARNING`. | `bg-warning/20 text-ink border border-warning/40` *(texto en `ink` por contraste).* |
 
 ---
 
@@ -54,8 +54,9 @@ Toda la interfaz utiliza **`Satoshi`** como familia única, diferenciando la jer
 
 | Rol Tipográfico | Clases UnoCSS Canónicas | Aplicación en Palabrario |
 | :--- | :--- | :--- |
-| **Display / Lema Hero** | `font-black text-3xl md:text-4xl tracking-tight text-ink` | Lema en `WordDetail`, Palabra del Día y encabezados de Arena. |
-| **Títulos de Sección (`H1–H2`)** | `font-bold text-xl md:text-2xl tracking-tight text-ink` | Encabezados de vistas (`Studio`, `Diccionario`, `Cola de Quórum`). |
+| **Display / Lema Hero** | `font-black text-4xl md:text-5xl tracking-tight text-ink` | Lema en `WordDetail`, Palabra del Día y portadas hero. |
+| **Título de Sección (`H1`)** | `font-bold text-2xl md:text-3xl tracking-tight text-ink` | Encabezados de vistas principales (`Studio`, `Diccionario`, `Cola de Quórum`). |
+| **Título de Módulo (`H2`)** | `font-bold text-xl md:text-2xl tracking-tight text-ink` | Encabezados de módulos, formularios y modales. |
 | **Subtítulos y Tarjetas (`H3`)** | `font-bold text-base md:text-lg text-ink` | Títulos de `DeckCard`, `CollectionCard` y nombres de usuario. |
 | **Cuerpo de Lectura y Definiciones** | `text-base leading-relaxed text-ink/85` | Definiciones, *friendly blurbs* y ejemplos de uso. |
 | **Eyebrows / Rótulos de Sección** | `text-xs font-bold uppercase tracking-wider text-ink/45` | *"Selecciona la definición correcta"*, *"¿Cómo se dice en otras regiones?"*. |
@@ -91,7 +92,7 @@ Toda la interfaz utiliza **`Satoshi`** como familia única, diferenciando la jer
 - **`FriendlyBlurb` (Estilo Vocabulary.com):** Aviso cálido `bg-brand/10 border border-brand/25 rounded-2xl p-5` con eyebrow `text-brand` y cuerpo `text-ink/85 leading-relaxed`; párrafo de etimología en `text-ink/65`.
 - **Contenedor de `SenseItem`:** `card-editorial` con listón superior `badge-pill bg-brand text-surface` (*"Acepciones de {lemma}"*), índice numérico en círculo `bg-ink/6 text-ink/70`, definición `font-semibold`, cita de ejemplo en `blockquote` con `border-l-2 border-info/50 text-ink/60 italic`, píldoras de región/CEFR y desplegable `"Ver más ⌄"` (**Reka UI `Collapsible`**).
 - **Opciones de Arena:** `rounded-2xl border p-3.5`; reposo `bg-surface border-ink/25 text-ink/75`; seleccionada `bg-success/12 border-success/50 shadow-soft` con índice sólido `bg-success text-surface`.
-- **Inputs y Omnibox (`input-editorial`):** `bg-surface rounded-2xl border-ink/12 shadow-soft px-4 py-3`, foco `border-brand ring-3 ring-brand/15`.
+- **Inputs y Omnibox (`input-editorial`):** `bg-surface rounded-2xl border-ink/12 shadow-soft h-12 px-4`, foco `border-brand ring-3 ring-brand/15`.
 
 ---
 
@@ -102,7 +103,7 @@ Esta configuración vive **únicamente** en `@palabrario/ui` y es re-exportada p
 ```typescript
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { defineConfig, presetWind3, presetIcons } from 'unocss'
+import { defineConfig, presetWind3, presetIcons, transformerVariantGroup } from 'unocss'
 
 const uiRoot = path.dirname(fileURLToPath(import.meta.url))
 const sharedComponentsGlob = path.resolve(uiRoot, 'components/**/*.{vue,ts}').replace(/\\/g, '/')
@@ -111,6 +112,9 @@ export default defineConfig({
   content: {
     filesystem: [sharedComponentsGlob],
   },
+  transformers: [
+    transformerVariantGroup()
+  ],
   presets: [
     presetWind3(),
     presetIcons({
@@ -151,7 +155,7 @@ export default defineConfig({
     'btn-primary': 'inline-flex items-center justify-center gap-2 bg-brand text-surface font-bold px-5 py-2.5 rounded-2xl shadow-soft-brand hover:(bg-brand-soft -translate-y-0.5) active:translate-y-0 transition-all duration-200 cursor-pointer disabled:(opacity-50 pointer-events-none)',
     'btn-secondary': 'inline-flex items-center justify-center gap-2 bg-surface text-ink font-semibold px-5 py-2.5 rounded-2xl border border-ink/12 shadow-soft hover:(bg-ink/4 border-ink/20 -translate-y-0.5) active:translate-y-0 transition-all duration-200 cursor-pointer disabled:(opacity-50 pointer-events-none)',
     'btn-ghost': 'inline-flex items-center justify-center gap-2 bg-transparent text-ink/70 font-semibold px-4 py-2 rounded-xl hover:(bg-ink/6 text-ink) transition-all cursor-pointer',
-    'input-editorial': 'w-full bg-surface text-ink placeholder:text-ink/40 rounded-2xl border border-ink/12 px-4 py-3 shadow-soft focus:(outline-none border-brand ring-3 ring-brand/15) transition-all',
+    'input-editorial': 'w-full bg-surface text-ink placeholder:text-ink/40 rounded-2xl border border-ink/12 h-12 px-4 shadow-soft focus:(outline-none border-brand ring-3 ring-brand/15) transition-all',
     'badge-pill': 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide',
   },
 })

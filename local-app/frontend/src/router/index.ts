@@ -47,8 +47,8 @@ export const routes: RouteRecordRaw[] = [
   { path: '/auth/sign-in', name: 'sign-in', component: SignInView, meta: { layout: 'auth', auth: 'guestOnly' } },
   { path: '/auth/sign-up', name: 'sign-up', component: SignUpView, meta: { layout: 'auth', auth: 'guestOnly' } },
 
-  // Perfil
-  { path: '/profile', name: 'user-profile', component: UserProfileView, meta: { layout: 'default', auth: 'requireAuth' } },
+  // Perfil Público / Propio (CU01)
+  { path: '/u/:username', name: 'user-profile', component: UserProfileView, meta: { layout: 'default', auth: 'public' } },
 
   // Portal Público y Diccionario
   { path: '/', name: 'home', component: HomeView, meta: { layout: 'default', auth: 'public' } },
@@ -63,17 +63,17 @@ export const routes: RouteRecordRaw[] = [
 
   // Studio Personal y Repetición Espaciada SM-2 (Sub-Fases 5.6 y 5.7 funcionales)
   { path: '/studio', name: 'studio-dashboard', component: StudioDashboardView, meta: { layout: 'default', auth: 'requireAuth' } },
-  { path: '/studio/study', name: 'studio-study-session', component: StudySessionView, alias: '/studio/session', meta: { layout: 'immersive', auth: 'requireAuth' } },
+  { path: '/studio/study', name: 'studio-study-session', component: StudySessionView, meta: { layout: 'immersive', auth: 'requireAuth' } },
   { path: '/studio/decks', name: 'studio-decks', component: StudioDecksView, meta: { layout: 'default', auth: 'requireAuth' } },
-  { path: '/studio/decks/:id/edit', name: 'studio-deck-editor', component: StudioDeckEditorView, alias: '/studio/decks/:id', meta: { layout: 'default', auth: 'requireAuth' } },
+  { path: '/studio/decks/:id/edit', name: 'studio-deck-editor', component: StudioDeckEditorView, meta: { layout: 'default', auth: 'requireAuth' } },
   { path: '/studio/collections', name: 'studio-collections', component: StudioCollectionsView, meta: { layout: 'default', auth: 'requireAuth' } },
-  { path: '/studio/collections/:id/edit', name: 'studio-collection-editor', component: StudioCollectionEditorView, alias: '/studio/collections/:id', meta: { layout: 'default', auth: 'requireAuth' } },
+  { path: '/studio/collections/:id/edit', name: 'studio-collection-editor', component: StudioCollectionEditorView, meta: { layout: 'default', auth: 'requireAuth' } },
   { path: '/studio/mastery', name: 'studio-mastery', component: StudioMasteryView, meta: { layout: 'default', auth: 'requireAuth' } },
 
   // Arena Multijugador en Vivo y Replay 3NF (Sub-Fase 5.8 funcional)
-  { path: '/play', name: 'arena-lobby', component: ArenaLobbyView, alias: '/arena', meta: { layout: 'default', auth: 'requireAuth' } },
-  { path: '/game/:roomCode', name: 'arena-game-room', component: ArenaGameView, alias: '/arena/room/:roomCode', meta: { layout: 'immersive', auth: 'requireAuth' } },
-  { path: '/game/:matchId/replay', name: 'arena-replay', component: ArenaReplayView, alias: '/arena/matches/:matchId', meta: { layout: 'default', auth: 'requireAuth' } },
+  { path: '/play', name: 'arena-lobby', component: ArenaLobbyView, meta: { layout: 'default', auth: 'requireAuth' } },
+  { path: '/game/:roomCode', name: 'arena-game-room', component: ArenaGameView, meta: { layout: 'immersive', auth: 'requireAuth' } },
+  { path: '/game/:matchId/replay', name: 'arena-replay', component: ArenaReplayView, meta: { layout: 'default', auth: 'requireAuth' } },
 
   // Editorial y Gobernanza (Sub-Fase 5.9 funcional)
   {
@@ -86,14 +86,12 @@ export const routes: RouteRecordRaw[] = [
     path: '/editor/word/:id?',
     name: 'editor-word-form',
     component: EditorWordFormView,
-    alias: ['/editor/words/new', '/editor/words/:id'],
     meta: { layout: 'default', auth: 'requireRole', roles: EDITORIAL },
   },
   {
     path: '/admin/governance',
     name: 'admin-governance',
     component: GovernanceDashboardView,
-    alias: '/editor/governance',
     meta: { layout: 'default', auth: 'requireRole', roles: ['ADMIN'] },
   },
 

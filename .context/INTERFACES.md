@@ -30,14 +30,14 @@ Todo el ecosistema Go está conectado mediante [`go.work`](../go.work) (`.` + `.
    - **El WebView (Vue 3 / TypeScript) jamás ejecuta llamadas HTTP/WS directas ni toca el token JWT.**
    - El proceso Go de Wails (`struct App` en `local-app/app.go`) actúa como **BFF (*Backend-For-Frontend*) local y bóveda de sesión en RAM** (`sessionToken` protegido por `sync.RWMutex`, inmune a XSS).
    - `local-app/app.go` importa los mismos structs de [`pkg/models`](../pkg/models), realiza las peticiones `net/http` o WebSockets hacia `:8000`, `:8001` y `:8002` adjuntando `Authorization: Bearer <sessionToken>`, y expone métodos Go públicos.
-   - Al ejecutar `wails generate module` (o `wails dev` / `wails build`), **Wails genera automáticamente los bindings y tipos TypeScript** en `local-app/frontend/wailsjs/go/main/App.js` (`.d.ts`) y `local-app/frontend/wailsjs/go/models.ts`. Así, un cambio en `pkg/models` propaga su tipado estático desde PostgreSQL (`sqlc`) hasta Vue 3 sin intervención humana ni riesgo de alucinación.
+   - Al ejecutar `wails3 generate bindings -ts` (o `wails3 task common:generate:bindings`), **Wails v3 genera automáticamente los bindings y tipos TypeScript** en `local-app/frontend/bindings/palabrario/local-app/app.ts` y `local-app/frontend/bindings/palabrario/pkg/models/models.ts`. Así, un cambio en `pkg/models` propaga su tipado estático desde PostgreSQL (`sqlc`) hasta Vue 3 sin intervención humana ni riesgo de alucinación.
 
 ```mermaid
 flowchart TB
-    subgraph Client["Cliente Nativo Desktop (Wails v2 — Proceso Único)"]
-        UI["Frontend Vue 3 + TypeScript\n(Importa wailsjs/go/main/App & wailsjs/go/models)"]
+    subgraph Client["Cliente Nativo Desktop (Wails v3 — Proceso Único)"]
+        UI["Frontend Vue 3 + TypeScript\n(Importa local-app/frontend/bindings/)"]
         WailsBFF["Puente Go Nativo BFF (local-app/app.go)\n• Custodia sessionToken JWT en RAM privada (sync.RWMutex)\n• Importa pkg/models vía go.work\n• Cliente net/http & WebSockets en Go"]
-        UI <-->|"Wails IPC Bindings & Events\n(wails generate module)"| WailsBFF
+        UI <-->|"Wails v3 IPC Bindings & Events\n(wails3 generate bindings -ts)"| WailsBFF
     end
 
     subgraph SharedPkg["Paquetes Go Compartidos (Raíz Monorepo: palabrario/pkg)"]

@@ -234,7 +234,7 @@ onMounted(async () => {
         <button
           type="button"
           class="btn-primary text-sm"
-          @click="router.push('/editor/words/new')"
+          @click="router.push('/editor/word')"
         >
           <Plus class="w-4 h-4 stroke-3" />
           <span>Nueva Propuesta</span>
@@ -434,7 +434,7 @@ onMounted(async () => {
         <button
           type="button"
           class="btn-primary mt-2"
-          @click="router.push('/editor/words/new')"
+          @click="router.push('/editor/word')"
         >
           <Plus class="w-4 h-4 stroke-3" />
           <span>Redactar Nueva Propuesta</span>
@@ -464,7 +464,7 @@ onMounted(async () => {
         <button
           type="button"
           class="btn-primary text-xs"
-          @click="router.push('/editor/words/new')"
+          @click="router.push('/editor/word')"
         >
           <Plus class="w-3.5 h-3.5 stroke-3" />
           <span>Nueva Propuesta</span>
@@ -517,7 +517,7 @@ onMounted(async () => {
             <button
               type="button"
               class="btn-secondary text-xs py-1.5 px-3"
-              @click="router.push(`/editor/words/${item.id_word}`)"
+              @click="router.push(`/editor/word/${item.id_word}`)"
             >
               <Edit3 class="w-3 h-3" />
               <span>Editar</span>
@@ -536,7 +536,7 @@ onMounted(async () => {
         <button
           type="button"
           class="btn-primary mt-2"
-          @click="router.push('/editor/words/new')"
+          @click="router.push('/editor/word')"
         >
           <Plus class="w-4 h-4 stroke-3" />
           <span>Redactar Mi Primera Propuesta</span>

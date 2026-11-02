@@ -503,7 +503,7 @@ onMounted(() => {
             <!-- Botones de Acción -->
             <div class="flex items-center gap-2 shrink-0 self-end md:self-center">
               <router-link
-                :to="`/studio/decks/${d.id_deck}`"
+                :to="`/studio/decks/${d.id_deck}/edit`"
                 class="btn-secondary !py-1.5 !px-3 text-xs font-semibold"
                 title="Editar baraja"
               >

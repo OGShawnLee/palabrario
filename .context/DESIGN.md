@@ -69,7 +69,7 @@ flowchart TD
   Validación, acierto y maestría: sentidos aprobados por quórum editorial (`APPROVED` — **RN06**), respuestas correctas en duelos de Arena (**CU15**) y tarjetas en maestría plena (**CU13**).  
   *Uso canónico:* `bg-success/12 text-success border border-success/50`.
 - **`warning` (`#F2B84B` — Miel Cálido):**  
-  Atención, quórum en deliberación y advertencias culturales: propuestas en `PENDING_QUORUM`, avisos preventivos de tabú/jerga vulgar, medallas de podio y estado de aprendizaje en SM-2.  
+  Atención, quórum en deliberación y advertencias culturales: propuestas en estado `DRAFT` sometidas a revisión de quórum, avisos preventivos de tabú/jerga vulgar, medallas de podio y estado de aprendizaje en SM-2.  
   *Uso canónico:* `badge-pill bg-warning/20 text-ink border border-warning/40` *(texto en `ink` para máximo contraste accesible)*.
 
 ### 2.3. Sistema de Sombras Táctiles Suaves (`UnoCSS`)
@@ -145,7 +145,7 @@ Todos los componentes deben construirse utilizando los atajos estandarizados en 
 ### 4.3. Inputs y Formularios
 
 - **Campo Editorial (`input-editorial`):**  
-  `w-full bg-surface text-ink placeholder:text-ink/40 rounded-2xl border border-ink/12 px-4 py-3 shadow-soft focus:(outline-none border-brand ring-3 ring-brand/15) transition-all`  
+  `w-full bg-surface text-ink placeholder:text-ink/40 rounded-2xl border border-ink/12 h-12 px-4 shadow-soft focus:(outline-none border-brand ring-3 ring-brand/15) transition-all`  
   *Uso:* Inputs de texto, textareas, selects y el buscador omnibox.
 
 ### 4.4. Navegación Flotante Estilo Apple (`TopBar`)
@@ -227,7 +227,7 @@ Usa estrictamente el sistema de diseño inspirado en Apple de Palabrario (@.cont
 - Botón Primario: class="btn-primary" (mandarina pastel #F78C56, rounded-2xl, shadow-soft-brand)
 - Botón Secundario: class="btn-secondary" (blanco surface, border-ink/12, shadow-soft)
 - Tarjeta Principal: class="card-editorial" (rounded-3xl, p-6) | Tarjeta Sutil: class="card-subtle" (bg-ink/4, rounded-2xl)
-- Input: class="input-editorial" (rounded-2xl, focus:border-brand focus:ring-3 focus:ring-brand/15)
+- Input: class="input-editorial" (rounded-2xl, h-12 px-4, focus:border-brand focus:ring-3 focus:ring-brand/15)
 - Badges: class="badge-pill" con bg-info/15 text-info, bg-success/15 text-success o bg-warning/20 text-ink
 - Tipografía: Satoshi universal con tabular-nums en contadores numéricos
 - Prohibido: border-2 border-ink, negro puro #000000 o colores por defecto de Tailwind.

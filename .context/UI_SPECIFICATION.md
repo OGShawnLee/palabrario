@@ -2,7 +2,7 @@
 
 > **Propósito de este documento (Frontend Progressive Disclosure Entrypoint):**  
 > Este archivo es el **HUD Central y Enrutador Arquitectónico del Frontend (`packages/ui`, `local-app/frontend` y `web-portal`)** para la Fase 5 y Fase 6 de **Palabrario**.  
-> Define las **Reglas de Hierro Anti-Deriva**, la topología del **Monorepo con Bun Workspaces (`@palabrario/ui`)**, el **Adaptador Polimórfico Isomórfico (`Wails IPC` + `Capacitor/Web HTTP & WS` + `Astro SSR`)**, enlaza al **Mapa Canónico de Rutas y Contratos ([`ROUTES_MAP.md`](./ROUTES_MAP.md))** y a los **6 Flujos y Diagramas de Secuencia ([`UI_FLOWS.md`](./UI_FLOWS.md))** con trazabilidad 1:1 hacia los 16 Casos de Uso (`CU01–CU16`), y establece el catálogo de componentes obligatorios.
+> Define las **Reglas de Hierro Anti-Deriva**, la topología del **Monorepo con Bun Workspaces (`@palabrario/ui`)**, el **Adaptador Polimórfico Isomórfico (`Wails IPC` + `Capacitor/Web HTTP & WS` + `Astro SSR`)**, enlaza al **Mapa Canónico de Rutas y Contratos ([`ROUTES_MAP.md`](./ROUTES_MAP.md))** y a los **7 Flujos y Diagramas de Secuencia ([`UI_FLOWS.md`](./UI_FLOWS.md))** con trazabilidad 1:1 hacia los 16 Casos de Uso (`CU01–CU16`), y establece el catálogo de componentes obligatorios.
 
 ---
 
@@ -13,7 +13,7 @@ Antes de modificar o crear cualquier archivo dentro de `packages/ui/`, `local-ap
 | Si necesitas saber... | Consulta este Artefacto |
 | :--- | :--- |
 | **Qué ruta (`Hash` o SSR), vista `.vue`, guardia de acceso, método `IPalabrarioAPI`, endpoint HTTP/WS y DTO (`models.*`) corresponde a cada pantalla** | **[`.context/ROUTES_MAP.md`](./ROUTES_MAP.md)** *(Matriz Maestra de Rutas $\leftrightarrow$ Endpoints $\leftrightarrow$ DTOs)* |
-| **Cómo fluyen paso a paso los 6 procesos críticos (Auth, Popover de Credenciales/Boletos en `TopBar`, Diccionario, SM-2, Arena WS y Quórum)** | **[`.context/UI_FLOWS.md`](./UI_FLOWS.md)** *(6 Diagramas de Secuencia UI $\leftrightarrow$ Puente $\leftrightarrow$ Backend)* |
+| **Cómo fluyen paso a paso los 7 procesos críticos (Auth, Popover de Credenciales/Boletos en `TopBar`, Diccionario, SM-2 y Maestría, Arena WS, Quórum y Colecciones)** | **[`.context/UI_FLOWS.md`](./UI_FLOWS.md)** *(7 Diagramas de Secuencia UI $\leftrightarrow$ Puente $\leftrightarrow$ Backend)* |
 | **Tokens de color (`paper`, `surface`, `ink`, `brand`, `success`, `warning`, `info`), tipografía `Satoshi`, sombras suaves (`shadow-soft*`) y `uno.config.ts`** | **[`.context/PALETTE.md`](./PALETTE.md)** *(SSOT Visual — Imprenta Táctil Ilustrada)* |
 | **Firmas Go de servicios SOA, DTOs canónicos (`pkg/models`), endpoints HTTP/WS y códigos de error** | **[`.context/INTERFACES.md`](./INTERFACES.md)** *(Contrato Sagrado Backend $\leftrightarrow$ Frontend)* |
 | **Reglas de negocio (`RN01–RN13`), estados editoriales, algoritmo SM-2 y puntuación monotónica de Arena** | **[`.context/DOMAIN.md`](./DOMAIN.md)** *(Modelo de Dominio DDD)* |
@@ -61,7 +61,7 @@ Palabrario/
 │           ├── assets/main.css       # Tipografía Satoshi + resets editoriales + .tabular-nums
 │           ├── types/models.ts       # Re-exporta `export type *` desde local-app/frontend/bindings
 │           ├── components/
-│           │   ├── ui/               # TopBar, BottomNav, MediaDropzone, ImageLightboxModal, SearchModal
+│           │   ├── ui/               # TopBar, BottomNav, PasswordInput, MediaDropzone, ImageLightboxModal, SearchModal
 │           │   ├── dictionary/       # WordCard, FriendlyBlurb, SenseItem, HeteronymPills, TabooWarningDialog, ReportModal
 │           │   ├── studio/           # DeckCard, CollectionCard, StudyCard, MasteryProgressBar, AddToDeckModal
 │           │   ├── arena/            # ArenaTimer, ImageChoiceGrid, PodiumCard
@@ -77,10 +77,10 @@ Palabrario/
 │       ├── bindings/                 # Autogenerado por `wails3 generate bindings -ts` desde Go
 │       └── src/
 │           ├── api/                  # client.ts (IPalabrarioAPI), wails.adapter.ts, capacitor.adapter.ts, arena.events.ts
-│           ├── composables/          # useAuth.ts
+│           ├── composables/          # useAuth.ts, useOverlays.ts
 │           ├── components/ui/        # CredentialsRolePopover.vue (conectado a api.* y useAuth)
 │           ├── layouts/              # AppLayout.vue, AuthLayout.vue, ImmersiveLayout.vue
-│           ├── router/               # index.ts con createWebHashHistory() y las 23 rutas
+│           ├── router/               # index.ts con createWebHashHistory() y las 23 rutas canónicas (sin aliases)
 │           └── views/                # Las 23 Vistas que consumen `api.*` y montan componentes de `@palabrario/ui`
 │
 └── web-portal/                       # 🌐 PLATAFORMA WEB 100% HÍBRIDA SSR + SPA (Fase 6)
@@ -140,29 +140,29 @@ flowchart TD
     subgraph CommunitySpace["2. Espacio Comunitario & Diccionario (CU05, CU10, CU11)"]
         Home["/#/ (Portada & Palabra del Día)"]
         Dict["/#/dictionary (Explorador & Buscador FTS)"]
-        WordDetail["/#/dictionary/:id (Ficha Léxica)"]
+        WordDetail["/#/dictionary/word/:id (Ficha Léxica)"]
         Cols["/#/collections & /#/collections/:id"]
         Decks["/#/decks & /#/decks/:id"]
     end
 
     subgraph StudioSpace["3. Studio Personal & Motor SM-2 (CU10–CU13)"]
         Studio["/#/studio (Dashboard)"]
-        Study["/#/studio/session (Sesión SM-2 Inmersiva)"]
-        MyDecks["/#/studio/decks & /#/studio/decks/:id"]
-        MyCols["/#/studio/collections & /#/studio/collections/:id"]
+        Study["/#/studio/study (Sesión SM-2 Inmersiva)"]
+        MyDecks["/#/studio/decks & /#/studio/decks/:id/edit"]
+        MyCols["/#/studio/collections & /#/studio/collections/:id/edit"]
         Mastery["/#/studio/mastery (Progreso & XP Ledger)"]
     end
 
     subgraph ArenaSpace["4. Arena Multijugador & Replay 3NF (CU14–CU16)"]
-        Lobby["/#/arena (Lobby & PIN)"]
-        Game["/#/arena/room/:code (Partida WS en Vivo)"]
-        Replay["/#/arena/matches/:matchId (Replay Ronda x Ronda)"]
+        Lobby["/#/play (Lobby & PIN)"]
+        Game["/#/game/:roomCode (Partida WS en Vivo)"]
+        Replay["/#/game/:matchId/replay (Replay Ronda x Ronda)"]
     end
 
     subgraph GovernanceSpace["5. Curaduría por Quórum & Gobernanza (CU02–CU04, CU06–CU09)"]
         Editor["/#/editor (Cola de Quórum Tripartito)"]
-        WordForm["/#/editor/words/new & /#/editor/words/:id (Autoría Léxica)"]
-        Admin["/#/editor/governance (Roles, Boletos & Reportes)"]
+        WordForm["/#/editor/word/:id? (Autoría Léxica)"]
+        Admin["/#/admin/governance (Roles, Boletos & Reportes)"]
     end
 
     Home --> Dict --> WordDetail
@@ -186,6 +186,7 @@ Todos los componentes reutilizables de interfaz se construyen en **`packages/ui/
   2. **Solicitar Ascenso a Editor (`CU02` + `RN02` + `RN12`):** Verifica con `ListMyEditorRequests()` si ya existe una solicitud `PENDING`; si no, presenta el formulario con `MediaDropzone` (`UploadImage` + `CreateEditorRequest`).
 - **`TopBar.vue` (`packages/ui/src/components/ui/`):** Barra de cabecera agnóstica del router: recibe `currentUser`, `activeSpace` y métricas por `props`, muestra logotipo, disparador de búsqueda omnibox (`Ctrl + K`), racha (`🔥`) y **`DropdownMenu` de Reka UI** emitiendo `@navigate(path)`, `@open-search`, `@open-credentials` y `@sign-out`.
 - **`BottomNav.vue` (`packages/ui/src/components/ui/`):** Barra de pestañas fija inferior para pantallas móviles (`Home`, `Diccionario`, `Studio`, `Arena`), recibiendo `activePath` por prop y emitiendo `@navigate(path)`.
+- **`PasswordInput.vue` (`packages/ui/src/components/ui/`):** Campo de contraseña accesible basado en `input-editorial` con botón de alternancia para mostrar/ocultar caracteres (`Eye` / `EyeOff` de `lucide-vue-next`), usado en `SignInView`, `SignUpView` y `UserProfileView`.
 
 ### 3.2. Componentes de Dominio Léxico y Curaduría (`packages/ui/src/components/dictionary/` y `packages/ui/src/components/editorial/`)
 - **`WordCard.vue`:** Tarjeta táctil editorial (`card-editorial`) que renderiza `models.WordSummaryCard` (lema, categoría gramatical, bandera dialectal, definición corta y miniatura) y emite `@select(idWord)`.
@@ -198,18 +199,18 @@ Todos los componentes reutilizables de interfaz se construyen en **`packages/ui/
   2. **Alertas de Contenido:** Badge de advertencia si `is_taboo_or_vulgar == true` (`bg-warning/20 border-warning/40`).
   3. **Desplegable `"Ver más ⌄"` (`see more ⌄`):** Sección colapsable accesible (**Reka UI `Collapsible`**) que revela la nota cultural (`cultural_note`), las oraciones de ejemplo (`examples[]`), la imagen opcional del sentido (`image_url`) y las acciones contextuales que emiten `@add-to-deck(sense)` y `@report(sense)`.
 - **`HeteronymPills.vue`:** Lista interactiva de equivalencias transdialectales a nivel lema (`models.HeteronymItem[]`, *"¿Cómo se dice allá?"*) que emite `@select-term(term)`.
-- **`QuorumStepper.vue` (`packages/ui/src/components/editorial/`):** Indicador visual del quórum tripartito (**RN06**, `reviews_count / 3`), bloqueo de auto-aprobación (**RN07**) y badge de veto administrativo (**RN08**).
+- **`QuorumStepper.vue` (`packages/ui/src/components/editorial/`):** Indicador visual del quórum tripartito (**RN06**, `approvals_count / 3`), bloqueo de auto-aprobación (**RN07**) y badge de veto administrativo (**RN08**).
 - **`ProposalDiffCard.vue` (`packages/ui/src/components/editorial/`):** Inspector detallado de una propuesta léxica mostrando lema, `friendly_blurb`, `etymology`, sentidos, ejemplos e ilustraciones (**RN12**).
 
 ### 3.3. Componentes de Studio y Motor SM-2 (`packages/ui/src/components/studio/`)
 - **`DeckCard.vue` y `CollectionCard.vue`:** Tarjetas con borde de tinta y sombra táctil para mazos y colecciones temáticas.
-- **`StudyCard.vue`:** Ficha interactiva de repaso para sesiones SM-2 (**CU12**): anverso con lema y dialecto, revelación de reverso y botonera de 4 calificaciones SM-2 (`1..4`) con atajos de teclado (`Espacio`, `1..4`), emitiendo `@rate({ qualityScore, responseTimeMs })`.
-- **`MasteryProgressBar.vue`:** Barra segmentada con `tabular-nums` que ilustra la proporción de palabras en estados `NEW`, `LEARNING`, `REVIEW` y `MASTERED`.
-- **`AddToDeckModal.vue`:** Diálogo Reka UI que recibe la lista de mazos del usuario (`decks`) y emite `@add({ idDeck, idSense })` o `@create-deck(payload)`.
+- **`StudyCard.vue`:** Ficha interactiva de repaso para sesiones SM-2 (**CU12**): anverso con lema y dialecto, revelación de reverso y botonera de 4 calificaciones SM-2 (`1..4`) con atajos de teclado (`Espacio`, `1..4`), emitiendo `@rate({ qualityRating })` para que `StudySessionView` registre `SubmitReviewRequest { id_sense, quality_rating, time_spent_ms }`.
+- **`MasteryProgressBar.vue`:** Barra segmentada con `tabular-nums` que ilustra la proporción de palabras en estados `NEW`, `LEARNING`, `REVIEWING` y `MASTERED`.
+- **`AddToDeckModal.vue`:** Diálogo Reka UI que recibe la lista de mazos del usuario (`decks`) y emite `@add({ idDeck, idSense })` (transformado por la vista padre en `api.AddDeckItem(idDeck, { id_sense: idSense })`) o `@create-deck(payload)`.
 
 ### 3.4. Componentes de la Arena Multijugador (`packages/ui/src/components/arena/`)
 - **`ArenaTimer.vue`:** Temporizador regresivo con clase `tabular-nums` sincronizado con `time_limit_secs` (**RN10**).
-- **`ImageChoiceGrid.vue`:** Grilla responsiva 2x2 para responder rondas visuales (`question_mode === 'WORD_TO_IMAGE'`, **RN13**), con estados de selección y atajos de teclado (`1–4`), emitiendo `@select-option(option)`.
+- **`ImageChoiceGrid.vue`:** Grilla responsiva 2x2 para responder rondas visuales (`modality === 'WORD_TO_IMAGE'`, **RN13**), con estados de selección y atajos de teclado (`1–4`), emitiendo `@select-option(option)`.
 - **`PodiumCard.vue`:** Tarjeta de premiación final que despliega el podio ordenado por el servidor y emite `@view-replay(matchId)`.
 
 ### 3.5. Componentes Globales de Superposición y Diálogos (`packages/ui/src/components/ui/` y `packages/ui/src/components/dictionary/` — Reka UI)
