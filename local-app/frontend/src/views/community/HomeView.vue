@@ -1,80 +1,178 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { Check } from 'lucide-vue-next'
 import {
-  AlertCircle,
-  ArrowRight,
-  BookOpen,
-  Compass,
-  Layers,
-  RotateCw,
-  Search,
-  Sparkles,
-} from 'lucide-vue-next'
-import {
-  FriendlyBlurb,
-  HeteronymPills,
+  AddToDeckModal,
+  AnnotatedCardDeck,
+  CollectionShowcase,
+  HomeHero,
   type Collection,
   type Deck,
+  type Region,
+  type SenseDetail,
   type WordDetail,
 } from '@palabrario/ui'
+import { useAuth } from '@/composables/useAuth'
+import { useAddToDeck } from '@/composables/useAddToDeck'
 import { api } from '@/api/client'
 
 const router = useRouter()
+const { isAuthenticated } = useAuth()
+
+const {
+  isAddToDeckOpen,
+  selectedSenseForDeck,
+  studioDecks,
+  isDeckLoading,
+  feedbackMsg: deckFeedbackMsg,
+  openAddToDeck,
+  handleAddDeckItem,
+  handleCreateDeckAndAdd,
+} = useAddToDeck()
 
 const searchQuery = ref('')
-const wordOfTheDay = ref<WordDetail | null>(null)
-const featuredCollections = ref<Collection[]>([])
-const featuredDecks = ref<Deck[]>([])
-const isLoading = ref(true)
-const error = ref<string | null>(null)
+const feedbackMessage = ref<string | null>(null)
+const wordOfTheDayAnchor = ref<HTMLElement | null>(null)
 
-// Arena widget interactivo rápido (inspirado en la captura de referencia)
-const arenaSelected = ref<number | null>(null)
-const arenaConfirmed = ref(false)
+const activeToast = computed(() => deckFeedbackMsg.value || feedbackMessage.value)
 
-const arenaMock = {
-  question: 'Selecciona la definición correcta para «apapachar»:',
-  options: [
-    'Mercado ambulante tradicional al aire libre',
-    'Tubo delgado para sorber bebidas',
-    'Acariciar o consentir con ternura profunda',
-    'Cometa de papel que se vuela con el viento',
+// Fallback canónico para WordDetail garantizado con los datos de BD (sin emojis de bandera)
+const DEFAULT_FEATURED_WORD: WordDetail = {
+  id_word: 3,
+  lemma: 'guagua',
+  normalized_lemma: 'guagua',
+  part_of_speech: 'sustantivo',
+  gender: 'NEUTRAL' as WordDetail['gender'],
+  etymology:
+    'Poligenético: del quechua wawa (bebé) en Sudamérica; origen caribeño para el transporte público.',
+  friendly_blurb:
+    'Una misma palabra puede llevarte por la ciudad o quedarse dormida en tus brazos. En Cuba y Puerto Rico, la guagua se espera en la esquina: llega con conversaciones, bolsas y el ritmo del barrio. En Chile, Ecuador y Perú, una guagua necesita abrigo, cariño y, a veces, una canción para dormir. El contexto te dice cuál; la palabra siempre cuenta algo de quien la usa.',
+  image_url: null,
+  origin_region: {
+    id_region: 'a1111111-0000-0000-0000-000000000008',
+    code: 'CU',
+    name: 'Cuba',
+    parent_zone: 'Caribe',
+    country_code: 'CU',
+    flag_emoji: '',
+  },
+  senses: [
+    {
+      id_sense: 103,
+      id_word: 3,
+      region_code: 'CU',
+      region_name: 'Cuba / Puerto Rico',
+      country_code: 'CU',
+      flag_emoji: '',
+      short_definition: 'Autobús de transporte colectivo urbano',
+      definition:
+        'Vehículo automotor de gran capacidad destinado al transporte regular de pasajeros.',
+      is_primary: true,
+      is_taboo_or_vulgar: false,
+      cultural_note:
+        'En las Antillas hispanas y las Islas Canarias es el término estándar de diario.',
+      image_url: null,
+      cefr_level: 'B1',
+      usage_frequency: 'EVERYDAY',
+      state: 'APPROVED',
+      examples: [
+        {
+          id_example: 3,
+          id_sense: 103,
+          sentence: 'Ayer la guagua pasó llena y tuve que caminar.',
+          source: 'Hablante · La Habana, Cuba',
+        },
+      ],
+    },
+    {
+      id_sense: 104,
+      id_word: 3,
+      region_code: 'CL',
+      region_name: 'Chile / Ecuador / Perú',
+      country_code: 'CL',
+      flag_emoji: '',
+      short_definition: 'Niño pequeño, infante o criatura en brazos',
+      definition: 'Bebé de muy corta edad o que aún no camina.',
+      is_primary: false,
+      is_taboo_or_vulgar: false,
+      cultural_note:
+        'Proviene de la raíz quechua wawa; voz de ternura arraigada en los Andes.',
+      image_url: null,
+      cefr_level: 'A2',
+      usage_frequency: 'COMMON',
+      state: 'APPROVED',
+      examples: [
+        {
+          id_example: 4,
+          id_sense: 104,
+          sentence: 'La guagua se quedó dormida en mis brazos.',
+          source: 'Hablante · Santiago, Chile',
+        },
+      ],
+    },
   ],
-  correctIndex: 2,
+  heteronyms: [
+    { region_code: 'MX', region_name: 'México', country_code: 'MX', flag_emoji: '', term: 'Camión' },
+    { region_code: 'CO', region_name: 'Colombia', country_code: 'CO', flag_emoji: '', term: 'Buseta' },
+    { region_code: 'AR', region_name: 'Argentina', country_code: 'AR', flag_emoji: '', term: 'Colectivo' },
+    { region_code: 'CL', region_name: 'Chile', country_code: 'CL', flag_emoji: '', term: 'Micro' },
+  ],
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
 }
 
-async function loadData() {
-  isLoading.value = true
-  error.value = null
+const featuredWord = ref<WordDetail>(DEFAULT_FEATURED_WORD)
+const featuredCollection = ref<Collection | null>(null)
+const regions = ref<Region[]>([])
 
-  try {
-    const [wotdRes, collectionsRes, decksRes] = await Promise.allSettled([
-      api.GetWordOfTheDay(''),
-      api.ExplorePublicCollections(true),
-      api.ExplorePublicDecks('', true),
-    ])
-
-    if (wotdRes.status === 'fulfilled' && wotdRes.value) {
-      wordOfTheDay.value = wotdRes.value
+function showToast(msg: string) {
+  feedbackMessage.value = msg
+  setTimeout(() => {
+    if (feedbackMessage.value === msg) {
+      feedbackMessage.value = null
     }
+  }, 3500)
+}
 
-    if (collectionsRes.status === 'fulfilled' && Array.isArray(collectionsRes.value)) {
-      featuredCollections.value = collectionsRes.value.slice(0, 4)
-    }
+onMounted(async () => {
+  const [wordRes, colsRes, regionsRes] = await Promise.allSettled([
+    api.GetWordOfTheDay(''),
+    api.ListCollections(true),
+    api.ListRegions(),
+  ])
 
-    if (decksRes.status === 'fulfilled' && Array.isArray(decksRes.value)) {
-      featuredDecks.value = decksRes.value.slice(0, 4)
-    }
-  } catch (err: unknown) {
-    error.value = err instanceof Error ? err.message : 'Error al cargar los datos del portal.'
-  } finally {
-    isLoading.value = false
+  if (wordRes.status === 'fulfilled' && wordRes.value?.lemma) {
+    featuredWord.value = wordRes.value
   }
-}
 
-function handleSearch() {
-  const q = searchQuery.value.trim()
+  if (regionsRes.status === 'fulfilled' && Array.isArray(regionsRes.value)) {
+    regions.value = regionsRes.value
+  }
+
+  // Recuperar una colección específica junto con sus barajas asociadas (GetCollection)
+  if (colsRes.status === 'fulfilled' && Array.isArray(colsRes.value) && colsRes.value.length > 0) {
+    const targetId = colsRes.value[0]!.id_collection
+    try {
+      const fullCollection = await api.GetCollection(targetId)
+      featuredCollection.value = fullCollection ?? colsRes.value[0]!
+    } catch {
+      featuredCollection.value = colsRes.value[0]!
+    }
+  } else {
+    try {
+      const fullCollection = await api.GetCollection(1)
+      if (fullCollection) {
+        featuredCollection.value = fullCollection
+      }
+    } catch {
+      // Sin colección disponible si el backend está desconectado
+    }
+  }
+})
+
+function handleSearch(customQuery?: string) {
+  const q = (typeof customQuery === 'string' ? customQuery : searchQuery.value).trim()
   if (q) {
     router.push({ path: '/dictionary', query: { q } })
   } else {
@@ -82,324 +180,114 @@ function handleSearch() {
   }
 }
 
-function goToWord(idWord: number) {
-  router.push(`/dictionary/word/${idWord}`)
+function handleGoToDictionary() {
+  router.push('/dictionary')
 }
 
-function handleHeteronymSelect(term: string) {
-  router.push({ path: '/dictionary', query: { q: term } })
+function handleScrollToWordOfTheDay() {
+  if (wordOfTheDayAnchor.value) {
+    wordOfTheDayAnchor.value.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  } else {
+    router.push(`/dictionary/word/${featuredWord.value.id_word}`)
+  }
 }
 
-onMounted(() => {
-  loadData()
-})
+function handleRegionSelect(regionCodeOrName: string) {
+  const isCode = /^[A-Z]{2}$/.test(regionCodeOrName)
+  if (isCode) {
+    router.push({ path: '/dictionary', query: { region: regionCodeOrName } })
+  } else {
+    router.push({ path: '/dictionary', query: { q: regionCodeOrName } })
+  }
+}
+
+function handleExploreCollection(id: number) {
+  router.push(`/collections/${id}`)
+}
+
+function handleSelectDeck(id: number) {
+  router.push(`/decks/${id}`)
+}
+
+async function handleSaveDeck(deck: Deck) {
+  if (!isAuthenticated.value) {
+    router.push('/auth/sign-in')
+    return
+  }
+  if (deck.id_deck) {
+    try {
+      await api.SaveDeck(deck.id_deck)
+      showToast(`¡Baraja «${deck.title}» guardada en tu Studio!`)
+    } catch {
+      router.push(`/decks/${deck.id_deck}`)
+    }
+  }
+}
+
+function handleAddToDeck(sense?: SenseDetail) {
+  const targetSense = sense ?? featuredWord.value.senses?.[0]
+  openAddToDeck(targetSense, '/')
+}
 </script>
 
 <template>
-  <div class="space-y-10 md:space-y-12">
-    <!-- 1. Cabecera y Buscador Omnibox Amigable -->
-    <section class="max-w-2xl mx-auto text-center space-y-4 pt-2">
-      <div class="badge-pill bg-brand/12 text-brand border border-brand/20">
-        <Sparkles class="w-3.5 h-3.5 stroke-2" />
-        <span>Léxico Panhispánico Vivo</span>
-      </div>
+  <div class="space-y-8 md:space-y-12">
+    <!-- 1. Hero Monumental Canónico (Figma Make V2) -->
+    <HomeHero
+      v-model="searchQuery"
+      :regions="regions.length > 0 ? regions : undefined"
+      @search="handleSearch"
+      @explore="handleGoToDictionary"
+      @word-of-the-day="handleScrollToWordOfTheDay"
+      @select-region="handleRegionSelect"
+    />
 
-      <h1 class="text-3xl md:text-5xl font-black tracking-tight text-ink">
-        Descubre el alma de nuestras palabras
-      </h1>
-
-      <p class="text-ink/65 text-base md:text-lg leading-relaxed max-w-xl mx-auto">
-        Explora modismos regionales con reseñas culturales amenas, domínalos con repetición espaciada y compite en tiempo real.
-      </p>
-
-      <!-- Input con sombra suave y foco mandarina pastel -->
-      <form class="relative pt-2 max-w-xl mx-auto" @submit.prevent="handleSearch">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Busca una palabra o modismo (ej. apapachar, guagua, tianguis)..."
-          class="input-editorial pl-11 pr-28 py-3.5 text-sm md:text-base"
-        />
-        <Search class="absolute left-4 top-1/2 -translate-y-1/2 mt-1 w-5 h-5 text-ink/40 stroke-2" />
-        <button
-          type="submit"
-          class="absolute right-2.5 top-1/2 -translate-y-1/2 mt-1 btn-primary !py-1.5 !px-3 text-xs"
-        >
-          Buscar
-        </button>
-      </form>
-    </section>
-
-    <!-- Estado de Error -->
-    <div
-      v-if="error"
-      class="max-w-md mx-auto p-4 rounded-2xl bg-warning/20 border border-warning/40 text-center space-y-3"
+    <!-- Feedback Toast flotante al interactuar -->
+    <Transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="opacity-0 translate-y-2"
+      enter-to-class="opacity-100 translate-y-0"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100 translate-y-0"
+      leave-to-class="opacity-0 translate-y-2"
     >
-      <div class="flex items-center justify-center gap-2 text-ink font-bold text-sm">
-        <AlertCircle class="w-5 h-5 text-warning stroke-2" />
-        <span>{{ error }}</span>
-      </div>
-      <button
-        type="button"
-        class="btn-secondary !py-1.5 !px-4 text-xs"
-        @click="loadData"
+      <div
+        v-if="activeToast"
+        class="fixed bottom-6 right-6 z-50 bg-ink text-surface text-sm font-bold px-5 py-3 rounded-2xl shadow-soft-lg flex items-center gap-2 border border-ink/20"
       >
-        <RotateCw class="w-3.5 h-3.5 stroke-2" />
-        Reintentar carga
-      </button>
+        <Check class="w-4 h-4 text-success stroke-2 shrink-0" />
+        <span>{{ activeToast }}</span>
+      </div>
+    </Transition>
+
+    <!-- 2. Baraja Cultural Anotada (Figma Nodes 10:3445 / 10:3539 - Option 03) -->
+    <div ref="wordOfTheDayAnchor" class="scroll-mt-24">
+      <AnnotatedCardDeck
+        :word="featuredWord"
+        @explore="(id: number) => router.push(`/dictionary/word/${id}`)"
+        @add-to-deck="handleAddToDeck"
+        @select-heteronym="(term: string) => router.push({ path: '/dictionary', query: { q: term } })"
+        @select-region="handleRegionSelect"
+      />
     </div>
 
-    <!-- 2. Grilla Principal (Palabra del Día + Arena Widget) -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-      <!-- Columna Izquierda (7 cols): Ficha Hero de la Palabra del Día -->
-      <article class="lg:col-span-7 card-editorial space-y-6">
-        <!-- Skeleton si está cargando -->
-        <div v-if="isLoading" class="space-y-4 animate-pulse">
-          <div class="h-6 bg-ink/10 rounded-full w-1/3" />
-          <div class="h-10 bg-ink/10 rounded-2xl w-2/3" />
-          <div class="h-24 bg-ink/10 rounded-2xl" />
-          <div class="h-16 bg-ink/10 rounded-2xl" />
-        </div>
+    <!-- 3. Showcase de Colección y Barajas Asociadas -->
+    <CollectionShowcase
+      v-if="featuredCollection"
+      :collection="featuredCollection"
+      @explore-collection="handleExploreCollection"
+      @select-deck="handleSelectDeck"
+      @save-deck="handleSaveDeck"
+    />
 
-        <template v-else-if="wordOfTheDay">
-          <!-- Encabezado de la Palabra del Día -->
-          <div class="flex flex-wrap items-start justify-between gap-4 border-b border-ink/8 pb-5">
-            <div class="space-y-2">
-              <div class="flex flex-wrap items-center gap-2">
-                <span
-                  v-if="wordOfTheDay.origin_region"
-                  class="badge-pill bg-info/15 text-info border border-info/25"
-                >
-                  {{ wordOfTheDay.origin_region.country_code }} {{ wordOfTheDay.origin_region.name }}
-                </span>
-                <span class="badge-pill bg-success/15 text-success border border-success/40">
-                  ✓ Aprobada (Quórum 3/3)
-                </span>
-                <span
-                  v-if="wordOfTheDay.senses?.[0]?.cefr_level"
-                  class="badge-pill bg-ink/6 text-ink/60"
-                >
-                  MCER {{ wordOfTheDay.senses[0].cefr_level }}
-                </span>
-              </div>
-
-              <h2 class="text-3xl md:text-5xl font-black tracking-tight text-ink pt-1">
-                {{ wordOfTheDay.lemma }}
-              </h2>
-
-              <p class="text-sm font-medium text-ink/50 italic">
-                {{ wordOfTheDay.part_of_speech }}
-                <span v-if="wordOfTheDay.etymology"> · {{ wordOfTheDay.etymology }}</span>
-              </p>
-            </div>
-
-            <button
-              type="button"
-              class="btn-secondary text-sm py-2 px-4"
-              @click="goToWord(wordOfTheDay.id_word)"
-            >
-              Ver Ficha Completa →
-            </button>
-          </div>
-
-          <!-- Nota cultural amena reutilizando componente compartido -->
-          <FriendlyBlurb :word="wordOfTheDay" />
-
-          <!-- Acepción Principal y Ejemplo -->
-          <div v-if="wordOfTheDay.senses && wordOfTheDay.senses.length > 0" class="space-y-3">
-            <div class="flex items-baseline gap-3">
-              <span class="w-6 h-6 rounded-full bg-ink/6 text-ink/70 text-xs font-bold flex items-center justify-center shrink-0 tabular-nums">
-                1
-              </span>
-              <div class="space-y-2 flex-1">
-                <p class="text-ink font-semibold leading-snug">
-                  {{ wordOfTheDay.senses[0].short_definition || wordOfTheDay.senses[0].definition }}
-                </p>
-                <blockquote
-                  v-if="wordOfTheDay.senses[0].examples && wordOfTheDay.senses[0].examples.length > 0"
-                  class="text-sm text-ink/60 italic border-l-2 border-info/50 pl-3 py-0.5"
-                >
-                  «{{ wordOfTheDay.senses[0].examples[0].sentence }}»
-                </blockquote>
-              </div>
-            </div>
-          </div>
-
-          <!-- Heteronimia Transdialectal reutilizando componente compartido -->
-          <HeteronymPills
-            v-if="wordOfTheDay.heteronyms && wordOfTheDay.heteronyms.length > 0"
-            :heteronyms="wordOfTheDay.heteronyms"
-            @select-term="handleHeteronymSelect"
-          />
-        </template>
-
-        <!-- Fallback si no hay palabra del día todavía -->
-        <div v-else class="text-center py-12 space-y-3">
-          <BookOpen class="w-10 h-10 text-ink/30 mx-auto stroke-2" />
-          <h3 class="font-bold text-lg text-ink">Palabra del Día</h3>
-          <p class="text-sm text-ink/60 max-w-sm mx-auto">
-            Explora cientos de expresiones vivas en nuestro catálogo dialectal.
-          </p>
-          <button
-            type="button"
-            class="btn-primary !py-2 !px-4 text-xs"
-            @click="router.push('/dictionary')"
-          >
-            Explorar Diccionario
-          </button>
-        </div>
-      </article>
-
-      <!-- Columna Derecha (5 cols): Widget de Arena Interactiva y Tokens -->
-      <aside class="lg:col-span-5 space-y-6">
-        <!-- Tarjeta de Duelo en Arena Mini-Preview -->
-        <div class="card-editorial space-y-5">
-          <div class="flex items-center justify-between">
-            <span class="badge-pill bg-warning/20 text-ink">
-              ⚡ Duelo en Arena · Desafío Diario
-            </span>
-            <span class="badge-pill bg-brand/12 text-brand border border-brand/20 font-black tabular-nums text-xs">
-              00:15 s
-            </span>
-          </div>
-
-          <div class="space-y-1">
-            <p class="text-xs font-bold uppercase tracking-wider text-ink/45">
-              Demuestra tu oído dialectal:
-            </p>
-            <h3 class="text-xl md:text-2xl font-black text-ink">
-              {{ arenaMock.question }}
-            </h3>
-          </div>
-
-          <!-- Opciones de respuesta -->
-          <div class="space-y-2.5">
-            <button
-              v-for="(option, index) in arenaMock.options"
-              :key="index"
-              type="button"
-              class="w-full text-left p-3.5 rounded-2xl border transition-all duration-150 flex items-center gap-3 cursor-pointer"
-              :class="
-                arenaConfirmed && index === arenaMock.correctIndex
-                  ? 'bg-success/15 border-success/50 text-ink font-semibold shadow-soft'
-                  : arenaSelected === index
-                    ? 'bg-brand/10 border-brand/30 text-ink font-semibold shadow-soft'
-                    : 'bg-surface border-ink/20 text-ink/75 hover:(bg-ink/3 border-ink/25)'
-              "
-              @click="arenaSelected = index"
-            >
-              <span
-                class="w-7 h-7 rounded-xl text-xs font-bold flex items-center justify-center shrink-0 tabular-nums"
-                :class="
-                  arenaConfirmed && index === arenaMock.correctIndex
-                    ? 'bg-success text-surface'
-                    : arenaSelected === index
-                      ? 'bg-brand text-surface'
-                      : 'bg-ink/6 text-ink/60'
-                "
-              >
-                {{ index + 1 }}
-              </span>
-              <span class="text-sm leading-snug">{{ option }}</span>
-            </button>
-          </div>
-
-          <!-- Botonera de Acción de Arena -->
-          <div class="pt-2 flex items-center gap-3">
-            <button
-              type="button"
-              class="btn-primary flex-1 !py-2.5 text-sm"
-              :disabled="arenaSelected === null"
-              @click="arenaConfirmed = true"
-            >
-              {{ arenaConfirmed ? '¡Respuesta confirmada!' : 'Confirmar respuesta' }}
-            </button>
-            <button
-              type="button"
-              class="btn-secondary !py-2.5 text-sm"
-              @click="router.push('/play')"
-            >
-              Ir a la Arena
-            </button>
-          </div>
-        </div>
-
-        <!-- Vitrina de Barajas Destacadas -->
-        <div v-if="featuredDecks.length > 0" class="card-editorial space-y-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <Layers class="w-4 h-4 text-brand stroke-2" />
-              <h3 class="font-bold text-base text-ink">Barajas Oficiales</h3>
-            </div>
-            <router-link to="/decks" class="text-xs font-bold text-brand hover:underline">
-              Ver todas →
-            </router-link>
-          </div>
-
-          <div class="space-y-2">
-            <router-link
-              v-for="deck in featuredDecks"
-              :key="deck.id_deck"
-              :to="`/decks/${deck.id_deck}`"
-              class="p-3 rounded-2xl bg-paper/60 border border-ink/8 hover:(border-brand/40 bg-surface shadow-soft) transition-all flex items-center justify-between gap-3 group"
-            >
-              <div class="min-w-0">
-                <h4 class="font-bold text-sm text-ink truncate group-hover:text-brand transition-colors">
-                  {{ deck.title }}
-                </h4>
-                <p class="text-xs text-ink/50 tabular-nums">
-                  {{ deck.item_count }} cartas
-                </p>
-              </div>
-              <ArrowRight class="w-4 h-4 text-ink/30 group-hover:(text-brand translate-x-0.5) transition-all shrink-0 stroke-2" />
-            </router-link>
-          </div>
-        </div>
-      </aside>
-    </div>
-
-    <!-- 3. Vitrina de Colecciones Temáticas -->
-    <section v-if="featuredCollections.length > 0" class="space-y-5 pt-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-2xl font-black tracking-tight text-ink">
-            Colecciones Curadas
-          </h2>
-          <p class="text-xs md:text-sm text-ink/60">
-            Explora conjuntos temáticos preparados por lexicógrafos y la comunidad.
-          </p>
-        </div>
-
-        <router-link to="/collections" class="btn-secondary !py-1.5 !px-3 text-xs">
-          Catálogo completo →
-        </router-link>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <router-link
-          v-for="col in featuredCollections"
-          :key="col.id_collection"
-          :to="`/collections/${col.id_collection}`"
-          class="card-editorial p-5 hover:(-translate-y-0.5 border-brand/30) transition-all flex flex-col justify-between group cursor-pointer"
-        >
-          <div class="space-y-2">
-            <div class="w-8 h-8 rounded-xl bg-info/15 text-info flex items-center justify-center">
-              <Compass class="w-4 h-4 stroke-2" />
-            </div>
-            <h3 class="font-bold text-base text-ink group-hover:text-brand transition-colors">
-              {{ col.title }}
-            </h3>
-            <p class="text-xs text-ink/65 line-clamp-2">
-              {{ col.description || 'Colección de modismos y léxico representativo.' }}
-            </p>
-          </div>
-
-          <div class="pt-4 mt-2 border-t border-ink/8 flex items-center justify-between text-xs text-ink/50 font-medium">
-            <span>{{ col.decks?.length || 0 }} barajas</span>
-            <span class="text-brand group-hover:translate-x-0.5 transition-transform">Ver →</span>
-          </div>
-        </router-link>
-      </div>
-    </section>
+    <!-- 4. Modal Reka UI para Guardar Acepción en Baraja de Studio (CU10) -->
+    <AddToDeckModal
+      v-model:open="isAddToDeckOpen"
+      :sense="selectedSenseForDeck"
+      :decks="studioDecks"
+      :is-loading="isDeckLoading"
+      @add="handleAddDeckItem"
+      @create-deck="handleCreateDeckAndAdd"
+    />
   </div>
 </template>

@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Bookmark,
   Flag,
+  Image as ImageIcon,
   RotateCw,
 } from 'lucide-vue-next'
 import {
@@ -144,12 +145,14 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-8 max-w-4xl mx-auto">
-    <!-- Botón de regreso -->
-    <div class="flex items-center justify-between">
+  <!-- Vista Principal: Sin envoltorios de tarjeta ni backgrounds artificiales. Se monta directo sobre bg-paper -->
+  <div class="space-y-10 md:space-y-14 py-2">
+
+    <!-- Top Utility Bar: Regreso y Notificaciones -->
+    <div class="flex items-center justify-between w-full">
       <button
         type="button"
-        class="btn-ghost !px-3 !py-1.5 text-xs text-ink/70 hover:text-ink inline-flex items-center gap-2"
+        class="inline-flex items-center gap-2 text-xs font-semibold text-ink/65 hover:text-ink transition-colors cursor-pointer"
         @click="router.push('/dictionary')"
       >
         <ArrowLeft class="w-4 h-4 stroke-2" />
@@ -158,7 +161,7 @@ onMounted(() => {
 
       <div
         v-if="activeFeedback"
-        class="badge-pill bg-success/15 text-success border border-success/40 font-bold text-xs animate-fade-in"
+        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-brand/10 text-brand border border-brand/20 animate-fade-in"
       >
         {{ activeFeedback }}
       </div>
@@ -167,9 +170,9 @@ onMounted(() => {
     <!-- Error State -->
     <div
       v-if="error"
-      class="card-editorial text-center py-12 space-y-4"
+      class="text-center py-16 px-6 space-y-4 max-w-xl mx-auto"
     >
-      <div class="w-12 h-12 rounded-2xl bg-warning/20 border border-warning/40 flex items-center justify-center text-warning mx-auto">
+      <div class="w-12 h-12 rounded-2xl bg-ink/5 flex items-center justify-center text-ink/60 mx-auto">
         <AlertCircle class="w-6 h-6 stroke-2" />
       </div>
       <div class="space-y-1">
@@ -190,130 +193,203 @@ onMounted(() => {
     <!-- Skeleton Loading -->
     <div
       v-else-if="isLoading"
-      class="space-y-6 animate-pulse"
+      class="space-y-10 animate-pulse w-full"
     >
-      <div class="card-editorial space-y-4">
-        <div class="h-6 bg-ink/10 rounded-full w-1/4" />
-        <div class="h-12 bg-ink/10 rounded-2xl w-1/2" />
-        <div class="h-4 bg-ink/10 rounded w-1/3" />
+      <div class="space-y-4">
+        <div class="h-20 sm:h-32 md:h-44 bg-ink/8 rounded-2xl w-3/5" />
+        <div class="h-5 bg-ink/6 rounded w-1/4" />
       </div>
-      <div class="h-36 bg-ink/10 rounded-3xl" />
-      <div class="card-editorial space-y-4">
-        <div class="h-8 bg-ink/10 rounded-2xl w-1/4" />
-        <div class="h-24 bg-ink/10 rounded-2xl" />
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16">
+        <div class="md:col-span-4 h-28 bg-ink/6 rounded-2xl" />
+        <div class="md:col-span-8 h-36 bg-ink/6 rounded-2xl" />
       </div>
     </div>
 
-    <!-- Contenido Principal de la Ficha Léxica -->
-    <div v-else-if="word" class="space-y-8">
-      <!-- 1. Encabezado Hero de la Ficha (CU05) -->
-      <article class="card-editorial space-y-6">
-        <div class="flex flex-wrap items-start justify-between gap-4 border-b border-ink/8 pb-6">
-          <div class="space-y-2">
-            <!-- Badges de región, quórum y nivel -->
-            <div class="flex flex-wrap items-center gap-2">
+    <!-- CONTENIDO EDITORIAL DE 2 COLORES (INK + BRAND) DIRECTO EN CANVAS -->
+    <main v-else-if="word" class="space-y-12 md:space-y-16">
+
+      <!-- 1. Canonical Word: Lema Tipográfico Monumental -->
+      <section class="grid gap-12">
+        <h1 class="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-ink tracking-tight leading-none">
+          {{ word.lemma }}
+        </h1>
+        <p class="text-sm md:text-base font-medium text-ink/60 capitalize">
+          {{ word.part_of_speech }}
+          <span v-if="word.gender" class="lowercase text-ink/45"> · {{ word.gender }}</span>
+        </p>
+      </section>
+
+      <!-- 2. Word in Context: Etimología a la Izquierda vs. Introducción Cultural Fluida a la Derecha -->
+      <section class="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
+        <!-- Columna Roots / Etimología -->
+        <div v-if="word.etymology" class="md:col-span-4 space-y-2">
+          <p class="text-[11px] font-bold tracking-widest text-brand uppercase">
+            Etimología
+          </p>
+          <p class="text-sm md:text-base text-ink/70 leading-relaxed">
+            {{ word.etymology }}
+          </p>
+        </div>
+
+        <!-- Columna Cultural Introduction: Texto Editorial Generoso -->
+        <div :class="word.etymology ? 'md:col-span-8' : 'md:col-span-12'">
+          <p
+            v-if="word.friendly_blurb"
+            class="text-xl sm:text-2xl md:text-3xl font-normal text-ink/90 leading-relaxed"
+          >
+            {{ word.friendly_blurb }}
+          </p>
+        </div>
+      </section>
+
+      <!-- Divisor sutil por opacidad de tinta -->
+      <hr class="border-t border-ink/10" />
+
+      <!-- 3. Regional Meanings: Comparativa en Columnas Paralelas en Desktop / Flujo Vertical en Mobile -->
+      <section class="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-start">
+        <article
+          v-for="(sense, index) in word.senses"
+          :key="sense.id_sense"
+          class="space-y-6"
+        >
+          <!-- Sense Heading & Discrete Actions -->
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-2">
               <span
-                v-if="word.origin_region"
-                class="badge-pill bg-info/15 text-info border border-info/25"
+                v-if="sense.region_name"
+                class="h-6 px-2.5 flex items-center rounded text-xs font-bold bg-ink/5 text-ink/80"
               >
-                {{ word.origin_region.country_code }} {{ word.origin_region.name }}
-              </span>
-              <span class="badge-pill bg-success/15 text-success border border-success/40">
-                ✓ Aprobada (Quórum 3/3)
+                {{ sense.region_name }}
               </span>
               <span
-                v-if="word.senses?.[0]?.cefr_level"
-                class="badge-pill bg-ink/6 text-ink/60"
+                v-if="sense.cefr_level"
+                class="h-6 px-2.5 flex items-center rounded text-xs font-bold bg-brand text-surface"
               >
-                MCER {{ word.senses[0].cefr_level }}
+                {{ sense.cefr_level }}
               </span>
               <span
-                v-if="word.senses?.some((s: SenseDetail) => s.is_taboo_or_vulgar)"
-                class="badge-pill bg-warning/20 text-ink border border-warning/40 font-bold"
+                v-if="sense.is_taboo_or_vulgar"
+                class="h-6 px-2.5 flex items-center rounded text-xs font-bold bg-warning text-surface"
               >
-                <AlertTriangle class="w-3 h-3 stroke-2" />
-                Tabú / Vulgar
+                Tabú
               </span>
             </div>
 
-            <!-- Lema principal -->
-            <h1 class="text-4xl md:text-5xl font-black tracking-tight text-ink pt-1">
-              {{ word.lemma }}
-            </h1>
+            <!-- Discrete Action Buttons per Sense -->
+            <div class="flex items-center gap-1.5">
+              <button
+                v-if="sense.image_url"
+                type="button"
+                class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-ink/60 hover:text-ink hover:bg-ink/5 transition-colors cursor-pointer"
+                title="Ver imagen"
+                @click="openLightbox(sense.image_url)"
+              >
+                <ImageIcon class="w-3.5 h-3.5 stroke-2" />
+                <span class="hidden sm:inline">Imagen</span>
+              </button>
 
-            <!-- Categoría gramatical y etimología resumida -->
-            <p class="text-sm md:text-base font-medium text-ink/55 italic">
-              {{ word.part_of_speech }}
-              <span v-if="word.gender"> ({{ word.gender.toLowerCase() }})</span>
-              <span v-if="word.etymology"> · {{ word.etymology }}</span>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium text-ink/75 hover:text-brand hover:bg-brand/10 transition-colors cursor-pointer border border-ink/10 hover:border-brand/30"
+                title="Añadir esta acepción a una baraja"
+                @click="handleOpenAddToDeck(sense)"
+              >
+                <Bookmark class="w-3.5 h-3.5 stroke-2" />
+                <span>Guardar</span>
+              </button>
+
+              <button
+                type="button"
+                class="p-1 rounded text-ink/40 hover:text-ink hover:bg-ink/5 transition-colors cursor-pointer"
+                title="Reportar esta acepción"
+                @click="handleOpenReport(sense)"
+              >
+                <Flag class="w-3.5 h-3.5 stroke-2" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Sense Definition: Número Ordinal 01/02 en Brand + Definición Principal -->
+          <div class="space-y-2">
+            <div class="flex items-baseline gap-3">
+              <h2 class="text-2xl md:text-3xl font-bold text-ink leading-snug tracking-tight">
+                {{ sense.definition }}
+              </h2>
+            </div>
+            <p v-if="sense.usage_frequency" class="text-xs text-ink/50 capitalize">
+              {{ sense.usage_frequency.toLowerCase() }}
             </p>
           </div>
 
-          <!-- Botones de Acción Global -->
-          <div class="flex items-center gap-2.5">
-            <button
-              type="button"
-              class="btn-primary text-xs md:text-sm !py-2.5 !px-4"
-              @click="handleOpenAddToDeck()"
-            >
-              <Bookmark class="w-4 h-4 stroke-2" />
-              <span>+ Guardar en Studio</span>
-            </button>
+          <!-- Nota Cultural Específica del Sentido -->
+          <p
+            v-if="sense.cultural_note"
+            class="text-base md:text-lg text-ink/70 leading-relaxed"
+          >
+            {{ sense.cultural_note }}
+          </p>
 
-            <button
-              type="button"
-              class="btn-ghost !p-2 text-ink/45 hover:text-ink text-xs"
-              title="Reportar ficha"
-              @click="handleOpenReport()"
-            >
-              <Flag class="w-4 h-4 stroke-2" />
-            </button>
+          <!-- Usage Quotation: Cita con Borde Izquierdo de Acento Brand -->
+          <div
+            v-if="sense.examples && sense.examples.length > 0"
+            class="border-l-2 border-brand pl-4 py-1 space-y-1.5"
+          >
+            <blockquote class="italic text-lg md:text-xl text-ink/85 leading-snug">
+              «{{ sense.examples[0].sentence }}»
+            </blockquote>
+            <figcaption v-if="sense.examples[0].source" class="text-xs text-ink/45 not-italic">
+              — {{ sense.examples[0].source }}
+            </figcaption>
           </div>
+        </article>
+      </section>
+
+      <!-- 4. Cross-border Heteronyms: Equivalencias en Otros Países -->
+      <section
+        v-if="word.heteronyms && word.heteronyms.length > 0"
+        class="pt-6 border-t border-ink/10 space-y-4"
+      >
+        <h3 class="text-sm font-bold text-ink/80">
+          Equivalencias en otros países
+        </h3>
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="(het, idx) in word.heteronyms"
+            :key="idx"
+            type="button"
+            class="px-3 py-1.5 rounded-full text-xs font-medium bg-ink/5 hover:bg-ink/10 text-ink/80 transition-colors cursor-pointer"
+            @click="handleHeteronymSelect(het.term)"
+          >
+            <span v-if="het.flag_emoji">{{ het.flag_emoji }} </span>
+            {{ het.country_code ? het.country_code + ' · ' : '' }}{{ het.term }}
+          </button>
         </div>
+      </section>
 
-        <!-- 2. Apertura Narrativa (FriendlyBlurb con paso directo del modelo WordDetail) -->
-        <FriendlyBlurb
-          :word="word"
-          @open-image="openLightbox"
-        />
+      <!-- 5. Word Actions: Botón Primario de Marca y Acción Secundaria Discreta -->
+      <footer class="pt-6 border-t border-ink/10 flex flex-wrap items-center gap-4 md:gap-8">
+        <button
+          type="button"
+          class="btn-primary"
+          @click="handleOpenAddToDeck()"
+        >
+          <Bookmark :size="20" />
+          <span>Añadir a mi Estudio</span>
+        </button>
 
-        <!-- 3. Contenedor de Acepciones ("Definitions of...") -->
-        <div class="space-y-4 pt-2">
-          <div class="flex items-center justify-between border-b border-ink/8 pb-3">
-            <span class="badge-pill bg-brand text-surface font-bold text-xs uppercase tracking-wider">
-              Acepciones de «{{ word.lemma }}»
-            </span>
+        <button
+          type="button"
+          class="btn-ghost"
+          @click="handleOpenReport()"
+        >
+          <Flag :size="20" />
+          <span>Reportar sugerencia</span>
+        </button>
+      </footer>
 
-            <span class="text-xs text-ink/50 tabular-nums font-medium">
-              {{ word.senses?.length || 0 }} {{ word.senses?.length === 1 ? 'sentido verificado' : 'sentidos verificados' }}
-            </span>
-          </div>
+    </main>
 
-          <!-- Lista de acepciones numeradas sin heterónimos duplicados -->
-          <div class="divide-y divide-ink/8">
-            <SenseItem
-              v-for="(sense, index) in word.senses"
-              :key="sense.id_sense"
-              :sense="sense"
-              :index="index + 1"
-              :part-of-speech="word.part_of_speech"
-              @add-to-deck="handleOpenAddToDeck(sense)"
-              @report="handleOpenReport(sense)"
-              @open-image="openLightbox"
-            />
-          </div>
-        </div>
-
-        <!-- 4. Heteronimia General a nivel de palabra "¿Cómo se dice en otras regiones?" -->
-        <HeteronymPills
-          v-if="word.heteronyms && word.heteronyms.length > 0"
-          :heteronyms="word.heteronyms"
-          @select-term="handleHeteronymSelect"
-        />
-      </article>
-    </div>
-
-    <!-- Modales y Diálogos Compartidos (@palabrario/ui) -->
+    <!-- Modales y Diálogos de Soporte (Mantenidos intactos para el Paso 3) -->
     <TabooWarningDialog
       :open="isTabooWarningOpen"
       :lemma="word?.lemma || 'palabra'"
