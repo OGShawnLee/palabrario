@@ -307,20 +307,20 @@ onMounted(() => {
             <div class="flex items-center gap-2">
               <span
                 v-if="deck.is_saved_from_community"
-                class="badge-pill bg-info/10 text-info border border-info/20 text-xs font-semibold"
+                class="minor-ink-pill text-xs font-semibold"
               >
                 Guardada
               </span>
               <span
                 v-else
-                class="badge-pill bg-success/10 text-success border border-success/20 text-xs font-semibold"
+                class="minor-ink-pill text-xs font-semibold"
               >
                 Propia
               </span>
 
               <span
                 v-if="deck.is_official"
-                class="badge-pill bg-brand/10 text-brand border border-brand/25 text-xs font-bold"
+                class="brand-pill text-xs font-bold gap-1"
               >
                 <Sparkles class="w-3 h-3 stroke-2" />
                 Oficial
@@ -328,7 +328,7 @@ onMounted(() => {
 
               <span
                 v-if="deck.is_public"
-                class="badge-pill bg-ink/6 text-ink/70 text-xs font-semibold"
+                class="minor-ink-pill text-xs font-semibold"
               >
                 Pública
               </span>

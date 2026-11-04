@@ -368,11 +368,11 @@ onMounted(() => {
     <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-ink/8">
       <div>
         <div class="flex items-center gap-2 mb-1">
-          <span class="badge-pill bg-brand/10 text-brand border border-brand/25">
+          <span class="brand-pill gap-1">
             <Shield class="w-3.5 h-3.5" />
             Gobernanza Institucional
           </span>
-          <span class="badge-pill bg-warning/20 text-ink border border-warning/40">
+          <span class="ink-pill">
             Exclusivo Administrador
           </span>
         </div>
@@ -422,7 +422,7 @@ onMounted(() => {
         <span>Solicitudes de Editor</span>
         <span
           v-if="editorRequests.length > 0 && requestStatusFilter === 'PENDING'"
-          class="badge-pill bg-brand text-surface text-[10px] px-2 py-0.2"
+          class="brand-pill text-[10px] !h-5 !px-2"
         >
           {{ editorRequests.length }}
         </span>
@@ -456,7 +456,7 @@ onMounted(() => {
         <span>Moderación de Reportes</span>
         <span
           v-if="reports.length > 0 && reportStatusFilter === 'PENDING'"
-          class="badge-pill bg-warning text-ink text-[10px] px-2 py-0.2 font-bold"
+          class="ink-pill text-[10px] !h-5 !px-2 font-bold"
         >
           {{ reports.length }}
         </span>
@@ -539,7 +539,7 @@ onMounted(() => {
 
             <div class="flex items-center gap-2">
               <span
-                class="badge-pill text-xs font-bold"
+                class="pill text-xs font-bold"
                 :class="[
                   req.status === 'APPROVED'
                     ? 'bg-success/15 text-success border border-success/30'
@@ -718,7 +718,7 @@ onMounted(() => {
                 </td>
                 <td class="py-3 px-4">
                   <span
-                    class="badge-pill text-[10px]"
+                    class="pill text-[10px]"
                     :class="t.granted_role === 'EDITOR' ? 'bg-brand/10 text-brand' : 'bg-ink/6 text-ink/70'"
                   >
                     {{ t.granted_role }}
@@ -735,7 +735,7 @@ onMounted(() => {
                 </td>
                 <td class="py-3 px-4 text-center">
                   <span
-                    class="badge-pill text-[10px] font-bold"
+                    class="pill text-[10px] font-bold"
                     :class="t.is_active ? 'bg-success/15 text-success' : 'bg-ink/10 text-ink/50'"
                   >
                     {{ t.is_active ? 'Activo' : 'Revocado / Inactivo' }}
@@ -897,7 +897,7 @@ onMounted(() => {
         >
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-ink/8 pb-3">
             <div class="flex items-center gap-2">
-              <span class="badge-pill bg-brand/10 text-brand text-[10px] font-bold">
+              <span class="minor-ink-pill text-[10px] font-bold">
                 {{ rep.target_type }}
               </span>
               <h3 class="font-bold text-base text-ink">
@@ -907,7 +907,7 @@ onMounted(() => {
 
             <div class="flex items-center gap-2">
               <span
-                class="badge-pill text-[10px] font-bold"
+                class="pill text-[10px] font-bold"
                 :class="[
                   rep.status === 'PENDING'
                     ? 'bg-warning/20 text-ink border border-warning/40'
@@ -1123,7 +1123,7 @@ onMounted(() => {
 
                 <td class="py-3 px-4 text-center">
                   <span
-                    class="badge-pill text-[10px] font-bold"
+                    class="pill text-[10px] font-bold"
                     :class="isUserActive(u) ? 'bg-success/15 text-success' : 'bg-brand/10 text-brand'"
                   >
                     {{ isUserActive(u) ? 'Activa' : 'Suspendida' }}

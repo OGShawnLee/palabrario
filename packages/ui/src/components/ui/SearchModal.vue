@@ -323,7 +323,7 @@ function onKeydown(e: KeyboardEvent) {
                   <div class="space-y-2">
                      <span
                       v-if="featuredItem.country_code"
-                      class="badge-pill bg-surface border border-ink/10 text-ink/70 tabular-nums select-none"
+                      class="minor-ink-pill tabular-nums select-none"
                     >
                       {{ cleanText(featuredItem.country_code) }}
                     </span>

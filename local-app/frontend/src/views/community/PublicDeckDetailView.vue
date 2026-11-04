@@ -128,13 +128,13 @@ onMounted(() => {
         <div class="flex flex-wrap items-center gap-2">
           <span
             v-if="deck.is_official"
-            class="badge-pill bg-brand/10 text-brand border border-brand/25 font-bold"
+            class="brand-pill font-bold gap-1"
           >
             <Sparkles class="w-3.5 h-3.5 stroke-2" />
             Baraja Oficial
           </span>
 
-          <span class="badge-pill bg-ink/6 text-ink/70 font-semibold tabular-nums">
+          <span class="minor-ink-pill font-semibold tabular-nums gap-1">
             <Layers class="w-3 h-3 stroke-2" />
             {{ items.length }} {{ items.length === 1 ? 'tarjeta de estudio' : 'tarjetas de estudio' }}
           </span>
@@ -238,21 +238,21 @@ onMounted(() => {
 
                   <span
                     v-if="item.sense?.flag_emoji || item.sense?.region_name"
-                    class="badge-pill bg-info/15 text-info border border-info/25 font-bold"
+                    class="minor-ink-pill font-bold"
                   >
                     {{ item.sense.flag_emoji }} {{ item.sense.region_name || item.sense.region_code }}
                   </span>
 
                   <span
                     v-if="item.sense?.cefr_level"
-                    class="badge-pill bg-ink/6 text-ink/60"
+                    class="brand-pill"
                   >
                     MCER {{ item.sense.cefr_level }}
                   </span>
 
                   <span
                     v-if="item.sense?.is_taboo_or_vulgar"
-                    class="badge-pill bg-warning/20 text-ink border border-warning/40 font-bold"
+                    class="ink-pill font-bold gap-1"
                   >
                     <AlertTriangle class="w-3 h-3 stroke-2" />
                     Tabú / Vulgar

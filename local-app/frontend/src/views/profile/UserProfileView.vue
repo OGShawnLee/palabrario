@@ -114,11 +114,11 @@ async function changePassword() {
           <h1 class="font-black text-3xl tracking-tight text-ink">{{ profile.name }}</h1>
           <p class="text-ink/65">@{{ profile.user_name }}</p>
           <div class="flex flex-wrap justify-center sm:justify-start gap-2 tabular-nums">
-            <span class="badge-pill bg-ink/6 text-ink/65">{{ profile.role }}</span>
-            <span class="badge-pill bg-info/15 text-info border border-info/25">Nivel {{ profile.current_level }}</span>
-            <span class="badge-pill bg-info/15 text-info border border-info/25">{{ profile.total_xp }} XP</span>
-            <span class="badge-pill bg-brand/12 text-brand border border-brand/25">🔥 {{ profile.current_streak }}</span>
-            <span class="badge-pill bg-warning/20 text-ink">🏆 {{ profile.matches_won }} victorias</span>
+            <span class="minor-ink-pill">{{ profile.role }}</span>
+            <span class="minor-ink-pill">Nivel {{ profile.current_level }}</span>
+            <span class="minor-ink-pill">{{ profile.total_xp }} XP</span>
+            <span class="brand-pill">🔥 {{ profile.current_streak }}</span>
+            <span class="minor-ink-pill">🏆 {{ profile.matches_won }} victorias</span>
           </div>
         </div>
       </section>
@@ -126,7 +126,7 @@ async function changePassword() {
       <section v-if="profile.unlocked_badges?.length" class="card-editorial space-y-3">
         <span class="text-xs font-bold uppercase tracking-wider text-ink/45 block">Medallas</span>
         <div class="flex flex-wrap gap-2">
-          <span v-for="badge in profile.unlocked_badges" :key="badge.id_achievement" class="badge-pill bg-warning/20 text-ink" :title="badge.description">
+          <span v-for="badge in profile.unlocked_badges" :key="badge.id_achievement" class="brand-pill" :title="badge.description">
             {{ badge.name }}
           </span>
         </div>

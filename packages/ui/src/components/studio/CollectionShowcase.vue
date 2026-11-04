@@ -99,7 +99,7 @@ const totalSenses = computed(() =>
             <div class="space-y-4">
               <!-- Identidad: Etiqueta Baraja -->
               <div class="flex items-center justify-between gap-2">
-                <span class="badge-pill bg-ink/6 text-ink">
+                <span :class="deck.is_official ? 'brand-pill rounded-full px-3' : 'minor-ink-pill rounded-full px-3'">
                   {{ deck.is_official ? 'Oficial' : 'Comunidad' }}
                 </span>
               </div>

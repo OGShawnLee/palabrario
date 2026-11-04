@@ -54,19 +54,22 @@ function handleImageOpen() {
       <div class="flex-1 space-y-2">
         <!-- Badges de categoría, región y CEFR -->
         <div class="flex flex-wrap items-center gap-1.5">
-          <span class="badge-pill bg-success/15 text-success border border-success/40 font-bold text-xs">
-            <span v-if="sense.flag_emoji">{{ sense.flag_emoji }}</span>
+          <span class="minor-ink-pill">
+            <span v-if="sense.flag_emoji" class="mr-1">{{ sense.flag_emoji }}</span>
             <span>{{ sense.region_name || sense.region_code }}</span>
-            <span v-if="partOfSpeech">· {{ partOfSpeech }}</span>
-            <span v-if="sense.cefr_level">· {{ sense.cefr_level }}</span>
+            <span v-if="partOfSpeech"> · {{ partOfSpeech }}</span>
+          </span>
+
+          <span v-if="sense.cefr_level" class="brand-pill">
+            {{ sense.cefr_level }}
           </span>
 
           <span
             v-if="sense.is_taboo_or_vulgar"
-            class="badge-pill bg-warning/20 text-ink border border-warning/40 font-bold text-xs"
+            class="ink-pill gap-1"
           >
             <AlertTriangle class="w-3 h-3 stroke-2" />
-            Tabú / Vulgar
+            Tabú
           </span>
         </div>
 

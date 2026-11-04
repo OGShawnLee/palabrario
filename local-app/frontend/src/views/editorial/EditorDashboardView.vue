@@ -204,11 +204,11 @@ onMounted(async () => {
     <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-ink/8">
       <div>
         <div class="flex items-center gap-2 mb-1">
-          <span class="badge-pill bg-brand/10 text-brand border border-brand/25">
+          <span class="brand-pill gap-1">
             <Scale class="w-3.5 h-3.5" />
             Curaduría Panhispánica
           </span>
-          <span v-if="isAdmin" class="badge-pill bg-warning/20 text-ink border border-warning/40">
+          <span v-if="isAdmin" class="ink-pill">
             Facultades Admin
           </span>
         </div>
@@ -259,7 +259,7 @@ onMounted(async () => {
           <span>Cola de Quórum Paritario</span>
           <span
             v-if="queueItems.length > 0"
-            class="badge-pill bg-brand text-surface text-[10px] px-2 py-0.2"
+            class="brand-pill text-[10px] !h-5 !px-2"
           >
             {{ queueItems.length }}
           </span>
@@ -279,7 +279,7 @@ onMounted(async () => {
           <span>Mis Propuestas Léxicas</span>
           <span
             v-if="myProposals.length > 0"
-            class="badge-pill bg-ink/10 text-ink text-[10px] px-2 py-0.2"
+            class="minor-ink-pill text-[10px] !h-5 !px-2"
           >
             {{ myProposals.length }}
           </span>
@@ -362,7 +362,7 @@ onMounted(async () => {
           >
             <div class="flex items-start justify-between gap-2">
               <div>
-                <span class="badge-pill bg-info/15 text-info border border-info/25 text-[10px] mb-1">
+                <span class="minor-ink-pill text-[10px] mb-1">
                   {{ item.flag_emoji }} {{ item.region_name || item.region_code }}
                 </span>
                 <h3 class="font-bold text-lg text-ink">
@@ -383,7 +383,7 @@ onMounted(async () => {
 
             <div class="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-ink/8 text-[11px] text-ink/45">
               <span>Por {{ item.author_full_name || item.author_user_name }}</span>
-              <span v-if="item.author_id === currentUserId" class="badge-pill bg-warning/20 text-ink text-[10px]">
+              <span v-if="item.author_id === currentUserId" class="brand-pill text-[10px]">
                 Tu propuesta
               </span>
             </div>
@@ -480,12 +480,12 @@ onMounted(async () => {
         >
           <div class="space-y-2.5">
             <div class="flex items-start justify-between gap-2">
-              <span class="badge-pill bg-info/15 text-info border border-info/25 text-[10px]">
+              <span class="minor-ink-pill text-[10px]">
                 {{ item.flag_emoji }} {{ item.region_name || item.region_code }}
               </span>
 
               <span
-                class="badge-pill text-[10px] font-bold"
+                class="pill text-[10px] font-bold"
                 :class="[
                   item.state === 'APPROVED'
                     ? 'bg-success/15 text-success border border-success/30'

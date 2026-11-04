@@ -57,7 +57,7 @@ function handleReplay() {
       <div class="w-14 h-14 rounded-full bg-warning/20 border border-warning/40 text-ink flex items-center justify-center mb-3 shadow-soft">
         <Trophy class="w-7 h-7 text-ink" />
       </div>
-      <span class="badge-pill bg-brand/15 text-brand border border-brand/25 mb-2">
+      <span class="brand-pill mb-2">
         Sala {{ summary.room_code }} · Finalizada
       </span>
       <h2 class="font-black text-2xl md:text-3xl text-ink tracking-tight">

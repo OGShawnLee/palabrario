@@ -115,7 +115,7 @@ onMounted(() => {
           <div class="flex flex-wrap items-center gap-2">
             <span
               v-if="collection.is_official"
-              class="badge-pill bg-brand/10 text-brand border border-brand/25 font-bold"
+              class="brand-pill font-bold gap-1"
             >
               <Sparkles class="w-3.5 h-3.5 stroke-2" />
               Colección Oficial
@@ -123,7 +123,7 @@ onMounted(() => {
 
             <span
               v-if="collection.is_featured"
-              class="badge-pill bg-info/15 text-info border border-info/25 font-bold"
+              class="minor-ink-pill font-bold gap-1"
             >
               <Compass class="w-3.5 h-3.5 stroke-2" />
               Curaduría Destacada

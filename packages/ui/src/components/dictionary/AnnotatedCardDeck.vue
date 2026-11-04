@@ -128,22 +128,18 @@ function formatFrequency(freq?: string): string {
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start w-full">
             <!-- Columna A (2 cols): Índice Numérico y Etiquetas Regionales -->
             <div class="lg:col-span-2 flex flex-row lg:flex-col items-center lg:items-start justify-between lg:justify-start gap-3">
-              <span class="text-brand text-2xl lg:text-3xl font-black tracking-tight tabular-nums select-none">
-                0{{ index + 1 }}
-              </span>
-
               <div class="flex flex-wrap items-center gap-2">
                 <!-- Píldora de Región (Sin emojis) -->
                 <button
                   type="button"
-                  class="bg-ink/6 hover:(bg-ink/10 text-brand) text-ink px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer select-none"
+                  class="minor-ink-pill"
                   @click="emit('select-region', sense.region_code)"
                 >
                   {{ cleanPillText(sense.region_name || sense.region_code) }}
                 </button>
 
                 <!-- Badge de Nivel CEFR (Token Semántico info según PALETTE.md) -->
-                <span class="badge-pill bg-brand text-surface tabular-nums select-none">
+                <span class="brand-pill">
                   {{ cleanPillText(sense.cefr_level || 'B1') }}
                 </span>
               </div>
@@ -175,10 +171,10 @@ function formatFrequency(freq?: string): string {
                 v-if="sense.examples && sense.examples.length > 0"
                 class="border-l-2 border-brand pl-4 sm:pl-5 py-0.5 space-y-2"
               >
-                <blockquote class="text-ink text-lg sm:text-xl leading-snug not-italic font-normal">
+                <blockquote class="text-ink text-lg sm:text-xl leading-snug">
                   «{{ cleanPillText(sense.examples[0].sentence) }}»
                 </blockquote>
-                <p v-if="sense.examples[0].source" class="text-ink/50 text-xs font-normal">
+                <p v-if="sense.examples[0].source" class="text-xs text-ink/50">
                   — {{ cleanPillText(sense.examples[0].source) }}
                 </p>
               </div>

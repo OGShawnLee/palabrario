@@ -311,7 +311,7 @@ onMounted(() => {
             <div class="space-y-3">
               <div class="flex items-center justify-between">
                 <span
-                  class="badge-pill border text-xs font-bold uppercase tracking-wider"
+                  class="pill border text-xs font-bold uppercase tracking-wider"
                   :class="tierBadgeClass(ach.tier)"
                 >
                   {{ ach.tier }}
@@ -357,7 +357,7 @@ onMounted(() => {
             </p>
           </div>
 
-          <span class="badge-pill bg-ink/6 text-ink/60 text-xs font-mono">
+          <span class="minor-ink-pill text-xs font-mono">
             Últimas {{ transactions.length }} transacciones
           </span>
         </div>

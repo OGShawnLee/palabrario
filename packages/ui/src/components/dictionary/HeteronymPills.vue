@@ -35,10 +35,10 @@ function onSelect(item: HeteronymItem) {
         v-for="(item, idx) in heteronyms"
         :key="idx"
         type="button"
-        class="badge-pill bg-surface border border-ink/8 text-ink/75 font-medium hover:(border-brand/40 text-brand bg-brand/5) transition-all cursor-pointer outline-none focus-visible:(border-brand ring-2 ring-brand/15)"
+        class="pill bg-surface border border-ink/8 text-ink/75 font-medium hover:(border-brand/40 text-brand bg-brand/5) transition-all cursor-pointer outline-none focus-visible:(border-brand ring-2 ring-brand/15)"
         @click="onSelect(item)"
       >
-        <strong class="text-ink font-bold">
+        <strong class="text-ink font-bold mr-1">
           {{ item.flag_emoji }} {{ item.region_code || item.country_code }}:
         </strong>
         <span>{{ item.term }}</span>

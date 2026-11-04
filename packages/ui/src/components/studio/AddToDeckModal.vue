@@ -109,10 +109,10 @@ function handleCreateAndAdd() {
         <!-- Vista previa de la acepción -->
         <div v-if="sense" class="card-subtle py-2.5 px-3.5 text-xs text-ink/75 space-y-1 shrink-0">
           <div class="flex items-center gap-2">
-            <span class="badge-pill bg-success/15 text-success border border-success font-bold text-[10px]">
+            <span class="minor-ink-pill font-bold text-[10px]">
               {{ sense.flag_emoji }} {{ sense.region_name || sense.region_code }}
             </span>
-            <span v-if="sense.cefr_level" class="badge-pill bg-ink/6 text-ink/60 text-[10px]">
+            <span v-if="sense.cefr_level" class="brand-pill text-[10px]">
               MCER {{ sense.cefr_level }}
             </span>
           </div>
@@ -167,7 +167,7 @@ function handleCreateAndAdd() {
                 <div class="space-y-1 min-w-0">
                   <div class="flex items-center gap-2">
                     <h4 class="font-bold text-sm text-ink truncate">{{ deck.title }}</h4>
-                    <span v-if="deck.is_official" class="badge-pill bg-brand/12 text-brand border border-brand/20 text-[10px]">
+                    <span v-if="deck.is_official" class="brand-pill text-[10px]">
                       Oficial
                     </span>
                   </div>

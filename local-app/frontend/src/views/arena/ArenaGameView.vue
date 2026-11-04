@@ -330,7 +330,7 @@ onUnmounted(() => {
       <div v-else-if="phase === 'WAITING'" class="space-y-8">
         <!-- Tarjeta de PIN y Bienvenida -->
         <div class="card-editorial p-6 sm:p-8 text-center max-w-xl mx-auto shadow-soft">
-          <span class="badge-pill bg-brand/10 text-brand border border-brand/25 mb-3">
+          <span class="brand-pill mb-3">
             Sala de Espera
           </span>
           <h2 class="font-black text-2xl sm:text-3xl text-ink tracking-tight mb-2">

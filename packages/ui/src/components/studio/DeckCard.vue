@@ -53,7 +53,7 @@ function handleClick() {
         <div class="flex flex-wrap items-center gap-1.5">
           <span
             v-if="deck.is_official"
-            class="badge-pill bg-brand/10 text-brand border border-brand/25 font-bold"
+            class="brand-pill font-bold gap-1"
           >
             <Sparkles class="w-3 h-3 stroke-2" />
             Oficial
@@ -61,7 +61,7 @@ function handleClick() {
 
           <span
             v-if="highlighted"
-            class="badge-pill bg-info/15 text-info border border-info/25 font-bold"
+            class="minor-ink-pill font-bold"
           >
             Destacada
           </span>

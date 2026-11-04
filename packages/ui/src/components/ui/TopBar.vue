@@ -196,7 +196,7 @@ const itemClass =
                 </p>
                 <div class="flex items-center justify-between gap-2">
                   <p class="text-sm font-bold text-ink truncate">{{ currentUser.name }}</p>
-                  <span class="badge-pill bg-ink/6 text-ink/65">
+                  <span class="minor-ink-pill">
                     {{ roleLabel }}
                   </span>
                 </div>
@@ -334,7 +334,7 @@ const itemClass =
 
             <!-- Racha en Móvil (con icono oficial Flame de lucide-vue-next) -->
             <div class="flex items-center gap-2">
-              <div class="badge-pill bg-brand/12 text-brand border border-brand/25 tabular-nums">
+              <div class="brand-pill tabular-nums gap-1">
                 <Flame class="w-3.5 h-3.5 text-brand fill-brand/20 stroke-2" />
                 <span>{{ streakDays ?? 0 }}</span>
               </div>

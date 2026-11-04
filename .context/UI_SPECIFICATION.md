@@ -30,7 +30,7 @@ Antes de modificar o crear cualquier archivo dentro de `packages/ui/`, `local-ap
 > 2. **Cero JWT en `localStorage` o `sessionStorage` en Escritorio:**
 >    - En **Desktop (Wails V3)**: El token JWT vive exclusivamente en la memoria RAM privada del proceso Go (`local-app/app.go` protegido con `sync.RWMutex`, inmune a XSS).
 >    - En **Móvil / Web SPA (Capacitor / Browser)**: El token se custodia mediante `@capacitor/preferences` (Keystore / Keychain nativo en móvil y almacenamiento aislado gestionado dentro de `CapacitorMobileAdapter`).
-> 3. **Fidelidad Estricta a [`.context/PALETTE.md`](./PALETTE.md):** Queda estrictamente prohibido usar colores por defecto de Tailwind/UnoCSS (`bg-red-500`, `text-gray-600`, `shadow-lg`, etc.) o valores hexadecimales sueltos. Se usan únicamente los 4 tokens base (`paper`, `surface`, `ink`, `brand`), los 3 semánticos (`success`, `warning`, `info`) y los atajos canónicos (`card-editorial`, `card-subtle`, `btn-primary`, `btn-secondary`, `btn-ghost`, `input-editorial`, `badge-pill`) con sombras `shadow-soft`, `shadow-soft-lg` y `shadow-soft-brand`. Prohibidos los trazos duros (`border-2 border-ink`).
+> 3. **Fidelidad Estricta a [`.context/PALETTE.md`](./PALETTE.md):** Queda estrictamente prohibido usar colores por defecto de Tailwind/UnoCSS (`bg-red-500`, `text-gray-600`, `shadow-lg`, etc.) o valores hexadecimales sueltos. Se usan únicamente los 4 tokens base (`paper`, `surface`, `ink`, `brand`), los 3 semánticos (`success`, `warning`, `info`) y los atajos canónicos (`card-editorial`, `card-subtle`, `btn-primary`, `btn-secondary`, `btn-ghost`, `input-editorial`, `pill`, `minor-ink-pill`, `brand-pill`, `ink-pill`) con sombras `shadow-soft`, `shadow-soft-lg` y `shadow-soft-brand`. Prohibidos los trazos duros (`border-2 border-ink`).
 > 4. **Cero Propiedades JSON o Endpoints Inventados:** Toda prop o estado que represente datos del servidor debe estar tipado con las clases e interfaces autogeneradas en `local-app/frontend/bindings/` (re-exportadas en `@palabrario/ui` mediante `export type *`) y mapeado en [`.context/ROUTES_MAP.md`](./ROUTES_MAP.md).
 > 5. **Tipografía Única `Satoshi`:** No importar fuentes secundarias. En temporizadores, marcadores de XP y códigos PIN de Arena es mandatorio usar la clase `tabular-nums`.
 > 6. **Iconografía Oficial con `lucide-vue-next`:** La biblioteca oficial y exclusiva de iconos para todos los componentes Vue es **`lucide-vue-next`** (ej. `import { BookOpen, Trophy, Sparkles, Flame, Check, X, ShieldAlert } from 'lucide-vue-next'`). Queda prohibido usar SVGs inline sin tipar, strings HTML crudos o fuentes secundarias. Todo icono se instancia como componente Vue y se estiliza con clases UnoCSS (`w-5 h-5 text-ink`, `stroke-2`, etc.) manteniendo el grosor de trazo editorial.
@@ -43,150 +43,57 @@ Antes de modificar o crear cualquier archivo dentro de `packages/ui/`, `local-ap
 
 ## 1. Arquitectura de Monorepo con Bun Workspaces y Transporte Isomórfico
 
-Para evitar duplicación de código y permitir que Palabrario opere al 100% en **Desktop (Wails V3)**, **Móvil (Capacitor)** y **Web Híbrida (Astro SSR SEO + 100% SPA con WebSockets en Fase 6)**, el repositorio utiliza **Bun Workspaces** desde la raíz:
-
-### 1.1. Árbol Canónico del Monorepo Frontend
-
-```text
-Palabrario/
-├── package.json                      # Workspace Root: ["packages/*", "local-app/frontend", "web-portal"]
-├── tsconfig.base.json                # Configuración TS base compartida
-│
-├── packages/
-│   └── ui/                           # 📦 @palabrario/ui — Sistema de Diseño y Componentes Puros (SSR-Safe)
-│       ├── package.json              # name: "@palabrario/ui", exports: ".", "./uno.config", "./styles.css"
-│       ├── tsconfig.json
-│       └── src/
-│           ├── uno.config.ts         # SSOT de PALETTE.md + content.filesystem escaneando packages/ui/src
-│           ├── assets/main.css       # Tipografía Satoshi + resets editoriales + .tabular-nums
-│           ├── types/models.ts       # Re-exporta `export type *` desde local-app/frontend/bindings
-│           ├── components/
-│           │   ├── ui/               # TopBar, BottomNav, PasswordInput, MediaDropzone, ImageLightboxModal, SearchModal
-│           │   ├── dictionary/       # WordCard, FriendlyBlurb, SenseItem, HeteronymPills, TabooWarningDialog, ReportModal
-│           │   ├── studio/           # DeckCard, CollectionCard, StudyCard, MasteryProgressBar, AddToDeckModal
-│           │   ├── arena/            # ArenaTimer, ImageChoiceGrid, PodiumCard
-│           │   └── editorial/        # QuorumStepper, ProposalDiffCard
-│           └── index.ts              # Barrel export de todos los componentes y tipos UI
-│
-├── local-app/                        # 🖥️ CLIENTE NATIVO Y SPA BASE (Fase 5: Sub-Fases 5.1 a 5.9)
-│   ├── app.go, main.go               # Puente Go BFF + Custodia JWT en RAM + Cliente WS Go
-│   ├── Taskfile.yml                  # Orquestador Wails V3: bindings -> type-check (ui + app) -> build -> go build
-│   └── frontend/
-│       ├── package.json              # Depende de "@palabrario/ui": "workspace:*"
-│       ├── uno.config.ts             # `export { default } from "@palabrario/ui/uno.config"`
-│       ├── bindings/                 # Autogenerado por `wails3 generate bindings -ts` desde Go
-│       └── src/
-│           ├── api/                  # client.ts (IPalabrarioAPI), wails.adapter.ts, capacitor.adapter.ts, arena.events.ts
-│           ├── composables/          # useAuth.ts, useOverlays.ts
-│           ├── components/ui/        # CredentialsRolePopover.vue (conectado a api.* y useAuth)
-│           ├── layouts/              # AppLayout.vue, AuthLayout.vue, ImmersiveLayout.vue
-│           ├── router/               # index.ts con createWebHashHistory() y las 23 rutas canónicas (sin aliases)
-│           └── views/                # Las 23 Vistas que consumen `api.*` y montan componentes de `@palabrario/ui`
-│
-└── web-portal/                       # 🌐 PLATAFORMA WEB 100% HÍBRIDA SSR + SPA (Fase 6)
-    ├── package.json                  # Depende de "@palabrario/ui": "workspace:*"
-    ├── uno.config.ts                 # `export { default } from "@palabrario/ui/uno.config"`
-    └── src/                          # Astro SSR para SEO/OpenGraph (Rutas #3-#10) + 100% de las 23 rutas en navegador
-```
-
-### 1.2. Patrón `Transport Adapter` (`IPalabrarioAPI = typeof WailsAppBridge`)
-
-```mermaid
-flowchart LR
-    subgraph SharedPkg["Paquete Compartido (@palabrario/ui)"]
-        UIComps["Componentes .vue Puros & SSR-Safe\n(Reciben Props tipadas con models.* y emiten Eventos)"]
-    end
-
-    subgraph Shells["Shells de Aplicación"]
-        Views["Vistas en local-app/frontend (Fase 5)\n& Páginas/Islas en web-portal (Fase 6)"]
-    end
-
-    subgraph ContractLayer["Contrato Único Autogenerado (src/api/client.ts)"]
-        API["IPalabrarioAPI = typeof WailsAppBridge\n+ ArenaEventBus"]
-    end
-
-    subgraph Adapters["Adaptadores de Transporte"]
-        WailsAdp["WailsDesktopAdapter (Desktop)\n• Invoca local-app/app.go vía IPC\n• Escucha Events.On('arena:ws_message')\n• JWT en RAM Go (sync.RWMutex)"]
-        CapAdp["CapacitorMobileAdapter (Móvil & Web SPA)\n• fetch() (:8000), Multipart (:8002)\n• Browser WebSocket (:8001/ws/arena/{code}?token={jwt})\n• JWT en @capacitor/preferences"]
-        AstroAdp["AstroSSRAdapter (Web SSR — Fase 6)\n• Fetch Server-to-Server a core-service (:8000)\n• Entrega HTML indexable + OpenGraph/JSON-LD"]
-    end
-
-    UIComps --> Views
-    Views --> API
-    API -->|"Runtime Wails"| WailsAdp
-    API -->|"Capacitor / Browser SPA"| CapAdp
-    API -->|"Astro Server Runtime"| AstroAdp
-```
-
----
-
-## 2. Arquitectura de Navegación y Mapa Canónico de Rutas
-
-> [!IMPORTANT]
-> **Consulta la matriz detallada de rutas en [`.context/ROUTES_MAP.md`](./ROUTES_MAP.md) y los diagramas de secuencia en [`.context/UI_FLOWS.md`](./UI_FLOWS.md).**  
-> Allí se especifica para cada una de las **23 vistas canónicas**: la ruta `Hash`, el archivo `.vue`, el layout (`default`, `auth`, `immersive`), la guardia de rol (`guestOnly`, `OptionalAuth`, `requireAuth`, `requireRole`), los casos de uso (`CU01–CU16`), los métodos de `IPalabrarioAPI`, los endpoints reales de `core-service/internal/api/router.go` y los structs de `pkg/models`.
-
-### Resumen de Espacios de Navegación
+Palabrario comparte la totalidad del ecosistema Go a través de `go.work` (`.` + `./local-app`), los DTOs de `pkg/models` y los componentes visuales mediante **Bun Workspaces** (`package.json` raíz: `packages/ui`, `local-app/frontend`, `web-portal`).
 
 ```mermaid
 flowchart TD
-    subgraph AuthSpace["1. Autenticación & Perfil Social"]
-        SignIn["/#/auth/sign-in"]
-        SignUp["/#/auth/sign-up"]
-        Profile["/#/u/:username (Público + Owner CU01)"]
-        TopBarMenu["TopBar DropdownMenu -> Popover 'Credenciales y Rol' (CU02, CU04)"]
+    subgraph UIWorkspace["Monorepo Frontend (Bun Workspaces)"]
+        SharedUI["@palabrario/ui (packages/ui)\n• Componentes .vue puros y SSR-Safe\n• UnoCSS canónico (PALETTE.md) + Satoshi\n• Tipos exportados desde bindings de Go"]
+        VueUI["Shell Desktop & Mobile SPA (local-app/frontend — Fase 5)\n• 23 Vistas + vue-router (Hash) + Layouts\n• Consume @palabrario/ui + IPalabrarioAPI"]
+        AstroWeb["Shell Web Híbrido (web-portal — Fase 6)\n• Astro SSR + OpenGraph/JSON-LD (Rutas #3–#10)\n• Monta las 23 rutas interactivas en navegador (SM-2, Arena WS, Quórum)"]
+        SharedUI --> VueUI
+        SharedUI --> AstroWeb
     end
 
-    subgraph CommunitySpace["2. Espacio Comunitario & Diccionario (CU05, CU10, CU11)"]
-        Home["/#/ (Portada & Palabra del Día)"]
-        Dict["/#/dictionary (Explorador & Buscador FTS)"]
-        WordDetail["/#/dictionary/word/:id (Ficha Léxica)"]
-        Cols["/#/collections & /#/collections/:id"]
-        Decks["/#/decks & /#/decks/:id"]
+    subgraph Desktop["Puente y Adaptadores de Transporte (IPalabrarioAPI)"]
+        WailsGo["Puente Nativo Go BFF (local-app/app.go)\n• Custodia el JWT en RAM privada (Inmune a XSS)\n• Importa pkg/models directamente vía go.work\n• Cliente HTTP/WS/Multipart en Go puro"]
+        WebAdp["CapacitorMobileAdapter & AstroSSRAdapter\n• fetch() tipado (:8000 / :8002)\n• Browser WebSocket (:8001/ws/arena/{code}?token={jwt})"]
+        VueUI <-->|"WailsDesktopAdapter (IPC)"| WailsGo
+        VueUI <-->|"CapacitorMobileAdapter"| WebAdp
+        AstroWeb <-->|"AstroSSR + WebAdapter"| WebAdp
     end
-
-    subgraph StudioSpace["3. Studio Personal & Motor SM-2 (CU10–CU13)"]
-        Studio["/#/studio (Dashboard)"]
-        Study["/#/studio/study (Sesión SM-2 Inmersiva)"]
-        MyDecks["/#/studio/decks & /#/studio/decks/:id/edit"]
-        MyCols["/#/studio/collections & /#/studio/collections/:id/edit"]
-        Mastery["/#/studio/mastery (Progreso & XP Ledger)"]
-    end
-
-    subgraph ArenaSpace["4. Arena Multijugador & Replay 3NF (CU14–CU16)"]
-        Lobby["/#/play (Lobby & PIN)"]
-        Game["/#/game/:roomCode (Partida WS en Vivo)"]
-        Replay["/#/game/:matchId/replay (Replay Ronda x Ronda)"]
-    end
-
-    subgraph GovernanceSpace["5. Curaduría por Quórum & Gobernanza (CU02–CU04, CU06–CU09)"]
-        Editor["/#/editor (Cola de Quórum Tripartito)"]
-        WordForm["/#/editor/word/:id? (Autoría Léxica)"]
-        Admin["/#/admin/governance (Roles, Boletos & Reportes)"]
-    end
-
-    Home --> Dict --> WordDetail
-    Home --> Studio --> Study
-    Home --> Lobby --> Game --> Replay
-    TopBarMenu --> Editor --> WordForm
 ```
 
 ---
 
-## 3. Catálogo de Componentes Canónicos Reutilizables (`@palabrario/ui` vs `local-app/frontend`)
+## 2. Los 7 Flujos Canónicos del Frontend (Trazabilidad 1:1 a Casos de Uso)
 
-Todos los componentes reutilizables de interfaz se construyen en **`packages/ui/src/components/` (`@palabrario/ui`)** organizados por responsabilidad, consumiendo exclusivamente los tokens de [`.context/PALETTE.md`](./PALETTE.md) y primitivas de **Reka UI**. Los layouts y envoltorios acoplados al router o estado de sesión viven en **`local-app/frontend/src/`**.
+Cada interacción de la interfaz se mapea contra los 16 Casos de Uso y sus reglas de negocio en [`.context/UI_FLOWS.md`](./UI_FLOWS.md):
 
-### 3.1. Layouts de Shell (`local-app/frontend/src/layouts/`) y Navegación Compartida (`packages/ui/src/components/ui/`)
-- **`AppLayout.vue` (`local-app/frontend/src/layouts/`):** Estructura envolvente principal (`layout: default`) con fondo `bg-paper`, que monta `TopBar` y `BottomNav` desde `@palabrario/ui`, conecta sus eventos con `vue-router` y `useAuth()`, y aloja `CredentialsRolePopover.vue`.
-- **`AuthLayout.vue` (`local-app/frontend/src/layouts/`):** Estructura minimalista centrada (`layout: auth`) para `SignInView` y `SignUpView`.
-- **`ImmersiveLayout.vue` (`local-app/frontend/src/layouts/`):** Lienzo de foco completo (`layout: immersive`) sin barras de navegación distraídas para `StudySessionView` y `ArenaGameView`.
-- **`CredentialsRolePopover.vue` (`local-app/frontend/src/components/ui/`):** **`Popover` / `Dialog` de Reka UI** anclado al menú de usuario (**Flujo 2 de [`UI_FLOWS.md`](./UI_FLOWS.md)**) con dos pestañas para aprendices:
-  1. **Canjear Boleto de Invitación (`CU04`):** Input para código institucional (`RedeemInvitationTicket`) que promueve el rol en vivo y refresca `useAuth()`.
-  2. **Solicitar Ascenso a Editor (`CU02` + `RN02` + `RN12`):** Verifica con `ListMyEditorRequests()` si ya existe una solicitud `PENDING`; si no, presenta el formulario con `MediaDropzone` (`UploadImage` + `CreateEditorRequest`).
-- **`TopBar.vue` (`packages/ui/src/components/ui/`):** Barra de cabecera agnóstica del router: recibe `currentUser`, `activeSpace` y métricas por `props`, muestra logotipo, disparador de búsqueda omnibox (`Ctrl + K`), racha (`🔥`) y **`DropdownMenu` de Reka UI** emitiendo `@navigate(path)`, `@open-search`, `@open-credentials` y `@sign-out`.
-- **`BottomNav.vue` (`packages/ui/src/components/ui/`):** Barra de pestañas fija inferior para pantallas móviles (`Home`, `Diccionario`, `Studio`, `Arena`), recibiendo `activePath` por prop y emitiendo `@navigate(path)`.
-- **`PasswordInput.vue` (`packages/ui/src/components/ui/`):** Campo de contraseña accesible basado en `input-editorial` con botón de alternancia para mostrar/ocultar caracteres (`Eye` / `EyeOff` de `lucide-vue-next`), usado en `SignInView`, `SignUpView` y `UserProfileView`.
+1. **Flujo 1: Acceso, Bootstrap y Perfil de Usuario (`CU01`):**  
+   Resolución de usuario reactiva, carga del perfil con dialecto ancla y refresco silencioso.
+2. **Flujo 2: Credenciales, Boleto VIP y Promoción a Editor (`CU02`, `CU04`):**  
+   Menú de usuario accesible en `TopBar` con canje de boleto serializado (`FOR UPDATE`) y formulario institucional.
+3. **Flujo 3: Búsqueda Omnibox y Explorador Dialectal (`CU05`):**  
+   Búsqueda instantánea con `Ctrl + K`, trigramas difusos y visualización de heterónimos transdialectales.
+4. **Flujo 4: Repaso Espaciado SM-2 y Maestría (`CU12`, `CU13`):**  
+   Ciclo de tarjetas interactivas, cálculo de intervalos SM-2, micro-recompensas de XP y gráfica de estados.
+5. **Flujo 5: Arena Multijugador en Tiempo Real (`CU14`, `CU15`, `CU16`):**  
+   Lobby con PIN de 6 caracteres, sincronización por WebSockets, temporizador y consolidación de Replay 3NF.
+6. **Flujo 6: Creación Léxica y Quórum Paritario Tripartito (`CU06`, `CU07`, `CU08`):**  
+   Formulario de autoría con validación de imágenes, revisión paritaria ciega (RN06/RN07) y veto administrativo (RN08).
+7. **Flujo 7: Estudio Personal y Colecciones Temáticas (`CU10`, `CU11`):**  
+   Creación de barajas, ordenamiento de series, clonación comunitaria (RN03) y privacidad de recursos (RN04/RN05).
+
+---
+
+## 3. Catálogo de Componentes Compartidos (`@palabrario/ui`)
+
+### 3.1. Componentes Base y Layout (`packages/ui/src/components/ui/`)
+- **`TopBar.vue`:** Barra superior flotante (*glass effect*) con logo de Palabrario, navegación segmentada, Omnibox trigger, avatar de usuario y popover de credenciales.
+- **`BottomNav.vue`:** Barra de navegación móvil fija inferior con iconos de acceso rápido para pantallas `< 768px`.
+- **`HomeHero.vue`:** Cabecera de bienvenida con búsqueda directa y accesos principales.
+- **`PasswordInput.vue`:** Input de contraseña con toggle accesible para revelar caracteres.
 
 ### 3.2. Componentes de Dominio Léxico y Curaduría (`packages/ui/src/components/dictionary/` y `packages/ui/src/components/editorial/`)
 - **`WordCard.vue`:** Tarjeta táctil editorial (`card-editorial`) que renderiza `models.WordSummaryCard` (lema, categoría gramatical, bandera dialectal, definición corta y miniatura) y emite `@select(idWord)`.
@@ -194,17 +101,17 @@ Todos los componentes reutilizables de interfaz se construyen en **`packages/ui/
   1. **Párrafo Gancho (`word.friendly_blurb`):** Texto principal de mayor cuerpo (`text-lg md:text-xl leading-relaxed text-ink`) que explica la palabra con calidez, humor y una situación cotidiana cercana (resaltando el lema en cursiva).
   2. **Párrafo de Contexto y Origen (`word.etymology`):** Segundo bloque editorial (`text-base leading-relaxed text-ink/80 mt-4`) que profundiza en la historia, raíces y matices culturales panhispánicos del término.
   3. Emite `@open-image` al hacer click en la ilustración opcional.
-- **`SenseItem.vue` *(Inspirado en el bloque "Definitions of..." de Vocabulary.com)*:** Ítem numerado (`1.`, `2.`, ...) dentro del contenedor de acepciones (`card-editorial` coronado por un listón `badge-pill bg-brand text-surface` con *"Acepciones de {lemma}"*). Cada `SenseItem` renderiza un `models.SenseDetail` con:
-  1. **Línea Principal:** Índice numérico + píldora de categoría/región (`badge-pill` con `flag_emoji`, `region_code`, `part_of_speech` y `cefr_level`) + definición directa (`definition` / `short_definition`).
-  2. **Alertas de Contenido:** Badge de advertencia si `is_taboo_or_vulgar == true` (`bg-warning/20 border-warning/40`).
+- **`SenseItem.vue` *(Inspirado en el bloque "Definitions of..." de Vocabulary.com)*:** Ítem numerado (`1.`, `2.`, ...) dentro del contenedor de acepciones (`card-editorial` coronado por un listón `brand-pill` con *"Acepciones de {lemma}"*). Cada `SenseItem` renderiza un `models.SenseDetail` con:
+  1. **Línea Principal:** Índice numérico + píldoras estandarizadas (`minor-ink-pill` para región y categoría gramatical, `brand-pill` para nivel MCER, `ink-pill` para tabú) + definición directa (`definition` / `short_definition`).
+  2. **Alertas de Contenido:** Badge de advertencia sensible en `ink-pill` si `is_taboo_or_vulgar == true`.
   3. **Desplegable `"Ver más ⌄"` (`see more ⌄`):** Sección colapsable accesible (**Reka UI `Collapsible`**) que revela la nota cultural (`cultural_note`), las oraciones de ejemplo (`examples[]`), la imagen opcional del sentido (`image_url`) y las acciones contextuales que emiten `@add-to-deck(sense)` y `@report(sense)`.
 - **`HeteronymPills.vue`:** Lista interactiva de equivalencias transdialectales a nivel lema (`models.HeteronymItem[]`, *"¿Cómo se dice allá?"*) que emite `@select-term(term)`.
 - **`QuorumStepper.vue` (`packages/ui/src/components/editorial/`):** Indicador visual del quórum tripartito (**RN06**, `approvals_count / 3`), bloqueo de auto-aprobación (**RN07**) y badge de veto administrativo (**RN08**).
-- **`ProposalDiffCard.vue` (`packages/ui/src/components/editorial/`):** Inspector detallado de una propuesta léxica mostrando lema, `friendly_blurb`, `etymology`, sentidos, ejemplos e ilustraciones (**RN12**).
+- **`ProposalDiffCard.vue` (`packages/ui/src/components/editorial/`):** Inspector detallado de una propuesta léxica mostrando lema, `friendly_blurb`, `etymology`, sentidos con píldoras canónicas, ejemplos e ilustraciones (**RN12**).
 
 ### 3.3. Componentes de Studio y Motor SM-2 (`packages/ui/src/components/studio/`)
 - **`DeckCard.vue` y `CollectionCard.vue`:** Tarjetas con borde de tinta y sombra táctil para mazos y colecciones temáticas.
-- **`StudyCard.vue`:** Ficha interactiva de repaso para sesiones SM-2 (**CU12**): anverso con lema y dialecto, revelación de reverso y botonera de 4 calificaciones SM-2 (`1..4`) con atajos de teclado (`Espacio`, `1..4`), emitiendo `@rate({ qualityRating })` para que `StudySessionView` registre `SubmitReviewRequest { id_sense, quality_rating, time_spent_ms }`.
+- **`StudyCard.vue`:** Ficha interactiva de repaso para sesiones SM-2 (**CU12**): anverso con lema y dialecto (`minor-ink-pill`), revelación de reverso y botonera de 4 calificaciones SM-2 (`1..4`) con atajos de teclado (`Espacio`, `1..4`), emitiendo `@rate({ qualityRating })` para que `StudySessionView` registre `SubmitReviewRequest { id_sense, quality_rating, time_spent_ms }`.
 - **`MasteryProgressBar.vue`:** Barra segmentada con `tabular-nums` que ilustra la proporción de palabras en estados `NEW`, `LEARNING`, `REVIEWING` y `MASTERED`.
 - **`AddToDeckModal.vue`:** Diálogo Reka UI que recibe la lista de mazos del usuario (`decks`) y emite `@add({ idDeck, idSense })` (transformado por la vista padre en `api.AddDeckItem(idDeck, { id_sense: idSense })`) o `@create-deck(payload)`.
 
@@ -228,7 +135,8 @@ Antes de considerar terminada una sub-fase de la Fase 5:
 1. **Verificación Automatizada Integral (`wails3 task client:check`):** Debe arrojar **0 errores de compilación** tanto en `@palabrario/ui` como en `local-app/frontend` y el binario Go.
 2. **Frontera Limpia `@palabrario/ui`:** Verificar que ningún archivo dentro de `packages/ui/` importe `vue-router` ni realice llamadas directas a `api.*`.
 3. **Inspección de Clases UnoCSS:** Comprobar que no existan clases genéricas (`bg-blue-*`, `text-gray-*`, `shadow-lg`); todo debe adherirse a los tokens semánticos de [`.context/PALETTE.md`](./PALETTE.md).
-4. **Estados Reactivos de Carga, Vacío y Error:** Toda vista en `local-app/frontend/src/views/` debe manejar explícitamente:
+4. **Píldoras Estandarizadas:** Utilizar `minor-ink-pill`, `brand-pill`, `ink-pill` o `pill` para cualquier insignia; no introducir clases de badge heredadas.
+5. **Estados Reactivos de Carga, Vacío y Error:** Toda vista en `local-app/frontend/src/views/` debe manejar explícitamente:
    - Estado de carga (*skeleton* táctil con `bg-ink/10 animate-pulse`).
    - Estado de error amigable mostrando el mensaje devuelto por el backend y botón de reintento.
    - Estado vacío (*Empty State*) con acción clara si la lista no contiene elementos.

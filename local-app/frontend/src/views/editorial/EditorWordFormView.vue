@@ -449,11 +449,11 @@ onMounted(init)
     <!-- Título de la vista -->
     <div class="space-y-1">
       <div class="flex items-center gap-2">
-        <span class="badge-pill bg-brand/10 text-brand border border-brand/25">
+        <span class="brand-pill gap-1">
           <Sparkles class="w-3.5 h-3.5" />
           Flujo 6: Autoría Léxica
         </span>
-        <span class="badge-pill bg-ink/6 text-ink/70">
+        <span class="minor-ink-pill">
           {{ isEditMode ? `Edición de Lema #${wordId}` : 'Nueva Propuesta Léxica' }}
         </span>
       </div>
@@ -843,7 +843,7 @@ onMounted(init)
                   v-for="c in semanticConcepts"
                   :key="c.id_concept"
                   type="button"
-                  class="badge-pill text-xs transition-all cursor-pointer border"
+                  class="pill text-xs transition-all cursor-pointer border"
                   :class="[
                     initialSelectedConceptIds.includes(c.id_concept)
                       ? 'bg-brand text-surface border-brand shadow-soft'
@@ -890,16 +890,16 @@ onMounted(init)
           >
             <div class="flex flex-wrap items-center justify-between gap-2">
               <div class="flex items-center gap-1.5">
-                <span class="badge-pill bg-info/15 text-info border border-info/25 text-xs">
+                <span class="minor-ink-pill text-xs">
                   {{ s.flag_emoji }} {{ s.region_name || s.region_code }}
                 </span>
-                <span v-if="s.is_primary" class="badge-pill bg-brand text-surface text-xs font-bold">
+                <span v-if="s.is_primary" class="brand-pill text-xs font-bold">
                   Principal
                 </span>
-                <span v-if="s.is_taboo_or_vulgar" class="badge-pill bg-warning/20 text-ink text-xs font-bold">
+                <span v-if="s.is_taboo_or_vulgar" class="ink-pill text-xs font-bold">
                   Tabú
                 </span>
-                <span class="badge-pill bg-ink/6 text-ink/60 text-xs">
+                <span class="minor-ink-pill text-xs">
                   {{ s.state }}
                 </span>
               </div>
@@ -988,7 +988,7 @@ onMounted(init)
                   v-for="c in semanticConcepts.slice(0, 8)"
                   :key="c.id_concept"
                   type="button"
-                  class="badge-pill text-[11px] bg-surface border border-ink/12 text-ink/70 hover:border-brand transition-all cursor-pointer"
+                  class="pill text-[11px] bg-surface border border-ink/12 text-ink/70 hover:border-brand transition-all cursor-pointer"
                   @click="handleLinkConcept(s.id_sense, c.id_concept)"
                 >
                   + {{ c.concept_key }}

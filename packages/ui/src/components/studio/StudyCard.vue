@@ -117,18 +117,18 @@ const stageLabel = computed(() => {
         <div class="flex flex-wrap items-center gap-2">
           <span
             v-if="card.flag_emoji || card.region_name"
-            class="badge-pill bg-info/15 text-info border border-info/25 font-bold"
+            class="minor-ink-pill font-bold"
           >
             {{ card.flag_emoji }} {{ card.region_name || card.region_code }}
           </span>
 
-          <span v-if="card.part_of_speech" class="badge-pill bg-ink/6 text-ink/70">
+          <span v-if="card.part_of_speech" class="minor-ink-pill">
             {{ card.part_of_speech }}
           </span>
         </div>
 
         <span
-          class="badge-pill font-bold"
+          class="pill font-bold"
           :class="{
             'bg-info/15 text-info border border-info/25': !card.current_mastery || card.current_mastery.progress_stage === 'NEW',
             'bg-warning/20 text-ink border border-warning/40': card.current_mastery?.progress_stage === 'LEARNING',

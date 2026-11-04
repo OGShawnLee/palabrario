@@ -118,14 +118,14 @@ function formatDate(dateStr?: string): string {
           </span>
           <span
             v-if="isResolved"
-            class="badge-pill"
+            class="pill"
             :class="proposal.state === 'APPROVED' ? 'bg-success/15 text-success border border-success/30' : 'bg-ink/10 text-ink/75 border border-ink/20'"
           >
             {{ proposal.state === 'APPROVED' ? 'Aprobada' : 'Archivada / Oculta' }}
           </span>
           <span
             v-else
-            class="badge-pill bg-warning/20 text-ink border border-warning/40"
+            class="minor-ink-pill"
           >
             En revisión
           </span>
@@ -208,17 +208,17 @@ function formatDate(dateStr?: string): string {
               <span class="font-bold text-sm text-ink">
                 {{ vote.editor_full_name || vote.editor_user_name }}
               </span>
-              <span v-if="vote.editor_dialect" class="badge-pill bg-info/15 text-info border border-info/25 text-[10px]">
+              <span v-if="vote.editor_dialect" class="minor-ink-pill text-[10px]">
                 {{ vote.editor_dialect }}
               </span>
-              <span v-if="vote.id_editor === currentUserId" class="badge-pill bg-brand/10 text-brand text-[10px]">
+              <span v-if="vote.id_editor === currentUserId" class="brand-pill text-[10px]">
                 Tú
               </span>
             </div>
 
             <div class="flex items-center gap-2">
               <span
-                class="badge-pill text-xs font-bold"
+                class="pill text-xs font-bold gap-1"
                 :class="[
                   vote.decision === 'APPROVE'
                     ? 'bg-success/20 text-success border border-success/40'

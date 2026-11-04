@@ -132,7 +132,7 @@ onMounted(() => {
           <span>Volver a la Arena</span>
         </button>
 
-        <span class="badge-pill bg-brand/10 text-brand border border-brand/25 text-xs">
+        <span class="minor-ink-pill text-xs">
           Replay Granular 3NF
         </span>
       </div>
@@ -169,10 +169,10 @@ onMounted(() => {
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-ink/8">
             <div>
               <div class="flex items-center gap-2 mb-2">
-                <span class="badge-pill bg-brand/15 text-brand border border-brand/25 text-xs">
+                <span class="brand-pill text-xs">
                   Sala {{ replayDetail.room_code }}
                 </span>
-                <span class="badge-pill bg-surface text-ink/60 border border-ink/10 text-xs">
+                <span class="minor-ink-pill text-xs">
                   {{ formatDate(replayDetail.finished_at) }}
                 </span>
               </div>
@@ -313,7 +313,7 @@ onMounted(() => {
                   {{ round.round_number }}
                 </div>
                 <div>
-                  <span class="badge-pill bg-surface text-ink/60 border border-ink/10 text-[10px] mb-1">
+                  <span class="minor-ink-pill text-[10px] mb-1">
                     {{ round.modality }}
                   </span>
                   <h3 class="font-black text-lg text-ink">

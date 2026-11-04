@@ -172,7 +172,7 @@ onMounted(async () => {
   <div class="space-y-8">
     <!-- Cabecera de la sección -->
     <header class="space-y-3">
-      <div class="badge-pill bg-brand/12 text-brand border border-brand/20">
+      <div class="brand-pill gap-1">
         <Sparkles class="w-3.5 h-3.5 stroke-2" />
         <span>Diccionario Panhispánico Vivo</span>
       </div>

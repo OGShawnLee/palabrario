@@ -62,7 +62,7 @@ function formatDate(dateStr?: string): string {
         <!-- Región Panhispánica -->
         <span
           v-if="proposal.flag_emoji || proposal.region_name"
-          class="badge-pill bg-info/15 text-info border border-info/25"
+          class="minor-ink-pill"
         >
           {{ proposal.flag_emoji }} {{ proposal.region_name || proposal.region_code }}
         </span>
@@ -70,7 +70,7 @@ function formatDate(dateStr?: string): string {
         <!-- Categoría Gramatical -->
         <span
           v-if="proposal.part_of_speech"
-          class="badge-pill bg-ink/6 text-ink/75"
+          class="minor-ink-pill"
         >
           {{ proposal.part_of_speech }}
         </span>
@@ -78,15 +78,15 @@ function formatDate(dateStr?: string): string {
         <!-- Nivel CEFR -->
         <span
           v-if="proposal.cefr_level"
-          class="badge-pill bg-ink/6 text-ink/60"
+          class="brand-pill"
         >
-          MCER {{ proposal.cefr_level }}
+          {{ proposal.cefr_level }}
         </span>
 
         <!-- Frecuencia de uso -->
         <span
           v-if="proposal.usage_frequency"
-          class="badge-pill bg-ink/6 text-ink/60"
+          class="minor-ink-pill"
         >
           {{ proposal.usage_frequency }}
         </span>
@@ -94,15 +94,15 @@ function formatDate(dateStr?: string): string {
         <!-- Advertencia Tabú / Vulgar -->
         <span
           v-if="proposal.is_taboo_or_vulgar"
-          class="badge-pill bg-warning/20 text-ink border border-warning/40 font-bold"
+          class="ink-pill gap-1"
         >
           <AlertTriangle class="w-3 h-3 stroke-2" />
-          Tabú / Vulgar
+          Tabú
         </span>
 
         <!-- Estado de la Propuesta -->
         <span
-          class="badge-pill text-xs font-bold"
+          class="pill"
           :class="[
             proposal.state === 'APPROVED'
               ? 'bg-success/15 text-success border border-success/30'

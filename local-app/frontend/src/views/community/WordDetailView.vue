@@ -255,22 +255,13 @@ onMounted(() => {
           <!-- Sense Heading & Discrete Actions -->
           <div class="flex items-center justify-between gap-3 flex-wrap">
             <div class="flex items-center gap-2">
-              <span
-                v-if="sense.region_name"
-                class="h-6 px-2.5 flex items-center rounded text-xs font-bold bg-ink/5 text-ink/80"
-              >
+              <span v-if="sense.region_name" class="minor-ink-pill">
                 {{ sense.region_name }}
               </span>
-              <span
-                v-if="sense.cefr_level"
-                class="h-6 px-2.5 flex items-center rounded text-xs font-bold bg-brand text-surface"
-              >
+              <span v-if="sense.cefr_level" class="brand-pill">
                 {{ sense.cefr_level }}
               </span>
-              <span
-                v-if="sense.is_taboo_or_vulgar"
-                class="h-6 px-2.5 flex items-center rounded text-xs font-bold bg-warning text-surface"
-              >
+              <span v-if="sense.is_taboo_or_vulgar" class="ink-pill">
                 Tabú
               </span>
             </div>
@@ -337,7 +328,7 @@ onMounted(() => {
             <blockquote class="italic text-lg md:text-xl text-ink/85 leading-snug">
               «{{ sense.examples[0].sentence }}»
             </blockquote>
-            <figcaption v-if="sense.examples[0].source" class="text-xs text-ink/45 not-italic">
+            <figcaption v-if="sense.examples[0].source" class="text-xs text-ink/50 not-italic">
               — {{ sense.examples[0].source }}
             </figcaption>
           </div>

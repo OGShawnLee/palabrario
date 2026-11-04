@@ -179,7 +179,7 @@ onMounted(() => {
       <div class="flex items-center gap-3 shrink-0">
         <div
           v-if="totalXpEarned > 0"
-          class="badge-pill bg-brand/10 text-brand border border-brand/25 font-black tabular-nums"
+          class="brand-pill tabular-nums gap-1"
         >
           <Sparkles class="w-3.5 h-3.5 stroke-2" />
           <span>+{{ totalXpEarned }} XP</span>
@@ -194,7 +194,7 @@ onMounted(() => {
         v-if="showFeedback && lastReviewResult"
         class="absolute -top-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none animate-bounce"
       >
-        <div class="badge-pill bg-brand text-surface px-4 py-1.5 shadow-soft-brand text-sm font-black flex items-center gap-1.5">
+        <div class="brand-pill px-4 py-1.5 shadow-soft-brand text-sm font-black flex items-center gap-1.5">
           <Sparkles class="w-4 h-4 stroke-2" />
           <span>+{{ lastReviewResult.xp_awarded }} XP</span>
         </div>

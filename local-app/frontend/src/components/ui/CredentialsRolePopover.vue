@@ -136,11 +136,11 @@ const tabClass =
         </header>
 
         <div v-if="currentUser" class="card-subtle flex flex-wrap items-center gap-2">
-          <span class="badge-pill bg-brand/12 text-brand border border-brand/25">{{ currentUser.role }}</span>
-          <span class="badge-pill bg-info/15 text-info border border-info/25 tabular-nums">
+          <span class="brand-pill">{{ currentUser.role }}</span>
+          <span class="minor-ink-pill tabular-nums">
             Nivel {{ currentUser.current_level }}
           </span>
-          <span class="badge-pill bg-ink/6 text-ink/65 tabular-nums">{{ currentUser.total_xp }} XP</span>
+          <span class="minor-ink-pill tabular-nums">{{ currentUser.total_xp }} XP</span>
         </div>
 
         <p v-if="!isLearner" class="card-subtle text-sm text-ink/75">
@@ -213,7 +213,7 @@ const tabClass =
                     <p class="text-xs text-ink/45 tabular-nums">{{ new Date(request.created_at).toLocaleDateString('es-MX') }}</p>
                   </div>
                   <span
-                    class="badge-pill"
+                    class="pill"
                     :class="{
                       'bg-warning/20 text-ink': request.status === 'PENDING',
                       'bg-success/15 text-success': request.status === 'APPROVED',

@@ -31,31 +31,31 @@ const formattedSenses = computed(() => {
       <div class="flex flex-wrap items-center gap-1.5">
         <span
           v-if="word.flag_emoji || word.region_name"
-          class="badge-pill bg-info/15 text-info border border-info/25"
+          class="minor-ink-pill"
         >
           {{ word.flag_emoji }} {{ word.region_name || word.region_code }}
         </span>
 
         <span
           v-if="word.part_of_speech"
-          class="badge-pill bg-ink/6 text-ink/70"
+          class="minor-ink-pill"
         >
           {{ word.part_of_speech }}
         </span>
 
         <span
           v-if="word.cefr_level"
-          class="badge-pill bg-ink/6 text-ink/60"
+          class="brand-pill"
         >
-          MCER {{ word.cefr_level }}
+          {{ word.cefr_level }}
         </span>
 
         <span
           v-if="word.is_taboo_or_vulgar"
-          class="badge-pill bg-warning/20 text-ink border border-warning/40 font-bold"
+          class="ink-pill gap-1"
         >
           <AlertTriangle class="w-3 h-3 stroke-2" />
-          Tabú / Vulgar
+          Tabú
         </span>
       </div>
 
@@ -79,7 +79,7 @@ const formattedSenses = computed(() => {
 
       <span
         v-if="word.usage_frequency"
-        class="badge-pill bg-ink/4 text-ink/60 lowercase"
+        class="minor-ink-pill lowercase"
       >
         {{ word.usage_frequency }}
       </span>

@@ -323,14 +323,14 @@ onMounted(() => {
       <section class="card-editorial p-6 md:p-8 space-y-6">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-2">
-            <span class="badge-pill bg-brand/10 text-brand border border-brand/25 font-bold">
+            <span class="minor-ink-pill font-bold gap-1">
               <Layers class="w-3.5 h-3.5 stroke-2" />
               Editor de Baraja
             </span>
 
             <span
               v-if="deck.is_official"
-              class="badge-pill bg-info/10 text-info border border-info/25 font-bold"
+              class="brand-pill font-bold gap-1"
             >
               <Sparkles class="w-3.5 h-3.5 stroke-2" />
               Baraja Oficial
@@ -338,7 +338,7 @@ onMounted(() => {
 
             <span
               v-if="isClonedOrSaved"
-              class="badge-pill bg-warning/15 text-ink border border-warning/30 font-bold"
+              class="minor-ink-pill font-bold"
             >
               Mazo Guardado de la Comunidad (RN03)
             </span>
@@ -521,7 +521,7 @@ onMounted(() => {
           <div class="flex items-center justify-between">
             <h3 class="font-bold text-sm text-ink flex items-center gap-2">
               <span>Acepciones para «{{ selectedWord.lemma }}»</span>
-              <span class="badge-pill bg-brand/10 text-brand text-xs">
+              <span class="minor-ink-pill text-xs">
                 {{ selectedWord.senses.length }} disponibles
               </span>
             </h3>
@@ -545,22 +545,22 @@ onMounted(() => {
                 <div class="flex flex-wrap items-center gap-2">
                   <span
                     v-if="sense.flag_emoji || sense.region_name"
-                    class="badge-pill bg-info/15 text-info border border-info/25 text-xs font-bold"
+                    class="minor-ink-pill text-xs font-bold"
                   >
                     {{ sense.flag_emoji }} {{ sense.region_name || sense.region_code }}
                   </span>
 
-                  <span v-if="selectedWord?.part_of_speech" class="badge-pill bg-ink/6 text-ink/70 text-xs font-semibold">
+                  <span v-if="selectedWord?.part_of_speech" class="minor-ink-pill text-xs font-semibold">
                     {{ selectedWord.part_of_speech }}
                   </span>
 
-                  <span v-if="sense.cefr_level" class="badge-pill bg-ink/6 text-ink/60 text-xs font-semibold">
+                  <span v-if="sense.cefr_level" class="brand-pill text-xs font-semibold">
                     MCER {{ sense.cefr_level }}
                   </span>
 
                   <span
                     v-if="sense.is_taboo_or_vulgar"
-                    class="badge-pill bg-warning/20 text-ink border border-warning/40 text-xs font-bold"
+                    class="ink-pill text-xs font-bold"
                   >
                     Tabú / Vulgar
                   </span>
@@ -645,18 +645,18 @@ onMounted(() => {
                 <div class="flex flex-wrap items-center gap-2">
                   <span
                     v-if="item.sense?.flag_emoji || item.sense?.region_name"
-                    class="badge-pill bg-info/15 text-info border border-info/25 text-xs font-bold"
+                    class="minor-ink-pill text-xs font-bold"
                   >
                     {{ item.sense.flag_emoji }} {{ item.sense.region_name || item.sense.region_code }}
                   </span>
 
-                  <span v-if="item.sense?.cefr_level" class="badge-pill bg-ink/6 text-ink/60 text-xs font-semibold">
+                  <span v-if="item.sense?.cefr_level" class="brand-pill text-xs font-semibold">
                     MCER {{ item.sense.cefr_level }}
                   </span>
 
                   <span
                     v-if="item.sense?.is_taboo_or_vulgar"
-                    class="badge-pill bg-warning/20 text-ink border border-warning/40 text-xs font-bold"
+                    class="ink-pill text-xs font-bold"
                   >
                     Tabú / Vulgar
                   </span>

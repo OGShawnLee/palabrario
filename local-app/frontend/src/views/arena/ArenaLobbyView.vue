@@ -208,10 +208,10 @@ onMounted(() => {
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-ink/8">
         <div>
           <div class="flex items-center gap-2 mb-1">
-            <span class="badge-pill bg-brand/15 text-brand border border-brand/25 text-xs">
+            <span class="brand-pill text-xs">
               Multijugador Sincronizado
             </span>
-            <span class="badge-pill bg-info/15 text-info border border-info/25 text-xs">
+            <span class="minor-ink-pill text-xs">
               WebSockets & Quórum
             </span>
           </div>
@@ -345,7 +345,7 @@ onMounted(() => {
                   <div class="flex items-center justify-between w-full mb-1">
                     <span class="font-bold text-sm text-ink truncate">{{ deck.title }}</span>
                     <span
-                      class="badge-pill text-[10px]"
+                      class="pill text-[10px]"
                       :class="deck.count >= 8 ? 'bg-success/15 text-success' : 'bg-brand/15 text-brand'"
                     >
                       {{ deck.count }} cartas

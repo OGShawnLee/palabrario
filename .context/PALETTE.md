@@ -60,7 +60,7 @@ Toda la interfaz utiliza **`Satoshi`** como familia única, diferenciando la jer
 | **Subtítulos y Tarjetas (`H3`)** | `font-bold text-base md:text-lg text-ink` | Títulos de `DeckCard`, `CollectionCard` y nombres de usuario. |
 | **Cuerpo de Lectura y Definiciones** | `text-base leading-relaxed text-ink/85` | Definiciones, *friendly blurbs* y ejemplos de uso. |
 | **Eyebrows / Rótulos de Sección** | `text-xs font-bold uppercase tracking-wider text-ink/45` | *"Selecciona la definición correcta"*, *"¿Cómo se dice en otras regiones?"*. |
-| **Badges y Botones** | `text-xs font-bold tracking-wide` (badges) · `font-bold` / `font-semibold` (botones) | Badges de país, CEFR, estados de quórum y acciones. |
+| **Píldoras y Botones** | `text-xs font-bold` (píldoras `h-6`) · `font-bold` / `font-semibold` (botones) | Píldoras de país, CEFR, estados de quórum y acciones. |
 | **Códigos PIN, Reloj y Puntajes** | `font-black tabular-nums` | PIN de Arena (`CU14`), cuenta regresiva (`RN10`), racha y XP. |
 
 ---
@@ -72,7 +72,7 @@ Toda la interfaz utiliza **`Satoshi`** como familia única, diferenciando la jer
    - Contenedores principales y tarjetas (`card-editorial`): `rounded-3xl`.
    - Botones, inputs, opciones de Arena, avisos internos y `card-subtle`: `rounded-2xl`.
    - Pestañas internas y botones fantasma: `rounded-xl`.
-   - Badges, píldoras y contadores: `rounded-full`.
+   - Píldoras compactas (`pill`, `minor-ink-pill`, `brand-pill`, `ink-pill`): `rounded` (radio suave de 4px, `h-6 px-2.5`).
 2. **Bordes por Opacidad (Sin Trazos Duros):**
    - Tarjetas y superficies: `border border-ink/10`. Inputs y botones secundarios: `border border-ink/12`.
    - Divisores internos: `border-ink/8`. **Prohibido** `border-2 border-ink` o bordes de tinta al 100%.
@@ -88,9 +88,14 @@ Toda la interfaz utiliza **`Satoshi`** como familia única, diferenciando la jer
 - **Botón Fantasma (`btn-ghost`):** Transparente, `text-ink/70`, hover `bg-ink/6`. Para acciones terciarias y menús.
 - **Tarjeta Principal (`card-editorial`):** `bg-surface rounded-3xl border-ink/10 shadow-soft p-6`.
 - **Tarjeta Sutil (`card-subtle`):** `bg-ink/4 rounded-2xl border-ink/8 p-4`. Para bloques informativos anidados (heterónimos, metadatos).
+- **Sistema Canónico de Píldoras Táctiles (`h-6 px-2.5 rounded text-xs font-bold`):**
+  - **`minor-ink-pill`** (`bg-ink/5 text-ink/80`): Para dialectos/regiones (`México`, `España`), categorías gramaticales (`sustantivo`, `verbo`), frecuencias de uso y contadores discretos.
+  - **`brand-pill`** (`bg-brand text-surface`): Mandarina pastel sólida para niveles MCER (`B2`, `C1`), distintivos oficiales (`Oficial`, `Colección Oficial`) y racha diaria (`🔥`).
+  - **`ink-pill`** (`bg-ink text-surface`): Carbón sólido de alto contraste para advertencias de contenido sensible (`Tabú`, `Vulgar`) o facultades administrativas.
+  - **`pill`** (Base estructural neutra): Clase raíz para píldoras con estados dinámicos o variantes semánticas (`bg-success/15 text-success`, `bg-warning/20 text-ink`, etc.).
 - **Navegación por Píldoras (TopBar / Tabs):** Contenedor `bg-ink/4 p-1 rounded-2xl border border-ink/6`; pestaña activa `bg-surface text-ink shadow-soft rounded-xl`; inactiva `text-ink/55 hover:text-ink`.
 - **`FriendlyBlurb` (Estilo Vocabulary.com):** Aviso cálido `bg-brand/10 border border-brand/25 rounded-2xl p-5` con eyebrow `text-brand` y cuerpo `text-ink/85 leading-relaxed`; párrafo de etimología en `text-ink/65`.
-- **Contenedor de `SenseItem`:** `card-editorial` con listón superior `badge-pill bg-brand text-surface` (*"Acepciones de {lemma}"*), índice numérico en círculo `bg-ink/6 text-ink/70`, definición `font-semibold`, cita de ejemplo en `blockquote` con `border-l-2 border-info/50 text-ink/60 italic`, píldoras de región/CEFR y desplegable `"Ver más ⌄"` (**Reka UI `Collapsible`**).
+- **Contenedor de `SenseItem`:** `card-editorial` con listón superior `brand-pill` (*"Acepciones de {lemma}"*), índice numérico en círculo `bg-ink/6 text-ink/70`, definición `font-semibold`, cita de ejemplo en `blockquote` con `border-l-2 border-info/50 text-ink/60 italic`, píldoras estandarizadas (`minor-ink-pill` para región, `brand-pill` para MCER, `ink-pill` para tabú) y desplegable `"Ver más ⌄"` (**Reka UI `Collapsible`**).
 - **Opciones de Arena:** `rounded-2xl border p-3.5`; reposo `bg-surface border-ink/25 text-ink/75`; seleccionada `bg-success/12 border-success/50 shadow-soft` con índice sólido `bg-success text-surface`.
 - **Inputs y Omnibox (`input-editorial`):** `bg-surface rounded-2xl border-ink/12 shadow-soft h-12 px-4`, foco `border-brand ring-3 ring-brand/15`.
 
@@ -152,11 +157,17 @@ export default defineConfig({
   shortcuts: {
     'card-editorial': 'bg-surface text-ink rounded-3xl border border-ink/10 shadow-soft p-6 transition-all duration-200',
     'card-subtle': 'bg-ink/4 text-ink rounded-2xl border border-ink/8 p-4',
-    'btn-primary': 'inline-flex items-center justify-center gap-2 bg-brand text-surface font-bold px-5 py-2.5 rounded-2xl shadow-soft-brand hover:(bg-brand-soft -translate-y-0.5) active:translate-y-0 transition-all duration-200 cursor-pointer disabled:(opacity-50 pointer-events-none)',
-    'btn-secondary': 'inline-flex items-center justify-center gap-2 bg-surface text-ink font-semibold px-5 py-2.5 rounded-2xl border border-ink/12 shadow-soft hover:(bg-ink/4 border-ink/20 -translate-y-0.5) active:translate-y-0 transition-all duration-200 cursor-pointer disabled:(opacity-50 pointer-events-none)',
+    'btn-primary': 'inline-flex items-center justify-center gap-2 bg-brand text-surface font-bold px-4 py-2.5 rounded-2xl shadow-soft-brand hover:(bg-brand-soft) transition-all duration-200 cursor-pointer disabled:(opacity-50 pointer-events-none)',
+    'btn-secondary': 'inline-flex items-center justify-center gap-2 bg-surface text-ink font-semibold px-4 py-2.5 rounded-2xl border border-ink/12 shadow-soft hover:(bg-ink/4 border-ink/20) transition-all duration-200 cursor-pointer disabled:(opacity-50 pointer-events-none)',
     'btn-ghost': 'inline-flex items-center justify-center gap-2 bg-transparent text-ink/70 font-semibold px-4 py-2 rounded-xl hover:(bg-ink/6 text-ink) transition-all cursor-pointer',
     'input-editorial': 'w-full bg-surface text-ink placeholder:text-ink/40 rounded-2xl border border-ink/12 h-12 px-4 shadow-soft focus:(outline-none border-brand ring-3 ring-brand/15) transition-all',
-    'badge-pill': 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide',
+
+    // Sistema de Píldoras Táctiles Ilustradas (Estandarización)
+    'pill': 'h-6 px-2.5 inline-flex items-center rounded text-xs font-bold',
+    'minor-ink-pill': 'pill bg-ink/5 text-ink/80',
+    'brand-pill': 'pill bg-brand text-surface',
+    'ink-pill': 'pill bg-ink text-surface',
+    'badge-pill': 'pill', // Alias de retrocompatibilidad
   },
 })
 ```
@@ -173,7 +184,4 @@ export default defineConfig({
 ## 6. Reglas Inquebrantables de UI para Agentes Constructores
 
 1. **Cero Colores Fuera del Tema:** Prohibido `bg-red-500`, `text-gray-600`, `border-slate-300`, `shadow-lg` o hex sueltos. Solo `paper`, `surface`, `ink`, `brand`, `info`, `success`, `warning` (con opacidades) y sombras `soft*`.
-2. **Sin Trazos Duros:** Prohibido `border-2 border-ink`, sombras sólidas desplazadas o negro puro. Bordes siempre por opacidad de `ink`.
-3. **Tipografía Única (`Satoshi`) con `tabular-nums` en Contadores:** No importes fuentes adicionales. Temporizadores, PIN, racha y XP llevan siempre `tabular-nums`.
-4. **Reka UI sin Estilos Intrusivos:** Modales, menús, tabs y tooltips usan primitivas de **Reka UI** estilizadas con nuestros shortcuts (`card-editorial`, `shadow-soft-lg`, `btn-*`).
-5. **Prohibido Inventar Propiedades Visuales No Respaldadas por el Backend:** Cada badge, imagen o contador se alimenta exclusivamente de los tipos de `@bindings/palabrario/pkg/models` a través de `IPalabrarioAPI`.
+2. **Píldoras Estandarizadas:** Usar exclusivamente las 3 píldoras canónicas (`minor-ink-pill`, `brand-pill`, `ink-pill`) o `pill` como base para estados dinámicos. Prohibido volver a utilizar la geometría inflada heredada.

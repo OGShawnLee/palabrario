@@ -227,7 +227,7 @@ onMounted(() => {
 
       <span
         v-if="collection"
-        class="badge-pill bg-ink/6 text-ink/70 font-semibold"
+        class="minor-ink-pill font-semibold"
       >
         {{ currentDecks.length }} {{ currentDecks.length === 1 ? 'baraja en la serie' : 'barajas en la serie' }}
       </span>
@@ -263,14 +263,14 @@ onMounted(() => {
       <!-- 1. Cabecera y Formulario de Metadatos -->
       <section class="card-editorial p-6 md:p-8 space-y-6">
         <div class="flex items-center gap-2">
-          <span class="badge-pill bg-info/15 text-info border border-info/25 font-bold">
+          <span class="minor-ink-pill font-bold gap-1">
             <Compass class="w-3.5 h-3.5 stroke-2" />
             Editor de Colección
           </span>
 
           <span
             v-if="collection.is_official"
-            class="badge-pill bg-brand/10 text-brand border border-brand/25 font-bold"
+            class="brand-pill font-bold"
           >
             Colección Oficial
           </span>
@@ -473,13 +473,13 @@ onMounted(() => {
                 <div class="flex flex-wrap items-center gap-2">
                   <span
                     v-if="d.is_official"
-                    class="badge-pill bg-brand/10 text-brand border border-brand/25 text-xs font-bold"
+                    class="brand-pill text-xs font-bold"
                   >
                     Oficial
                   </span>
 
                   <span
-                    class="badge-pill text-xs font-semibold"
+                    class="minor-ink-pill text-xs font-semibold"
                     :class="d.is_public ? 'bg-success/15 text-success border border-success/30' : 'bg-ink/6 text-ink/60'"
                   >
                     {{ d.is_public ? 'Pública' : 'Privada' }}

@@ -19,7 +19,7 @@ La tipografía universal es **`Satoshi`**. Al igual que *San Francisco* en el ec
 - **Lienzo Cálido Editorial:** Fondo `paper` (`#FFFDF5`) con tarjetas elevadas `surface` (`#FFFFFF`); adiós al blanco clínico hospitalario.
 - **Tinta Suave sin Dureza:** Textos, trazos y sombras nacen de la tinta carbón (`#3B3B39`), graduados exclusivamente mediante opacidad (`/10`, `/12`, `/45`, `/65`, `/85`).
 - **Navegación en Vidrio Esmerilado:** Barra superior flotante con efecto *glass* (`bg-paper/85 backdrop-blur-md border-b border-ink/8`).
-- **Píldoras y Botones Táctiles:** Esquinas generosas (`rounded-2xl`, `rounded-3xl` y cápsulas `rounded-full`) que invitan al tacto y reducen la fricción cognitiva.
+- **Píldoras y Botones Táctiles:** Esquinas generosas (`rounded-2xl`, `rounded-3xl` y píldoras compactas `rounded` `h-6`) que invitan al tacto y reducen la fricción cognitiva.
 - **Aire Cinematográfico (Whitespace):** Espaciado generoso entre módulos que permite al estudiante asimilar la riqueza lexicográfica sin abrumarse.
 
 ---
@@ -58,19 +58,19 @@ flowchart TD
   - `border-ink/8` – `border-ink/12`: Bordes y divisores estructurales elegantes.
   - `bg-ink/4` – `bg-ink/6`: Contenedores secundarios (`card-subtle`), fondos de píldoras y hovers sutiles.
 - **`brand` (`#F78C56`) & `brand-soft` (`#FCA374`):**  
-  Mandarina pastel cálido. El acento protagónico para interactividad: botones primarios (`btn-primary`), racha diaria (`🔥`), anillos de foco (`ring-brand/15`) y acentos de apertura cultural (`FriendlyBlurb`).
+  Mandarina pastel cálido. El acento protagónico para interactividad: botones primarios (`btn-primary`), racha diaria (`🔥`), anillos de foco (`ring-brand/15`), píldoras de nivel MCER (`brand-pill`) y acentos de apertura cultural (`FriendlyBlurb`).
 
 ### 2.2. Tokens Semánticos Pastel (Regiones, Estados y Gamificación)
 
 - **`info` (`#7C92FF` — Azul Lavanda):**  
-  Reservado para identidad geográfica y metadatos educativos: etiquetas dialectales panhispánicas, contadores de XP, niveles del MCER (`A1–C2`) y barras decorativas de citas.  
-  *Uso canónico:* `badge-pill bg-info/15 text-info border border-info/25`.
+  Reservado para identidad geográfica y metadatos educativos: etiquetas dialectales panhispánicas, contadores de XP, niveles del MCER y barras decorativas de citas.  
+  *Uso canónico:* `minor-ink-pill` para banderas/regiones, o `pill bg-info/15 text-info border border-info/25`.
 - **`success` (`#6CBF73` — Verde Salvia):**  
   Validación, acierto y maestría: sentidos aprobados por quórum editorial (`APPROVED` — **RN06**), respuestas correctas en duelos de Arena (**CU15**) y tarjetas en maestría plena (**CU13**).  
-  *Uso canónico:* `bg-success/12 text-success border border-success/50`.
+  *Uso canónico:* `bg-success/12 text-success border border-success/50`; en píldoras: `pill bg-success/15 text-success border border-success/30`.
 - **`warning` (`#F2B84B` — Miel Cálido):**  
   Atención, quórum en deliberación y advertencias culturales: propuestas en estado `DRAFT` sometidas a revisión de quórum, avisos preventivos de tabú/jerga vulgar, medallas de podio y estado de aprendizaje en SM-2.  
-  *Uso canónico:* `badge-pill bg-warning/20 text-ink border border-warning/40` *(texto en `ink` para máximo contraste accesible)*.
+  *Uso canónico:* `ink-pill` para contenido sensible (`Tabú`, `Vulgar`) y `pill bg-warning/20 text-ink border border-warning/40` para deliberación.
 
 ### 2.3. Sistema de Sombras Táctiles Suaves (`UnoCSS`)
 
@@ -83,55 +83,47 @@ En el espíritu de Apple, las sombras son amplias, orgánicas y sutiles; simulan
 
 ## 3. Reglas Tipográficas: Familia `Satoshi`
 
-Palabrario unifica toda la experiencia en **`Satoshi`**, eliminando la dispersión de fuentes y asegurando renderizado veloz tanto en Wails v3 como en navegadores web.
-
-### 3.1. Jerarquía Tipográfica Canónica
-
-| Rol | Clases UnoCSS Canónicas | Peso | Tamaño / Leading | Aplicación en Palabrario |
-| :--- | :--- | :---: | :---: | :--- |
-| **Display Hero** | `font-black text-4xl md:text-5xl tracking-tight text-ink` | 900 | 2.5rem–3rem / 1.1 | Lemas en `WordDetail`, portadas hero y anuncios |
-| **Título Sección (H1)** | `font-bold text-2xl md:text-3xl tracking-tight text-ink` | 700 | 1.75rem–2rem / 1.2 | Títulos de vistas principales (Studio, Diccionario) |
-| **Título Módulo (H2)** | `font-bold text-xl md:text-2xl tracking-tight text-ink` | 700 | 1.25rem–1.5rem / 1.25 | Encabezados de tarjetas, formularios y modales |
-| **Subtítulo / Card (H3)** | `font-bold text-base md:text-lg text-ink` | 700 | 1.125rem / 1.3 | Títulos de barajas (`DeckCard`), colecciones y usuarios |
-| **Cuerpo Principal** | `font-normal text-base leading-relaxed text-ink/85` | 400 | 1rem / 1.625 | Definiciones léxicas, etimología y *friendly blurbs* |
-| **Cita / Ejemplo** | `font-normal text-sm leading-relaxed italic text-ink/70` | 400 | 0.875rem / 1.5 | Oraciones de ejemplo en contexto |
-| **Rótulo / Eyebrow** | `font-bold text-xs uppercase tracking-wider text-ink/45` | 700 | 0.75rem / 1.4 | *"¿Cómo se dice en otras regiones?"*, notas culturales |
-| **Botones y Badges** | `font-bold text-xs tracking-wide` o `font-semibold text-sm` | 700/600 | 0.75rem–0.875rem | Píldoras de país, botones de acción y pestañas |
-| **Métricas / Contadores** | `font-black tabular-nums` | 900 | Variable | Temporizador Arena, códigos PIN, racha y XP |
-
-### 3.2. Principios Tipográficos
-1. **Compresión en Titulares, Amplitud en Lectura:** Los encabezados usan interlineado compacto (`tracking-tight leading-tight`) emulando los lanzamientos icónicos de Apple. Las definiciones lexicográficas se abren con `leading-relaxed` para una lectura fluida.
-2. **`tabular-nums` No Negociable:** Todo elemento que cambie dinámicamente (reloj regresivo de Arena, XP acumulado, racha de días, porcentajes de retención) **debe** incluir la clase `tabular-nums` para evitar que la interfaz oscile en cada refresco.
-3. **Restricción de Pesos:** Solo se utilizan pesos de Satoshi bien delimitados: `font-normal` (400), `font-medium` (500), `font-bold` (700) y `font-black` (900).
+- **Display Hero (`H1`):** `font-black text-4xl md:text-5xl tracking-tight text-ink`
+- **Títulos de Módulo (`H2`):** `font-bold text-2xl md:text-3xl tracking-tight text-ink`
+- **Subtítulos y Tarjetas (`H3`):** `font-bold text-lg md:text-xl text-ink`
+- **Cuerpo Editorial:** `text-base leading-relaxed text-ink/85`
+- **Rótulos y Metadatos:** `text-xs font-bold uppercase tracking-wider text-ink/45`
+- **Píldoras Estandarizadas:** `text-xs font-bold` (altura fija `h-6 px-2.5 rounded`)
+- **Datos Mutables:** `font-bold tabular-nums` (códigos PIN, temporizadores, racha y XP)
 
 ---
 
-## 4. Estilización de Componentes y Shortcuts Canónicos
+## 4. Componentes UI Canónicos y Contratos Visuales
 
-Todos los componentes deben construirse utilizando los atajos estandarizados en `packages/ui/src/uno.config.ts`:
-
-### 4.1. Botones y Elementos Interactivos
+### 4.1. Botones y Píldoras Táctiles
 
 - **Botón Primario (`btn-primary`):**  
   ```css
-  inline-flex items-center justify-center gap-2 bg-brand text-surface font-bold px-5 py-2.5 rounded-2xl shadow-soft-brand hover:(bg-brand-soft -translate-y-0.5) active:translate-y-0 transition-all duration-200 cursor-pointer disabled:(opacity-50 pointer-events-none)
+  inline-flex items-center justify-center gap-2 bg-brand text-surface font-bold px-4 py-2.5 rounded-2xl shadow-soft-brand hover:(bg-brand-soft) transition-all duration-200 cursor-pointer disabled:(opacity-50 pointer-events-none)
   ```
-  *Uso:* Acción cardinal de la pantalla (*"Iniciar sesión"*, *"Guardar cambios"*, *"Confirmar respuesta"*).
+  *Uso:* La acción más importante de cada pantalla (Aprobar, Enviar a Quórum, Iniciar Duelo, Guardar).
 - **Botón Secundario (`btn-secondary`):**  
   ```css
-  inline-flex items-center justify-center gap-2 bg-surface text-ink font-semibold px-5 py-2.5 rounded-2xl border border-ink/12 shadow-soft hover:(bg-ink/4 border-ink/20 -translate-y-0.5) active:translate-y-0 transition-all duration-200 cursor-pointer disabled:(opacity-50 pointer-events-none)
+  inline-flex items-center justify-center gap-2 bg-surface text-ink font-semibold px-4 py-2.5 rounded-2xl border border-ink/12 shadow-soft hover:(bg-ink/4 border-ink/20) transition-all duration-200 cursor-pointer disabled:(opacity-50 pointer-events-none)
   ```
-  *Uso:* Acciones de soporte (*"Guardar en Studio"*, *"Saltar"*, *"Reintentar"*).
+  *Uso:* Acciones alternativas (Cancelar, Reintentar, Añadir acepción, Descartar).
 - **Botón Fantasma (`btn-ghost`):**  
   ```css
   inline-flex items-center justify-center gap-2 bg-transparent text-ink/70 font-semibold px-4 py-2 rounded-xl hover:(bg-ink/6 text-ink) transition-all cursor-pointer
   ```
   *Uso:* Navegación secundaria, botones de cierre `X`, enlaces de retorno.
-- **Píldoras y Etiquetas (`badge-pill`):**  
+- **Sistema de Píldoras Estandarizadas (`pill`, `minor-ink-pill`, `brand-pill`, `ink-pill`):**  
   ```css
-  inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide
+  pill: h-6 px-2.5 inline-flex items-center rounded text-xs font-bold
+  minor-ink-pill: pill bg-ink/5 text-ink/80
+  brand-pill: pill bg-brand text-surface
+  ink-pill: pill bg-ink text-surface
   ```
-  *Uso:* Banderas dialectales, niveles CEFR, racha diaria y estados de quórum.
+  *Uso canónico:*
+  - **`minor-ink-pill`**: Dialectos/regiones (`México`), categorías gramaticales (`sustantivo`), frecuencias de uso y contadores discretos.
+  - **`brand-pill`**: Niveles MCER (`B2`), distintivos oficiales (`Oficial`) y racha (`🔥`).
+  - **`ink-pill`**: Contenido sensible (`Tabú`, `Vulgar`) de alto contraste y facultades administrativas.
+  - **`pill`**: Base estructural para estados dinámicos (`APPROVED`, `PENDING`, etc.).
 
 ### 4.2. Tarjetas y Contenedores
 
@@ -159,7 +151,7 @@ Todos los componentes deben construirse utilizando los atajos estandarizados en 
 1. **Apertura Narrativa (`FriendlyBlurb` — Inspirado en Vocabulary.com):**  
    Contenedor cálido `bg-brand/10 border border-brand/25 rounded-2xl p-5 space-y-2` que humaniza el lema con anécdotas culturales, complementado por la etimología en `text-ink/65`.
 2. **Caja de Acepciones (`SenseItem`):**  
-   Listón editorial `badge-pill bg-brand text-surface` con *"Acepciones de {lemma}"*, índice numerado en círculo `bg-ink/6 text-ink/70`, citas de ejemplo con filete lateral lavanda (`border-l-2 border-info/50 pl-3 italic text-ink/60`) y desplegable colapsable accesible de Reka UI.
+   Listón editorial `brand-pill` con *"Acepciones de {lemma}"*, índice numerado en círculo `bg-ink/6 text-ink/70`, citas de ejemplo con filete lateral lavanda (`border-l-2 border-info/50 pl-3 italic text-ink/60`), píldoras canónicas (`minor-ink-pill` para región, `brand-pill` para MCER, `ink-pill` para tabú) y desplegable colapsable accesible de Reka UI.
 3. **Zona de Duelo en Arena:**  
    Opciones de respuesta con bordes suaves (`rounded-2xl border border-ink/25 p-3.5`). Al seleccionar la correcta, transición suave hacia `bg-success/12 border-success/50` con índice en verde salvia sólido.
 4. **Zona de Subida de Archivos (`MediaDropzone`):**  
@@ -179,7 +171,7 @@ Todos los componentes deben construirse utilizando los atajos estandarizados en 
 - **Proporción de Grillas:** Distribución asimétrica elegante (ej. 7 columnas para la ficha lexicográfica principal y 5 columnas para el widget de repaso/arena).
 
 ### 5.3. Escala de Radio de Bordes (`Border Radius`)
-- **Píldoras y Cápsulas (`rounded-full`):** Badges, avatares circulares, botones de tag dialectal.
+- **Píldoras Estandarizadas (`rounded` — 4px, `h-6 px-2.5`):** `minor-ink-pill`, `brand-pill`, `ink-pill`, `pill`.
 - **Módulos Principales (`rounded-3xl` — 24px):** Tarjetas editoriales (`card-editorial`), modales de diálogo.
 - **Controles y Botones (`rounded-2xl` — 16px):** Botones `btn-primary` y `btn-secondary`, inputs, opciones de Arena, `card-subtle`.
 - **Sub-elementos (`rounded-xl` — 12px):** Pestañas internas de navegación, botones fantasma, items de menú.
@@ -195,6 +187,7 @@ Todos los componentes deben construirse utilizando los atajos estandarizados en 
 - **Tratar a la palabra como una joya escultórica:** Centra los lemas heroicos con espaciado generoso, peso `font-black` y etimología cuidada.
 - **Asegurar accesibilidad de contraste:** En fondos `warning/20`, el texto debe ser `text-ink`, nunca amarillo sobre crema.
 - **Respetar Reka UI para interactividad compleja:** Modales, menús y desplegables usan Reka UI estilizado con nuestros shortcuts.
+- **Usar el sistema de píldoras canónico:** `minor-ink-pill` para región, `brand-pill` para MCER, `ink-pill` para tabú.
 
 ### ❌ Don't (Errores Prohibidos)
 - **NO usar negro puro (`#000000`) ni bordes duros:** Queda prohibido `border-2 border-ink` o líneas negras tajantes.
@@ -228,7 +221,7 @@ Usa estrictamente el sistema de diseño inspirado en Apple de Palabrario (@.cont
 - Botón Secundario: class="btn-secondary" (blanco surface, border-ink/12, shadow-soft)
 - Tarjeta Principal: class="card-editorial" (rounded-3xl, p-6) | Tarjeta Sutil: class="card-subtle" (bg-ink/4, rounded-2xl)
 - Input: class="input-editorial" (rounded-2xl, h-12 px-4, focus:border-brand focus:ring-3 focus:ring-brand/15)
-- Badges: class="badge-pill" con bg-info/15 text-info, bg-success/15 text-success o bg-warning/20 text-ink
+- Píldoras Estandarizadas: class="minor-ink-pill" (dialecto/gramática), class="brand-pill" (MCER/oficial), class="ink-pill" (tabú), class="pill" (base para estados dinámicos)
 - Tipografía: Satoshi universal con tabular-nums en contadores numéricos
 - Prohibido: border-2 border-ink, negro puro #000000 o colores por defecto de Tailwind.
 ```
