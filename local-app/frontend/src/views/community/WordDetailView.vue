@@ -18,6 +18,9 @@ import {
   ReportModal,
   SenseItem,
   TabooWarningDialog,
+  formatFrequency,
+  formatGender,
+  formatPartOfSpeech,
   type SenseDetail,
   type WordDetail,
 } from '@palabrario/ui'
@@ -214,8 +217,8 @@ onMounted(() => {
           {{ word.lemma }}
         </h1>
         <p class="text-sm md:text-base font-medium text-ink/60 capitalize">
-          {{ word.part_of_speech }}
-          <span v-if="word.gender" class="lowercase text-ink/45"> · {{ word.gender }}</span>
+          {{ formatPartOfSpeech(word.part_of_speech) }}
+          <span v-if="word.gender" class="lowercase text-ink/45"> · {{ formatGender(word.gender) }}</span>
         </p>
       </section>
 
@@ -307,8 +310,8 @@ onMounted(() => {
                 {{ sense.definition }}
               </h2>
             </div>
-            <p v-if="sense.usage_frequency" class="text-xs text-ink/50 capitalize">
-              {{ sense.usage_frequency.toLowerCase() }}
+            <p v-if="sense.usage_frequency" class="text-xs text-ink/50">
+              {{ formatFrequency(sense.usage_frequency) }}
             </p>
           </div>
 

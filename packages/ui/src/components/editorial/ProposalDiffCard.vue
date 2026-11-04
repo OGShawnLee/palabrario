@@ -12,6 +12,7 @@ import {
   User,
 } from 'lucide-vue-next'
 import type { SenseQuorumItem, Example } from '../../types/models'
+import { formatFrequency, formatPartOfSpeech } from '../../utils/formatters'
 
 const props = withDefaults(
   defineProps<{
@@ -72,7 +73,7 @@ function formatDate(dateStr?: string): string {
           v-if="proposal.part_of_speech"
           class="minor-ink-pill"
         >
-          {{ proposal.part_of_speech }}
+          {{ formatPartOfSpeech(proposal.part_of_speech) }}
         </span>
 
         <!-- Nivel CEFR -->
@@ -88,7 +89,7 @@ function formatDate(dateStr?: string): string {
           v-if="proposal.usage_frequency"
           class="minor-ink-pill"
         >
-          {{ proposal.usage_frequency }}
+          {{ formatFrequency(proposal.usage_frequency) }}
         </span>
 
         <!-- Advertencia Tabú / Vulgar -->

@@ -15,6 +15,7 @@ import {
   Quote,
 } from 'lucide-vue-next'
 import type { HeteronymItem, SenseDetail } from '../../types/models'
+import { formatPartOfSpeech } from '../../utils/formatters'
 import HeteronymPills from './HeteronymPills.vue'
 
 const props = defineProps<{
@@ -57,7 +58,7 @@ function handleImageOpen() {
           <span class="minor-ink-pill">
             <span v-if="sense.flag_emoji" class="mr-1">{{ sense.flag_emoji }}</span>
             <span>{{ sense.region_name || sense.region_code }}</span>
-            <span v-if="partOfSpeech"> · {{ partOfSpeech }}</span>
+            <span v-if="partOfSpeech"> · {{ formatPartOfSpeech(partOfSpeech) }}</span>
           </span>
 
           <span v-if="sense.cefr_level" class="brand-pill">

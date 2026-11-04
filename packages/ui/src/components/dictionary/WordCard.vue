@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { AlertTriangle, BookOpen } from 'lucide-vue-next'
 import type { WordSummaryCard } from '../../types/models'
+import { formatFrequency, formatPartOfSpeech } from '../../utils/formatters'
 
 const props = defineProps<{
   word: WordSummaryCard
@@ -40,7 +41,7 @@ const formattedSenses = computed(() => {
           v-if="word.part_of_speech"
           class="minor-ink-pill"
         >
-          {{ word.part_of_speech }}
+          {{ formatPartOfSpeech(word.part_of_speech) }}
         </span>
 
         <span
@@ -79,9 +80,9 @@ const formattedSenses = computed(() => {
 
       <span
         v-if="word.usage_frequency"
-        class="minor-ink-pill lowercase"
+        class="minor-ink-pill"
       >
-        {{ word.usage_frequency }}
+        {{ formatFrequency(word.usage_frequency) }}
       </span>
     </div>
   </article>

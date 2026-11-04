@@ -1,5 +1,6 @@
 // Barrel export de @palabrario/ui
 export type * from './types/models'
+export * from './utils/formatters'
 
 // UI Global
 export { default as MediaDropzone } from './components/ui/MediaDropzone.vue'
