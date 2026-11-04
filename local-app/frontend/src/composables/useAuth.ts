@@ -86,6 +86,10 @@ async function refreshProfile(): Promise<void> {
   }
 }
 
+function clearError(): void {
+  error.value = null
+}
+
 /** Store reactivo singleton de sesión (Flujo 1 de UI_FLOWS.md). */
 export function useAuth() {
   return {
@@ -101,5 +105,7 @@ export function useAuth() {
     signUp,
     signOut,
     refreshProfile,
+    clearError,
   }
 }
+

@@ -54,12 +54,18 @@ export default defineConfig({
     'card-subtle': 'bg-ink/4 text-ink rounded-2xl border border-ink/8 p-4',
 
     // Botones redondeados con sombra suave y feedback amable
-    'btn-primary': 'inline-flex items-center justify-center gap-2 bg-brand text-surface font-bold px-5 py-2.5 rounded-2xl shadow-soft-brand hover:(bg-brand-soft -translate-y-0.5) active:translate-y-0 transition-all duration-200 cursor-pointer disabled:(opacity-50 pointer-events-none)',
-    'btn-secondary': 'inline-flex items-center justify-center gap-2 bg-surface text-ink font-semibold px-5 py-2.5 rounded-2xl border border-ink/12 shadow-soft hover:(bg-ink/4 border-ink/20 -translate-y-0.5) active:translate-y-0 transition-all duration-200 cursor-pointer disabled:(opacity-50 pointer-events-none)',
-    'btn-ghost': 'inline-flex items-center justify-center gap-2 bg-transparent text-ink/70 font-semibold px-4 py-2 rounded-xl hover:(bg-ink/6 text-ink) transition-all cursor-pointer',
+    'btn-primary': 'inline-flex items-center justify-center gap-2 bg-brand text-surface font-bold px-4 py-2.5 rounded-2xl shadow-soft-brand hover:(bg-brand-soft) transition-all duration-200 cursor-pointer disabled:(bg-ink/6 text-ink/35 cursor-not-allowed shadow-none border-transparent transition-none)',
+    'btn-secondary': 'inline-flex items-center justify-center gap-2 bg-surface text-ink font-semibold px-4 py-2.5 rounded-2xl border border-ink/12 shadow-soft hover:(bg-ink/4 border-ink/20) transition-all duration-200 cursor-pointer disabled:(bg-ink/4 text-ink/35 cursor-not-allowed shadow-none border-ink/8 transition-none)',
+    'btn-ghost': 'inline-flex items-center justify-center gap-2 bg-transparent text-ink/70 font-semibold px-4 py-2 rounded-xl hover:(bg-ink/6 text-ink) transition-all cursor-pointer disabled:(bg-transparent text-ink/30 cursor-not-allowed shadow-none transition-none)',
 
     // Inputs y píldoras con jerarquía de opacidad
-    'input-editorial': 'w-full bg-surface text-ink placeholder:text-ink/40 rounded-2xl border border-ink/12 h-12 px-4 shadow-soft focus:(outline-none border-brand ring-3 ring-brand/15) transition-all',
-    'badge-pill': 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide',
+    'input-editorial': 'w-full bg-surface text-ink placeholder:text-ink/40 rounded-2xl border border-ink/12 h-11 px-4 text-sm shadow-soft focus:(outline-none border-brand ring-3 ring-brand/15) transition-all',
+
+    // Sistema de Píldoras Táctiles Ilustradas (Estandarización)
+    'pill': 'h-6 px-2.5 inline-flex items-center rounded text-xs font-bold',
+    'minor-ink-pill': 'pill bg-ink/5 text-ink/80',
+    'brand-pill': 'pill bg-brand text-surface',
+    'ink-pill': 'pill bg-ink text-surface',
+    'badge-pill': 'pill', // Alias de retrocompatibilidad
   },
 })

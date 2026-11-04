@@ -1,1 +1,3 @@
-export { default } from "@palabrario/ui/uno.config"
+import config from "@palabrario/ui/uno.config"
+
+export default config

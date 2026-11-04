@@ -130,4 +130,9 @@ router.beforeEach(async (to, from) => {
   return true
 })
 
+router.afterEach(() => {
+  const auth = useAuth()
+  auth.clearError()
+})
+
 export default router
