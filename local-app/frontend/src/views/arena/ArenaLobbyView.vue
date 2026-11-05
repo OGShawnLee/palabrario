@@ -3,18 +3,11 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   AlertCircle,
-  Clock,
-  Compass,
-  Gamepad2,
-  History,
-  Layers,
+  ArrowRight,
+  Check,
   Lock,
   Play,
-  Plus,
   RefreshCw,
-  Sparkles,
-  Trophy,
-  Users,
 } from 'lucide-vue-next'
 import {
   type Deck,
@@ -41,12 +34,15 @@ const isPublic = ref(true)
 const isCreating = ref(false)
 const createError = ref<string | null>(null)
 
+const roundOptions = [8, 12, 16] as const
+const timeOptions = [10, 15, 20] as const
+
 // --- Estado: Historial de Partidas ---
 const matchHistory = ref<MatchSummary[]>([])
 const isLoadingHistory = ref(true)
 const historyError = ref<string | null>(null)
 
-// Combinación de barajas disponibles
+// Combinación de barajas disponibles (ordenadas por elegibilidad >= 8 cartas primero)
 const availableDecks = computed(() => {
   const map = new Map<number, { id: number; title: string; count: number; isOwned: boolean }>()
 
@@ -70,7 +66,12 @@ const availableDecks = computed(() => {
     }
   })
 
-  return Array.from(map.values())
+  return Array.from(map.values()).sort((a, b) => {
+    const aEligible = a.count >= 8 ? 1 : 0
+    const bEligible = b.count >= 8 ? 1 : 0
+    if (aEligible !== bEligible) return bEligible - aEligible
+    return b.count - a.count
+  })
 })
 
 const selectedDeck = computed(() => {
@@ -80,21 +81,30 @@ const selectedDeck = computed(() => {
 
 const hasMinCards = computed(() => {
   if (!selectedDeck.value) return false
-  return selectedDeck.value.count >= 8
+  return selectedDeck.value.count >= Math.max(8, totalRounds.value)
 })
 
-async function loadData() {
-  isLoadingDecks.value = true
-  isLoadingHistory.value = true
-  joinError.value = null
+function formatTermCount(count: number): string {
+  return count === 1 ? '1 término' : `${count} términos`
+}
+
+function selectDeck(deck: { id: number; count: number }) {
+  if (deck.count < 8) return
+  selectedDeckId.value = deck.id
   createError.value = null
-  historyError.value = null
+  if (totalRounds.value > deck.count) {
+    totalRounds.value = 8
+  }
+}
+
+async function refreshDecks() {
+  isLoadingDecks.value = true
+  createError.value = null
 
   try {
-    const [studioRes, publicRes, historyRes] = await Promise.allSettled([
+    const [studioRes, publicRes] = await Promise.allSettled([
       api.ListStudioDecks(),
       api.ListDecks('', true),
-      api.GetMyMatchHistory(20),
     ])
 
     if (studioRes.status === 'fulfilled') {
@@ -103,34 +113,51 @@ async function loadData() {
     if (publicRes.status === 'fulfilled') {
       publicDecks.value = publicRes.value ?? []
     }
-    if (historyRes.status === 'fulfilled') {
-      matchHistory.value = historyRes.value ?? []
-    }
 
-    // Auto-seleccionar la primera baraja con >= 8 cartas
-    const validDeck = availableDecks.value.find((d) => d.count >= 8)
-    if (validDeck) {
-      selectedDeckId.value = validDeck.id
-    } else if (availableDecks.value.length > 0) {
-      selectedDeckId.value = availableDecks.value[0].id
+    if (!selectedDeckId.value || !availableDecks.value.some((d) => d.id === selectedDeckId.value && d.count >= 8)) {
+      const validDeck = availableDecks.value.find((d) => d.count >= 8)
+      selectedDeckId.value = validDeck ? validDeck.id : null
     }
   } catch (err: unknown) {
-    createError.value = err instanceof Error ? err.message : 'Error al cargar recursos de la arena'
+    createError.value = err instanceof Error ? err.message : 'Error al actualizar las barajas.'
   } finally {
     isLoadingDecks.value = false
+  }
+}
+
+async function refreshHistory() {
+  isLoadingHistory.value = true
+  historyError.value = null
+
+  try {
+    const res = await api.GetMyMatchHistory(20)
+    matchHistory.value = res ?? []
+  } catch (err: unknown) {
+    const rawMsg = err instanceof Error ? err.message : ''
+    if (rawMsg.includes('context deadline exceeded') || rawMsg.includes('Client.Timeout') || rawMsg.includes('error de red')) {
+      historyError.value = 'No se pudo conectar con el servidor para obtener el archivo de partidas.'
+    } else {
+      historyError.value = rawMsg || 'Error al actualizar el historial de partidas.'
+    }
+  } finally {
     isLoadingHistory.value = false
   }
+}
+
+async function loadData() {
+  await Promise.all([refreshDecks(), refreshHistory()])
 }
 
 function handlePinInput(event: Event) {
   const target = event.target as HTMLInputElement
   roomPin.value = target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  if (joinError.value) joinError.value = null
 }
 
 async function handleJoin() {
   const pin = roomPin.value.trim().toUpperCase()
   if (pin.length < 6) {
-    joinError.value = 'El código PIN debe tener 6 caracteres.'
+    joinError.value = 'El código de sala debe tener 6 caracteres.'
     return
   }
 
@@ -141,20 +168,25 @@ async function handleJoin() {
     await api.JoinArenaMatch(pin)
     router.push({ name: 'arena-game-room', params: { roomCode: pin } })
   } catch (err: unknown) {
-    joinError.value = err instanceof Error ? err.message : 'No fue posible unirse a la sala. Verifica el PIN.'
+    joinError.value = err instanceof Error ? err.message : 'No fue posible unirse a la sala. Verifica el código.'
   } finally {
     isJoining.value = false
   }
 }
 
 async function handleCreateMatch() {
-  if (!selectedDeckId.value) {
-    createError.value = 'Selecciona una baraja para la contienda.'
+  if (!selectedDeckId.value || !selectedDeck.value) {
+    createError.value = 'Selecciona una baraja con al menos 8 términos para iniciar.'
     return
   }
 
-  if (!hasMinCards.value) {
-    createError.value = 'La baraja debe contener al menos 8 acepciones para jugar en la arena (CU14).'
+  if (selectedDeck.value.count < 8) {
+    createError.value = 'Se requiere un mínimo de 8 términos aprobados para abrir una sala.'
+    return
+  }
+
+  if (selectedDeck.value.count < totalRounds.value) {
+    createError.value = `Esta baraja tiene ${selectedDeck.value.count} términos; elige ${selectedDeck.value.count >= 12 ? '12 o menos' : '8'} rondas.`
     return
   }
 
@@ -170,19 +202,19 @@ async function handleCreateMatch() {
     })
 
     if (!pkg || !pkg.room_code) {
-      throw new Error('El servidor no devolvió el código de sala')
+      throw new Error('El servidor no devolvió el código de sala.')
     }
 
     router.push({ name: 'arena-game-room', params: { roomCode: pkg.room_code } })
   } catch (err: unknown) {
-    createError.value = err instanceof Error ? err.message : 'Error al preparar la sala de arena'
+    createError.value = err instanceof Error ? err.message : 'Error al preparar la sala de arena.'
   } finally {
     isCreating.value = false
   }
 }
 
 function formatDate(dateStr: string) {
-  if (!dateStr) return ''
+  if (!dateStr) return '—'
   const d = new Date(dateStr)
   return d.toLocaleDateString('es-ES', {
     day: '2-digit',
@@ -190,6 +222,16 @@ function formatDate(dateStr: string) {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+function formatWinner(match: MatchSummary): { name: string; score: string | null } {
+  if (match.podium && match.podium.length > 0) {
+    const first = match.podium[0]
+    const name = first.user_name || first.name || 'Participante'
+    const score = typeof first.score === 'number' ? `${first.score.toLocaleString('es-ES')} pts` : null
+    return { name, score }
+  }
+  return { name: 'Sin podio', score: null }
 }
 
 function navigateToReplay(matchId: string) {
@@ -202,307 +244,435 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-[calc(100vh-5rem)] bg-paper py-8 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-6xl mx-auto space-y-8">
-      <!-- Encabezado de la Arena -->
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-ink/8">
-        <div>
-          <div class="flex items-center gap-2 mb-1">
-            <span class="brand-pill text-xs">
-              Multijugador Sincronizado
-            </span>
-            <span class="minor-ink-pill text-xs">
-              WebSockets & Quórum
-            </span>
-          </div>
-          <h1 class="font-black text-3xl sm:text-4xl text-ink tracking-tight">
-            Arena de Contienda
-          </h1>
-          <p class="text-sm text-ink/70 mt-1 max-w-xl">
-            Demuestra tu dominio léxico en tiempo real compitiendo contra hasta 8 participantes en rondas rápidas de definición y asociación visual.
+  <!-- Vista Principal: Directo sobre bg-paper con ritmo tipográfico editorial y cero cajas/píldoras infladas -->
+  <div class="space-y-12 md:space-y-16 py-2">
+    <!-- 1. Encabezado Monumental + Contexto Editorial y Entrada Rápida por PIN -->
+    <section class="space-y-10">
+      <div class="space-y-3">
+        <h1 class="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-ink tracking-tight leading-none">
+          arena
+        </h1>
+        <p class="text-sm md:text-base font-medium text-ink/60">
+          Contienda léxica en tiempo real <span class="text-ink/45">· hasta 8 participantes</span>
+        </p>
+      </div>
+
+      <!-- Asimetría Editorial 4:8 (igual que Etimología + Introducción en WordDetailView) -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-start">
+        <!-- Columna Izquierda (4 cols): Acceso Directo con Código de Sala -->
+        <div class="md:col-span-5 lg:col-span-4 space-y-3">
+          <p class="text-[11px] font-bold tracking-widest text-brand uppercase">
+            Código de Sala
           </p>
+          <p class="text-sm text-ink/65 leading-relaxed">
+            Si un anfitrión te compartió un código de 6 caracteres, ingrésalo para entrar directo a la partida.
+          </p>
+
+          <form @submit.prevent="handleJoin" class="pt-1 space-y-2.5">
+            <div class="flex items-stretch gap-2">
+              <input
+                id="room-pin"
+                :value="roomPin"
+                type="text"
+                maxlength="6"
+                placeholder="MX8921"
+                aria-label="Código de sala de 6 caracteres"
+                class="h-11 w-full sm:w-40 bg-surface text-ink placeholder:text-ink/35 border border-ink/20 rounded px-3.5 text-center text-base font-black tabular-nums tracking-[0.22em] uppercase focus:outline-none focus:border-brand transition-colors"
+                :disabled="isJoining"
+                @input="handlePinInput"
+              />
+              <button
+                type="submit"
+                class="h-11 px-4 rounded bg-ink text-surface text-xs font-bold inline-flex items-center justify-center gap-1.5 shrink-0 hover:bg-ink/90 transition-colors cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
+                :disabled="isJoining || roomPin.trim().length < 6"
+              >
+                <RefreshCw v-if="isJoining" class="w-3.5 h-3.5 animate-spin" />
+                <template v-else>
+                  <span>Entrar a Sala</span>
+                  <ArrowRight class="w-3.5 h-3.5 stroke-2" />
+                </template>
+              </button>
+            </div>
+
+            <p
+              v-if="joinError"
+              class="text-xs text-brand font-medium flex items-center gap-1.5"
+            >
+              <AlertCircle class="w-3.5 h-3.5 shrink-0" />
+              <span>{{ joinError }}</span>
+            </p>
+          </form>
+        </div>
+
+        <!-- Columna Derecha (8 cols): Introducción Narrativa Fluida -->
+        <div class="md:col-span-7 lg:col-span-8">
+          <p class="text-xl sm:text-2xl md:text-3xl font-normal text-ink/90 leading-relaxed">
+            Pon a prueba tu agilidad en rondas rápidas de definición y asociación visual. Elige un repertorio de al menos ocho términos, ajusta el ritmo y comparte el código con tus rivales.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Divisor sutil por opacidad de tinta -->
+    <hr class="border-t border-ink/10" />
+
+    <!-- 2. Configurar Nueva Sala: Columnas Paralelas Limpias en Lienzo -->
+    <form @submit.prevent="handleCreateMatch">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+        <!-- Columna Izquierda (7 cols): Seleccionar Baraja -->
+        <div class="lg:col-span-7 space-y-5">
+          <!-- Encabezado con botón de actualización exactamente junto a lo que actualiza -->
+          <div class="flex items-end justify-between gap-4">
+            <div class="space-y-1">
+              <p class="text-[11px] font-bold tracking-widest text-brand uppercase">
+                01 · Repertorio Léxico
+              </p>
+              <h2 class="text-2xl md:text-3xl font-bold text-ink tracking-tight">
+                Seleccionar Baraja
+              </h2>
+            </div>
+
+            <button
+              type="button"
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium text-ink/60 hover:text-ink hover:bg-ink/5 border border-ink/10 transition-colors cursor-pointer"
+              title="Actualizar lista de barajas"
+              @click="refreshDecks"
+            >
+              <RefreshCw class="w-3.5 h-3.5 stroke-2" :class="isLoadingDecks ? 'animate-spin' : ''" />
+              <span>Actualizar</span>
+            </button>
+          </div>
+
+          <!-- Estado: Cargando -->
+          <div v-if="isLoadingDecks" class="space-y-3 pt-2 animate-pulse">
+            <div class="h-14 bg-ink/6 rounded w-full" />
+            <div class="h-14 bg-ink/6 rounded w-full" />
+            <div class="h-14 bg-ink/6 rounded w-4/5" />
+          </div>
+
+          <!-- Estado: Vacío -->
+          <div
+            v-else-if="availableDecks.length === 0"
+            class="py-6 border-t border-b border-ink/12 space-y-1"
+          >
+            <p class="text-sm font-bold text-ink">
+              No hay barajas disponibles para la contienda.
+            </p>
+            <p class="text-xs text-ink/60">
+              Crea una baraja con al menos 8 términos en Mi Studio o guarda acepciones desde el Diccionario.
+            </p>
+          </div>
+
+          <!-- Lista Editorial Plana con Divisores de 1px (Cero píldoras por fila, igual al diseño de Figma) -->
+          <div
+            v-else
+            role="listbox"
+            aria-label="Barajas disponibles para la contienda"
+            class="divide-y divide-ink/12 border-t border-b border-ink/15 max-h-80 overflow-y-auto"
+          >
+            <button
+              v-for="deck in availableDecks"
+              :key="deck.id"
+              type="button"
+              role="option"
+              :aria-selected="selectedDeckId === deck.id"
+              :disabled="deck.count < 8"
+              class="w-full text-left px-4 py-3.5 flex items-center justify-between gap-4 transition-colors"
+              :class="[
+                selectedDeckId === deck.id
+                  ? 'bg-ink text-paper cursor-pointer'
+                  : deck.count >= 8
+                    ? 'hover:bg-ink/4 text-ink cursor-pointer'
+                    : 'text-ink/40 cursor-not-allowed',
+              ]"
+              @click="selectDeck(deck)"
+            >
+              <div class="min-w-0">
+                <div
+                  class="font-bold text-base truncate"
+                  :class="selectedDeckId === deck.id ? 'text-paper' : deck.count >= 8 ? 'text-ink' : 'text-ink/45'"
+                >
+                  {{ deck.title }}
+                </div>
+                <div
+                  class="text-xs mt-0.5 tabular-nums"
+                  :class="selectedDeckId === deck.id ? 'text-paper/75' : deck.count >= 8 ? 'text-ink/55' : 'text-ink/40'"
+                >
+                  <span>{{ deck.isOwned ? 'Mi Studio' : 'Comunidad' }}</span>
+                  <span class="mx-1.5">·</span>
+                  <span>{{ formatTermCount(deck.count) }}</span>
+                  <span v-if="deck.count < 8" class="ml-1">(mínimo 8)</span>
+                </div>
+              </div>
+
+              <div class="shrink-0 flex items-center">
+                <Check
+                  v-if="selectedDeckId === deck.id"
+                  class="w-4 h-4 text-paper stroke-2"
+                  aria-hidden="true"
+                />
+                <Lock
+                  v-else-if="deck.count < 8"
+                  class="w-4 h-4 text-ink/35"
+                  aria-label="Baraja bloqueada por tener menos de 8 términos"
+                />
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Columna Derecha (5 cols): Reglas de la Partida -->
+        <div class="lg:col-span-5 space-y-6">
+          <div class="space-y-1">
+            <p class="text-[11px] font-bold tracking-widest text-brand uppercase">
+              02 · Cadencia y Formato
+            </p>
+            <h2 class="text-2xl md:text-3xl font-bold text-ink tracking-tight">
+              Reglas de la Partida
+            </h2>
+          </div>
+
+          <div class="space-y-5">
+            <!-- Control Segmentado Unido de 1px: Total de Rondas (Cero tarjetas/píldoras sueltas) -->
+            <div>
+              <span class="block text-[11px] font-bold uppercase tracking-wider text-ink/60 mb-2">
+                Total de Rondas
+              </span>
+              <div
+                role="group"
+                aria-label="Total de rondas"
+                class="grid grid-cols-3 border border-ink/20 divide-x divide-ink/20 bg-surface"
+              >
+                <button
+                  v-for="r in roundOptions"
+                  :key="r"
+                  type="button"
+                  :disabled="selectedDeck ? selectedDeck.count < r : false"
+                  class="h-11 text-sm font-bold tabular-nums transition-colors cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
+                  :class="
+                    totalRounds === r
+                      ? 'bg-ink text-paper'
+                      : 'bg-surface text-ink hover:bg-ink/4'
+                  "
+                  @click="totalRounds = r"
+                >
+                  {{ r }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Control Segmentado Unido de 1px: Tiempo por Ronda -->
+            <div>
+              <span class="block text-[11px] font-bold uppercase tracking-wider text-ink/60 mb-2">
+                Tiempo por Ronda
+              </span>
+              <div
+                role="group"
+                aria-label="Tiempo por ronda en segundos"
+                class="grid grid-cols-3 border border-ink/20 divide-x divide-ink/20 bg-surface"
+              >
+                <button
+                  v-for="sec in timeOptions"
+                  :key="sec"
+                  type="button"
+                  class="h-11 text-sm font-bold tabular-nums transition-colors cursor-pointer"
+                  :class="
+                    roundTimeSec === sec
+                      ? 'bg-ink text-paper'
+                      : 'bg-surface text-ink hover:bg-ink/4'
+                  "
+                  @click="roundTimeSec = sec"
+                >
+                  {{ sec }}s
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Error de Creación -->
+          <p
+            v-if="createError"
+            class="text-xs text-brand font-medium flex items-center gap-1.5"
+          >
+            <AlertCircle class="w-4 h-4 shrink-0" />
+            <span>{{ createError }}</span>
+          </p>
+
+          <!-- Acción Principal (Mismo btn-primary cálido que WordDetailView) -->
+          <div class="pt-2">
+            <button
+              type="submit"
+              class="btn-primary w-full sm:w-auto"
+              :disabled="isCreating || !selectedDeckId || !hasMinCards"
+            >
+              <RefreshCw v-if="isCreating" class="w-4 h-4 animate-spin" />
+              <Play v-else class="w-4 h-4 stroke-2" />
+              <span>{{ isCreating ? 'Preparando sala...' : 'Crear Sala y Obtener PIN' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+
+    <!-- Divisor sutil por opacidad de tinta -->
+    <hr class="border-t border-ink/10" />
+
+    <!-- 3. Contiendas Recientes: Archivo Editorial Plano -->
+    <section aria-labelledby="recent-matches-heading" class="space-y-5">
+      <div class="flex items-end justify-between gap-4">
+        <div class="space-y-1">
+          <p class="text-[11px] font-bold tracking-widest text-brand uppercase">
+            03 · Archivo de Partidas
+          </p>
+          <h2 id="recent-matches-heading" class="text-2xl md:text-3xl font-bold text-ink tracking-tight">
+            Contiendas Recientes
+          </h2>
         </div>
 
         <button
           type="button"
-          class="btn-secondary self-start md:self-auto text-xs px-4 py-2 flex items-center gap-2"
-          @click="loadData"
+          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium text-ink/60 hover:text-ink hover:bg-ink/5 border border-ink/10 transition-colors cursor-pointer"
+          title="Actualizar historial de contiendas"
+          @click="refreshHistory"
         >
-          <RefreshCw class="w-3.5 h-3.5" :class="isLoadingDecks || isLoadingHistory ? 'animate-spin' : ''" />
+          <RefreshCw class="w-3.5 h-3.5 stroke-2" :class="isLoadingHistory ? 'animate-spin' : ''" />
           <span>Actualizar</span>
         </button>
       </div>
 
-      <!-- Sección Principal: Entrar con PIN y Crear Sala (Grid 12 cols) -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <!-- Tarjeta 1: Unirse con PIN (5 cols) -->
-        <div class="lg:col-span-5 card-editorial p-6 sm:p-8 flex flex-col justify-between min-h-[380px]">
-          <div>
-            <div class="flex items-center gap-3 mb-4">
-              <div class="w-10 h-10 rounded-2xl bg-brand/15 text-brand flex items-center justify-center shadow-soft">
-                <Play class="w-5 h-5 ml-0.5" />
-              </div>
-              <div>
-                <h2 class="font-bold text-xl text-ink">Unirse a una Sala</h2>
-                <p class="text-xs text-ink/60">Ingresa el código PIN de 6 dígitos que te compartió el anfitrión</p>
-              </div>
-            </div>
+      <!-- Error de Historial -->
+      <p
+        v-if="historyError"
+        class="text-xs text-brand font-medium flex items-center gap-1.5"
+      >
+        <AlertCircle class="w-4 h-4 shrink-0" />
+        <span>{{ historyError }}</span>
+      </p>
 
-            <!-- Formulario de PIN -->
-            <form @submit.prevent="handleJoin" class="space-y-4 mt-6">
-              <div>
-                <label for="room-pin" class="block text-xs font-bold uppercase tracking-wider text-ink/60 mb-2">
-                  Código de Sala (PIN)
-                </label>
-                <input
-                  id="room-pin"
-                  :value="roomPin"
-                  type="text"
-                  maxlength="6"
-                  placeholder="MX8921"
-                  class="input-editorial w-full text-center text-3xl font-black tabular-nums tracking-widest uppercase py-3.5"
-                  :disabled="isJoining"
-                  @input="handlePinInput"
-                />
-              </div>
-
-              <!-- Alerta de Error PIN -->
-              <div
-                v-if="joinError"
-                class="p-3.5 rounded-2xl bg-brand/10 border border-brand/30 text-ink text-xs flex items-center gap-2"
-              >
-                <AlertCircle class="w-4 h-4 text-brand shrink-0" />
-                <span>{{ joinError }}</span>
-              </div>
-
-              <button
-                type="submit"
-                class="btn-primary w-full py-3.5 flex items-center justify-center gap-2 text-base"
-                :disabled="isJoining || roomPin.trim().length < 6"
-              >
-                <RefreshCw v-if="isJoining" class="w-5 h-5 animate-spin" />
-                <Play v-else class="w-5 h-5" />
-                <span>{{ isJoining ? 'Conectando...' : 'Entrar a la Sala' }}</span>
-              </button>
-            </form>
-          </div>
-
-          <!-- Información Rápida -->
-          <div class="mt-8 pt-6 border-t border-ink/8 text-xs text-ink/65 space-y-2">
-            <div class="flex items-center gap-2">
-              <Sparkles class="w-4 h-4 text-brand shrink-0" />
-              <span>Modalidades de texto y desafíos visuales con ilustraciones.</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <Clock class="w-4 h-4 text-brand shrink-0" />
-              <span>Puntuación por velocidad de respuesta sincronizada.</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Tarjeta 2: Crear Sala Nueva (7 cols) -->
-        <div class="lg:col-span-7 card-editorial p-6 sm:p-8">
-          <div class="flex items-center gap-3 mb-6">
-            <div class="w-10 h-10 rounded-2xl bg-success/15 text-success flex items-center justify-center shadow-soft">
-              <Plus class="w-5 h-5" />
-            </div>
-            <div>
-              <h2 class="font-bold text-xl text-ink">Crear Sala de Juego</h2>
-              <p class="text-xs text-ink/60">Sé el anfitrión y personaliza la baraja, rondas y duración</p>
-            </div>
-          </div>
-
-          <form @submit.prevent="handleCreateMatch" class="space-y-6">
-            <!-- Selector de Baraja -->
-            <div>
-              <label class="block text-xs font-bold uppercase tracking-wider text-ink/60 mb-2">
-                Baraja para la Contienda
-              </label>
-
-              <div v-if="isLoadingDecks" class="py-4 text-center text-xs text-ink/50 animate-pulse">
-                Cargando barajas disponibles...
-              </div>
-
-              <div v-else-if="availableDecks.length === 0" class="card-subtle p-4 text-center space-y-2">
-                <Layers class="w-6 h-6 text-ink/40 mx-auto" />
-                <p class="text-xs text-ink/70">No tienes barajas ni hay barajas públicas disponibles con suficientes términos.</p>
-              </div>
-
-              <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-48 overflow-y-auto p-1">
-                <button
-                  v-for="deck in availableDecks"
-                  :key="deck.id"
-                  type="button"
-                  class="flex flex-col text-left p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer"
-                  :class="[
-                    selectedDeckId === deck.id
-                      ? 'bg-brand/10 border-brand ring-3 ring-brand/20 shadow-soft text-brand'
-                      : 'bg-surface border-ink/10 hover:border-brand/40 text-ink/80',
-                    deck.count < 8 ? 'opacity-60' : '',
-                  ]"
-                  @click="selectedDeckId = deck.id"
-                >
-                  <div class="flex items-center justify-between w-full mb-1">
-                    <span class="font-bold text-sm text-ink truncate">{{ deck.title }}</span>
-                    <span
-                      class="pill text-[10px]"
-                      :class="deck.count >= 8 ? 'bg-success/15 text-success' : 'bg-brand/15 text-brand'"
-                    >
-                      {{ deck.count }} cartas
-                    </span>
-                  </div>
-                  <span class="text-[11px] text-ink/50">
-                    {{ deck.isOwned ? 'Baraja personal de Studio' : 'Baraja comunitaria' }}
-                  </span>
-                </button>
-              </div>
-
-              <!-- Aviso de validación de quórum de cartas (RN10 / CU14) -->
-              <p v-if="selectedDeck && !hasMinCards" class="text-xs text-brand mt-2 font-medium">
-                ⚠️ Esta baraja tiene {{ selectedDeck.count }} cartas. Se requiere un mínimo de 8 cartas para iniciar una sala de arena.
-              </p>
-            </div>
-
-            <!-- Configuración de Rondas y Tiempo -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <!-- Rondas -->
-              <div>
-                <label for="total-rounds" class="block text-xs font-bold uppercase tracking-wider text-ink/60 mb-2">
-                  Total de Rondas
-                </label>
-                <select
-                  id="total-rounds"
-                  v-model.number="totalRounds"
-                  class="input-editorial w-full py-2.5 text-sm font-semibold"
-                >
-                  <option :value="5">5 rondas (Partida Rápida)</option>
-                  <option :value="8">8 rondas (Estándar)</option>
-                  <option :value="12">12 rondas (Extendida)</option>
-                </select>
-              </div>
-
-              <!-- Tiempo por Ronda -->
-              <div>
-                <label for="round-time" class="block text-xs font-bold uppercase tracking-wider text-ink/60 mb-2">
-                  Tiempo por Ronda
-                </label>
-                <select
-                  id="round-time"
-                  v-model.number="roundTimeSec"
-                  class="input-editorial w-full py-2.5 text-sm font-semibold"
-                >
-                  <option :value="10">10 segundos (Frenético)</option>
-                  <option :value="15">15 segundos (Equilibrado)</option>
-                  <option :value="20">20 segundos (Reflexivo)</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Error de Creación -->
-            <div
-              v-if="createError"
-              class="p-3.5 rounded-2xl bg-brand/10 border border-brand/30 text-ink text-xs flex items-center gap-2"
-            >
-              <AlertCircle class="w-4 h-4 text-brand shrink-0" />
-              <span>{{ createError }}</span>
-            </div>
-
-            <!-- Botón Crear -->
-            <button
-              type="submit"
-              class="btn-primary w-full py-3.5 flex items-center justify-center gap-2 text-base shadow-soft-brand"
-              :disabled="isCreating || !selectedDeckId || !hasMinCards"
-            >
-              <RefreshCw v-if="isCreating" class="w-5 h-5 animate-spin" />
-              <Play v-else class="w-5 h-5" />
-              <span>{{ isCreating ? 'Creando Sala...' : 'Crear Sala y Esperar Jugadores' }}</span>
-            </button>
-          </form>
-        </div>
+      <!-- Estado: Cargando -->
+      <div
+        v-if="isLoadingHistory"
+        class="py-6 border-t border-b border-ink/12 text-xs text-ink/50 animate-pulse"
+      >
+        Consultando archivo de contiendas...
       </div>
 
-      <!-- Sección Historial de Partidas y Replays (CU16) -->
-      <div class="card-editorial p-6 sm:p-8">
-        <div class="flex items-center justify-between mb-6">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-2xl bg-info/15 text-info flex items-center justify-center shadow-soft">
-              <History class="w-5 h-5" />
-            </div>
-            <div>
-              <h2 class="font-bold text-xl text-ink">Historial de Contiendas Recientes</h2>
-              <p class="text-xs text-ink/60">Consulta los resultados de tus partidas y visualiza el replay detallado (CU16)</p>
-            </div>
-          </div>
-        </div>
+      <!-- Estado: Vacío (Fila plana con divisores de 1px, NO una cita ni tarjeta) -->
+      <div
+        v-else-if="matchHistory.length === 0"
+        class="py-5 border-t border-b border-ink/15 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm text-ink/65"
+      >
+        <span>Sin contiendas registradas aún.</span>
+        <span class="text-xs text-ink/45">
+          Las partidas finalizadas aparecerán aquí con su repetición ronda por ronda.
+        </span>
+      </div>
 
-        <div v-if="isLoadingHistory" class="py-12 text-center text-xs text-ink/50 animate-pulse">
-          Cargando historial de contiendas...
-        </div>
-
-        <div v-else-if="matchHistory.length === 0" class="card-subtle p-8 text-center space-y-2">
-          <Gamepad2 class="w-8 h-8 text-ink/30 mx-auto" />
-          <h3 class="font-bold text-sm text-ink">Aún no has participado en ninguna contienda</h3>
-          <p class="text-xs text-ink/60 max-w-sm mx-auto">
-            Crea tu primera sala o únete a una con PIN para comenzar a acumular puntos de arena y desbloquear logros.
-          </p>
-        </div>
-
-        <div v-else class="overflow-x-auto">
+      <!-- Estado: Poblado -->
+      <template v-else>
+        <!-- Vista Desktop (sm+): Tabla Editorial Plana -->
+        <div class="hidden sm:block overflow-x-auto">
           <table class="w-full text-left border-collapse text-sm">
             <thead>
-              <tr class="border-b border-ink/8 text-xs font-bold uppercase tracking-wider text-ink/50">
-                <th class="py-3 px-4">Sala</th>
-                <th class="py-3 px-4">Baraja</th>
-                <th class="py-3 px-4">Rondas</th>
-                <th class="py-3 px-4">Fecha</th>
-                <th class="py-3 px-4">Ganador</th>
-                <th class="py-3 px-4 text-right">Acción</th>
+              <tr class="border-b border-ink/15 text-xs font-medium text-ink/55">
+                <th class="py-2.5 pr-4 font-normal">Sala</th>
+                <th class="py-2.5 px-4 font-normal">Baraja</th>
+                <th class="py-2.5 px-4 font-normal">Formato</th>
+                <th class="py-2.5 px-4 font-normal">Ganador</th>
+                <th class="py-2.5 px-4 font-normal">Fecha</th>
+                <th class="py-2.5 pl-4 text-right font-normal">
+                  <span class="sr-only">Repetición</span>
+                </th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-ink/6">
+            <tbody class="divide-y divide-ink/12 border-b border-ink/15">
               <tr
                 v-for="match in matchHistory"
                 :key="match.id_match"
                 class="hover:bg-ink/3 transition-colors"
               >
-                <td class="py-3.5 px-4 font-black tabular-nums tracking-wider text-brand">
-                  {{ match.room_code }}
+                <td class="py-3.5 pr-4 font-bold tabular-nums text-ink">
+                  #{{ match.room_code }}
                 </td>
-                <td class="py-3.5 px-4 font-semibold text-ink">
+                <td class="py-3.5 px-4 text-ink">
                   {{ match.deck_title || 'Léxico Panhispánico' }}
                 </td>
-                <td class="py-3.5 px-4 font-medium tabular-nums text-ink/70">
-                  {{ match.total_rounds }} rondas
+                <td class="py-3.5 px-4 tabular-nums text-ink/75">
+                  {{ match.total_rounds }} rondas · {{ match.round_time_sec || 15 }}s
                 </td>
-                <td class="py-3.5 px-4 text-xs text-ink/60">
+                <td class="py-3.5 px-4 tabular-nums text-ink">
+                  <span>{{ formatWinner(match).name }}</span>
+                  <template v-if="formatWinner(match).score">
+                    <span class="mx-1 text-ink/40">·</span>
+                    <span class="text-ink/75">{{ formatWinner(match).score }}</span>
+                  </template>
+                </td>
+                <td class="py-3.5 px-4 tabular-nums text-ink/65">
                   {{ formatDate(match.finished_at) }}
                 </td>
-                <td class="py-3.5 px-4">
-                  <span
-                    v-if="match.podium && match.podium.length > 0"
-                    class="font-semibold text-ink text-xs flex items-center gap-1.5"
-                  >
-                    <Trophy class="w-3.5 h-3.5 text-warning shrink-0" />
-                    <span>{{ match.podium[0].name || match.podium[0].user_name }}</span>
-                    <span class="text-[11px] text-ink/45">({{ match.podium[0].score }} pts)</span>
-                  </span>
-                  <span v-else class="text-xs text-ink/40">Sin podio</span>
-                </td>
-                <td class="py-3.5 px-4 text-right">
+                <td class="py-3.5 pl-4 text-right whitespace-nowrap">
                   <button
                     type="button"
-                    class="btn-secondary text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
+                    class="font-bold text-xs text-ink hover:text-brand inline-flex items-center gap-1 transition-colors cursor-pointer"
                     @click="navigateToReplay(match.id_match)"
                   >
-                    <span>Ver Replay</span>
-                    <History class="w-3 h-3 text-ink/60" />
+                    <span>Ver repetición</span>
+                    <ArrowRight class="w-3.5 h-3.5 stroke-2" />
                   </button>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
+
+        <!-- Vista Móvil (< sm): Bloques de Filas Clave-Valor con Divisores de 1px -->
+        <div class="sm:hidden space-y-6">
+          <div
+            v-for="match in matchHistory"
+            :key="match.id_match"
+            class="border-t border-ink/20"
+          >
+            <dl class="divide-y divide-ink/12 border-b border-ink/15 text-xs">
+              <div class="py-2.5 flex items-center justify-between gap-4">
+                <dt class="text-ink/55">Sala</dt>
+                <dd class="font-bold tabular-nums text-ink">#{{ match.room_code }}</dd>
+              </div>
+              <div class="py-2.5 flex items-center justify-between gap-4">
+                <dt class="text-ink/55">Baraja</dt>
+                <dd class="text-ink font-medium truncate">{{ match.deck_title || 'Léxico Panhispánico' }}</dd>
+              </div>
+              <div class="py-2.5 flex items-center justify-between gap-4">
+                <dt class="text-ink/55">Formato</dt>
+                <dd class="tabular-nums text-ink">{{ match.total_rounds }} rondas · {{ match.round_time_sec || 15 }}s</dd>
+              </div>
+              <div class="py-2.5 flex items-center justify-between gap-4">
+                <dt class="text-ink/55">Ganador</dt>
+                <dd class="tabular-nums text-ink">
+                  <span>{{ formatWinner(match).name }}</span>
+                  <template v-if="formatWinner(match).score">
+                    <span class="mx-1 text-ink/40">·</span>
+                    <span>{{ formatWinner(match).score }}</span>
+                  </template>
+                </dd>
+              </div>
+              <div class="py-2.5 flex items-center justify-between gap-4">
+                <dt class="text-ink/55">Fecha</dt>
+                <dd class="tabular-nums text-ink/75">{{ formatDate(match.finished_at) }}</dd>
+              </div>
+            </dl>
+            <div class="pt-3">
+              <button
+                type="button"
+                class="font-bold text-xs text-ink hover:text-brand inline-flex items-center gap-1 transition-colors cursor-pointer"
+                @click="navigateToReplay(match.id_match)"
+              >
+                <span>Ver repetición</span>
+                <ArrowRight class="w-3.5 h-3.5 stroke-2" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </template>
+    </section>
   </div>
 </template>
