@@ -18,9 +18,9 @@ export default defineConfig({
     }
   },
   shortcuts: {
-    button: "h-12 px-4 border border-black border-solid rounded-none inline-flex items-center justify-center disabled:opacity-60",
+    button: "h-12 px-4 border border-black border-solid rounded-none inline-flex items-center justify-center disabled:opacity-50",
     "button-main": "button bg-main font-medium text-white",
     "button-side": "button bg-white text-main",
-    field: "h-12 px-4 border border-solid border-dull rounded-none font-medium placeholder-dull disabled:opacity-60",
+    field: "h-12 px-4 border border-solid border-dull rounded-none font-medium placeholder-dull disabled:opacity-50",
   },
 })

@@ -8,10 +8,10 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] Set up by hand after ticket 003: `@unocss/reset` imported in `main.ts`, `presetWind3`, Satoshi as the font, and the root `Taskfile.yml` `client:*` tasks point to `app`.
 - [x] Fontshare setup confirmed working with the UnoCSS web fonts preset.
 - [x] `.tickets/004-build-landing-page/` (`completed`): static mobile-first monochrome hero on `/` (`HomeView.vue`), Vue Router hash history setup (`router/index.ts`), and route placeholders for `/auth/sign-in` and `/auth/sign-up`.
+- [x] `.tickets/005-build-auth-pages/` (`completed`): two-column mobile-first `AuthLayout.vue` (inverted left editorial panel on desktop), `AuthHeader.vue`, `FormField.vue`, `regions.ts`, reactive `SignInView.vue`, and 2-step `SignUpView.vue` with optional full-name toggle and region grid.
 
 ## Next steps
-- [ ] Rebuild `auth/sign-in`.
-- [ ] Rebuild `auth/sign-up`.
+- [ ] Wire backend authentication (`useAuth` / Wails bindings) and error banner to `SignInView.vue` and `SignUpView.vue`, or decide the next route in scope.
 - [ ] Decide what happens to the Capacitor adapter (`capacitor.adapter.ts`) during the frontend rebuild.
 
 ## Agent workflow

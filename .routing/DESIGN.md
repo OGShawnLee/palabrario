@@ -38,11 +38,11 @@ Colors are theme aliases in `uno.config.ts`:
 - Shared (`button`): height `h-12`, horizontal padding `px-4`, border 1px solid black (`border border-black border-solid`), no rounding (`rounded-none`), content centered.
 - Main (`button-main`): black background (`bg-main`), medium weight (`font-medium`), white text.
 - Side (`button-side`): white background (`bg-white`), black text (`text-main`).
-- Disabled (all): `disabled:opacity-60`.
+- Disabled (all): `disabled:opacity-50`.
 - No hover, active, or focus styling yet. See PROGRESS.md.
 
 ## Fields
 - Shortcut: `field`.
 - Height `h-12`, horizontal padding `px-4`, 1px solid `dull` border (`border border-solid border-dull`), no rounding (`rounded-none`), medium weight (`font-medium`).
 - Placeholder color: `dull` (`placeholder-dull`).
-- Disabled: `disabled:opacity-60`.
+- Disabled: `disabled:opacity-50`.

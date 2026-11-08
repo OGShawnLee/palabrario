@@ -85,10 +85,10 @@ Copy without reading: `local-app/main.go`, `local-app/app.go`, `local-app/app_ar
    - Set the sans font to `Satoshi` from Fontshare. Check that the installed `@unocss/preset-web-fonts` supports the `fontshare` provider. If not, load Satoshi with an `@font-face` rule in `app/frontend/index.html` instead, and record the choice in the change log.
    - Define these theme colors: `main` = `black`, `side-dark` = `#262626`, `side-light` = `#A3A3A3`.
    - Define these shortcuts, with values taken from [DESIGN.md](../../.routing/DESIGN.md):
-     - `button`: `h-12 px-4 border-2 border-black border-solid rounded-none inline-flex items-center justify-center disabled:opacity-60`
+     - `button`: `h-12 px-4 border-2 border-black border-solid rounded-none inline-flex items-center justify-center disabled:opacity-50`
      - `button-main`: `button bg-main text-white`
      - `button-side`: `button bg-white text-black`
-     - `field`: `h-12 px-4 border-2 border border-solid rounded-none placeholder-side-light disabled:opacity-60`
+     - `field`: `h-12 px-4 border-2 border border-solid rounded-none placeholder-side-light disabled:opacity-50`
    - Do not add any other shortcut, and do not add hover, focus, or active variants.
 7. **Create the home page.**
    - Create `app/frontend/src/views/HomeView.vue`.
