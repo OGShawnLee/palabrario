@@ -8,6 +8,7 @@ Central routing directory for all agents. Read this first.
 - [DOMAIN.md](DOMAIN.md): domain entities, bounded contexts, and business rules.
 - [INTERFACES.md](INTERFACES.md): SOA contracts, DTOs, `sqlc` queries, and HTTP/WS endpoints.
 - [INFRASTRUCTURE.md](INFRASTRUCTURE.md): deployment, ports, Docker/Vagrant setup, and testing architecture.
+- [ROUTES.md](ROUTES.md): route table, layouts, and access rules. Read only when a ticket touches a route.
 
 ## Project
 - **Palabrario:** a Spanish vocabulary platform with a curated dictionary, SM-2 spaced repetition study, and real-time multiplayer arenas.
