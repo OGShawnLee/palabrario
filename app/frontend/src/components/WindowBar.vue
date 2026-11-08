@@ -4,7 +4,7 @@ import { OnClose, OnMaximize, OnMinimize } from "@bindings/palabrario/app/app.js
 
 <template>
   <header
-    class="sticky top-0 z-50 h-10 w-full bg-white border-b border-solid border-neutral-100 px-4 grid grid-cols-12 items-center select-none"
+    class="sticky top-0 z-50 h-10 w-full bg-ground border-b border-solid border-light px-4 grid grid-cols-12 items-center select-none"
     style="--wails-draggable: drag; -webkit-app-region: drag;"
     @dblclick="OnMaximize"
   >

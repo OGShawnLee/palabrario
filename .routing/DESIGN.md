@@ -6,23 +6,28 @@ Monochrome, minimal design for the minibrario rework. Defined decisions only. Op
 - No rounded corners anywhere (`border-radius: 0`).
 - Borders are sharp and solid.
 
-## Color
+## Color & Surface Hierarchy
 Colors are theme aliases in `uno.config.ts`:
-- `main` = `black`: main text, main button background, button border.
-- `side` = `#404040`: side (secondary) text.
-- `dull` = `#737373`: placeholder text, field border.
-- White `#FFFFFF`: page background, side button background, main button text.
+- `main` = `black`: main text, headings, active navigation links, main button background, button border.
+- `side` = `#404040`: default body/secondary text (set globally on `<body>`), inactive navigation links.
+- `dull` = `#737373`: placeholder text, field border, muted metadata (`@username`).
+- `ground` = `#FAFAFA`: default page canvas background (set globally on `<body>`), `WindowBar` background, `TopBar` translucent base (`bg-ground/50`), and `button-side` background.
+- `light` = `#F5F5F5`: subtle structural borders (`WindowBar`, `TopBar`, and Popover borders: `border-light`) and icon button background (`button-icon`).
+- White `#FFFFFF` (`bg-white`): elevated foreground surfaces (Popovers, dropdowns, modal cards, auth form panels) so they stand out cleanly against `bg-ground` without drop shadows; also main button text (`text-white`).
 - No dark mode.
 
 ## Typography
 - One font family: Satoshi, loaded from Fontshare through the UnoCSS web fonts preset.
-- Two text colors:
-  - Main text: black (`main`).
-  - Side text: dark gray (`side`).
+- Two primary text colors:
+  - Main text: black (`main`) for headings, logos, and primary interactive labels.
+  - Side text: dark gray (`side`) as the global default body text color.
 
-## Base styles
+## Base styles & Global Root (`index.html`)
 - UnoCSS preset: `presetWind3`.
 - Reset: `@unocss/reset/tailwind-compat.css`, imported in `app/frontend/src/main.ts` after `virtual:uno.css`.
+- Global root styling lives on `<body>` in `app/frontend/index.html`:
+  - `<body class="bg-ground text-side font-sans antialiased min-h-screen">`
+  - Layout wrappers (`App.vue`, `AppLayout.vue`) must not override the canvas with `bg-white` or set redundant root font classes; they inherit `bg-ground`, `text-side`, and `font-sans` from `index.html`.
 
 ## Components
 - Core components are defined as UnoCSS shortcuts in `app/frontend/uno.config.ts`.
@@ -34,10 +39,11 @@ Colors are theme aliases in `uno.config.ts`:
 - UI copy is in English. Button labels use title case (`Sign In`, `Sign Up`).
 
 ## Buttons
-- Shortcuts: `button`, `button-main`, `button-side`.
+- Shortcuts: `button`, `button-main`, `button-side`, `button-icon`.
 - Shared (`button`): height `h-12`, horizontal padding `px-4`, border 1px solid black (`border border-black border-solid`), no rounding (`rounded-none`), content centered.
 - Main (`button-main`): black background (`bg-main`), medium weight (`font-medium`), white text.
-- Side (`button-side`): white background (`bg-white`), black text (`text-main`).
+- Side (`button-side`): `ground` background (`bg-ground`), black text (`text-main`).
+- Icon (`button-icon`): `h-12 min-w-12 w-12 bg-light text-black disabled:opacity-50`.
 - Disabled (all): `disabled:opacity-50`.
 - No hover, active, or focus styling yet. See PROGRESS.md.
 

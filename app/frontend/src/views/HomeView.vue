@@ -3,7 +3,7 @@ import { RouterLink } from "vue-router"
 </script>
 
 <template>
-  <main class="min-h-screen w-full flex flex-col items-center justify-center text-center px-4 py-12 sm:px-6 md:py-16">
+  <main class="flex-1 w-full flex flex-col items-center justify-center text-center px-4 py-12 sm:px-6 md:py-16">
     <div class="w-full max-w-4xl mx-auto flex flex-col items-center gap-6 md:gap-8">
       <p class="text-xs font-bold tracking-widest uppercase text-dull select-none">The dictionary of our differences</p>
       <h1 class="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-main leading-none">
