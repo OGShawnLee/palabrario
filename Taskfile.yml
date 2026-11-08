@@ -123,31 +123,31 @@ tasks:
   # ============================================================================
   client:check:
     desc: 'Verificación rápida total del cliente (Bindings + Tipos TS + Vite + Go)'
-    dir: local-app
+    dir: app
     cmds:
       - wails3 task check
 
   client:build:
-    desc: 'Compila el binario de producción (local-app/bin/palabrario.exe)'
-    dir: local-app
+    desc: 'Compila el binario de producción (app/bin/palabrario.exe)'
+    dir: app
     cmds:
       - wails3 task build
 
   client:start:
     desc: 'Compila y abre la aplicación nativa en vivo'
-    dir: local-app
+    dir: app
     cmds:
       - wails3 task start
 
   client:dev:
     desc: 'Modo desarrollo en caliente (Vite + Wails hot reload en :9245)'
-    dir: local-app
+    dir: app
     cmds:
       - wails3 task dev
 
   client:bindings:
     desc: 'Regenera únicamente los bindings TypeScript desde Go'
-    dir: local-app
+    dir: app
     cmds:
       - wails3 task bindings
 

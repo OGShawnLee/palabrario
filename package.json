@@ -3,6 +3,7 @@
   "private": true,
   "workspaces": [
     "packages/*",
-    "local-app/frontend"
+    "local-app/frontend",
+    "app/frontend"
   ]
 }

@@ -17,13 +17,14 @@ Central routing directory for all agents. Read this first.
 
 ## Stack
 - **Backend (stable, untouched):** Go 1.24, Chi v5, sqlc, pgxpool. Services: [core-service](../core-service), [realtime-service](../realtime-service), [image-service](../image-service). PostgreSQL 17.
-- **Desktop client:** Wails 3 with Go. Frontend: Vue 3, Vite, Bun, UnoCSS, configured in [uno.config.ts](../uno.config.ts).
+- **Desktop client:** Wails 3 with Go. Frontend: Vue 3, Vite, Bun, UnoCSS, configured in [uno.config.ts](../app/frontend/uno.config.ts).
 - **Mobile client:** Capacitor, inside the frontend directory of the desktop app. Wails knows nothing of Capacitor, and Capacitor knows nothing of Wails.
-- **Font:** Supreme, via Fontshare.
+- **Font:** Satoshi, via Fontshare.
 - **Icons:** `lucide-vue-next`.
 
 ## Ground rules
 - Routes in scope: landing page, `auth/sign-in`, `auth/sign-up`. Others are decided as we move.
+- Mobile-first design: write base styles for mobile viewports first and scale up with responsive breakpoints (`sm:`, `md:`, `lg:`).
 - The UI is written in English from scratch. Existing Spanish UI strings are replaced by the rework, not translated.
 - The rework is route by route, one commit per route, merged to `main` when complete.
 - Commits: English, Conventional Commits, with a detailed body describing what changed.
@@ -40,5 +41,5 @@ Central routing directory for all agents. Read this first.
 - **Translators:** Gemini 3.8 Flash (`gemini-3.8-flash`) through the Antigravity provider, for documentation translation.
 - **Reviewer:** the user. The user reads the code and may spawn an agent.
 - Workers must not modify files outside their ticket's scope.
-- Workers do not edit [uno.config.ts](../uno.config.ts) directly. They log proposed shortcuts or tokens for the router to approve.
+- Workers do not edit [uno.config.ts](../app/frontend/uno.config.ts) directly. They log proposed shortcuts or tokens for the router to approve.
 - The router accepts a ticket only after its spec checks pass, not on the worker's self-report.

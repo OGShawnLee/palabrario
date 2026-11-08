@@ -1,10 +1,15 @@
 # PROGRESS
 
-Pending work for the minibrario rework. Decisions already made are in `DESIGN.md` and `CONTEXT.md`. Current stance: absolute minimalism. No styling is applied yet; these items are deferred until the routes are rebuilt.
+Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md` and `CONTEXT.md`. Current stance: absolute minimalism. Items below are deferred until the routes are rebuilt.
+
+## Done
+- [x] `.tickets/001-translate-domain-infrastructure/` and `.tickets/002-translate-interfaces/` (both `completed`): see Localization below.
+- [x] `.tickets/003-scaffold-app/` (`completed`): new app under `app/` (Wails 3, Vue 3, Vite, Bun, UnoCSS) with the Go services and bindings copied from `local-app/`, a Satoshi-based `uno.config.ts` with color aliases and the shortcuts `button`, `button-main`, `button-side`, `field`, and a minimal home page. `wails3 task check` and `wails3 task dev` pass.
+- [x] Set up by hand after ticket 003: `@unocss/reset` imported in `main.ts`, `presetWind3`, Satoshi as the font, and the root `Taskfile.yml` `client:*` tasks point to `app`.
+- [x] Fontshare setup confirmed working with the UnoCSS web fonts preset.
 
 ## Next steps
-- [ ] Configure `uno.config.ts`: font (Supreme via Fontshare preset), colors, border and sharp radius, and the core component shortcuts (buttons, fields).
-- [ ] Rebuild the root landing page.
+- [ ] Rebuild the root landing page on top of the scaffold: `.tickets/004-build-landing-page/` (`draft`) — static mobile-first hero adapted from `HomeHero.vue` + Vue Router setup (`/`, `/auth/sign-in`, `/auth/sign-up`).
 - [ ] Rebuild `auth/sign-in`.
 - [ ] Rebuild `auth/sign-up`.
 - [ ] Decide what happens to the Capacitor adapter (`capacitor.adapter.ts`) during the frontend rebuild.
@@ -31,10 +36,18 @@ Pending work for the minibrario rework. Decisions already made are in `DESIGN.md
 - [ ] Create a terminology glossary before translating, so technical terms (RBAC, FTS, SM-2, quorum) stay consistent.
   - Proposed entries from `001-translate-domain-infrastructure` (pending user review): `Canonical Lemma` (*Lema Canónico*), `Sense` (*Acepción / Sentido Dialectal*), `Anchor Dialect` (*Dialecto Ancla*), `Engaging Cultural Blurb` (*Reseña Cultural Amena*), `Transdialectal Heteronymy` (*Heteronimia Transdialectal*), `Prompt` (*Reactivo*), `Deck` (*Baraja*), `Ledger` (*Libro mayor*).
   - Proposed entries from `002-translate-interfaces` (pending user review): `Invitation Ticket` (*Boleto de invitación*), `Internal Prompt` (*Reactivo interno*), `Batch Flush` (*Descarga por lotes*), `Session Vault` (*Bóveda de sesión*).
-- [ ] Confirm the Fontshare setup works with the UnoCSS web fonts preset, using Supreme.
 
 ## Design system gaps
 - [ ] Define the remaining component classes (cards, lists, tables, dividers, feedback messages) when their routes are built.
+- [x] `field` border color defined (`border-dull`, `#737373`).
+- [x] Contrast increased: theme colors are now `main` (`black`), `side` (`#404040`), and `dull` (`#737373`, ~4.6:1 contrast on white).
+- [ ] The Satoshi font loads from the Fontshare CDN at runtime, so the app needs network access for it. Decide whether to self-host it.
+
+## Scaffold follow-ups
+- [ ] `app/build/config.yml` still has template values: company, product identifier, description, and copyright.
+- [ ] `app/build/` is git-ignored by the root `.gitignore` (`build/`). Decide whether to add a negation rule so it is tracked.
+- [ ] The `summary:` texts in `app/Taskfile.yml` are still in Spanish.
+- [x] Moved `@unocss/reset` from the root `package.json` to `app/frontend/package.json`.
 
 ## Hover and focus states
 - [ ] Define one focus indicator for all interactive elements (monochrome, visible, keyboard-operable). Required by RNF-USA-01 and WCAG 2.4.7. Do not remove focus styling.
