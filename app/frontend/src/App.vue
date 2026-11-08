@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { RouterView } from "vue-router"
+import WindowBar from "@/components/WindowBar.vue"
 </script>
 
 <template>
-  <RouterView />
+  <div class="min-h-screen w-full flex flex-col bg-white text-main">
+    <WindowBar />
+    <div class="flex-1 flex flex-col">
+      <RouterView />
+    </div>
+  </div>
 </template>

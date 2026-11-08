@@ -9,8 +9,10 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] Fontshare setup confirmed working with the UnoCSS web fonts preset.
 - [x] `.tickets/004-build-landing-page/` (`completed`): static mobile-first monochrome hero on `/` (`HomeView.vue`), Vue Router hash history setup (`router/index.ts`), and route placeholders for `/auth/sign-in` and `/auth/sign-up`.
 - [x] `.tickets/005-build-auth-pages/` (`completed`): two-column mobile-first `AuthLayout.vue` (inverted left editorial panel on desktop), `AuthHeader.vue`, `FormField.vue`, `regions.ts`, reactive `SignInView.vue`, and 2-step `SignUpView.vue` with optional full-name toggle and region grid.
+- [x] `.tickets/006-build-window-bar/` (`completed`): frameless window setup (`app/main.go`), Wails v3 window methods (`OnMinimize`, `OnMaximize`, `OnClose` in `app/app_window.go`), and macOS-style `WindowBar.vue` wired into `App.vue`.
 
 ## Next steps
+- [ ] Build `TopBar.vue`, universal `AppLayout.vue`, and `/dictionary` + `/arena` route placeholders: `.tickets/007-build-topbar-and-app-layout/` (`draft`).
 - [ ] Wire backend authentication (`useAuth` / Wails bindings) and error banner to `SignInView.vue` and `SignUpView.vue`, or decide the next route in scope.
 - [ ] Decide what happens to the Capacitor adapter (`capacitor.adapter.ts`) during the frontend rebuild.
 
