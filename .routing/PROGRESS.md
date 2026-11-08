@@ -13,11 +13,14 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] `.tickets/007-build-topbar-and-app-layout/` (`completed`): responsive `TopBar.vue` (`max-w-6xl` + `grid-cols-12` center alignment), `TopBarMobileMenu.vue` (full-screen Reka UI `Dialog`), `TopBarDesktopStatus.vue` (Reka UI user status `Popover`), `TOP-BAR.md` state machine docs, universal `AppLayout.vue` wrapping non-auth routes, and `/dictionary`, `/arena`, `/studio`, `/settings` route placeholders.
 - [x] `.tickets/008-translate-readme/` (`completed`): translated `README.md` to English, updated architectural map links to `.routing/`, reworked Section 9 (Project Status & Roadmap), and removed Section 10.
 - [x] `.tickets/012-translate-routes-map/` (`completed`): created standalone `.routing/ROUTES.md` canonical route inventory table (9 active/planned routes) and linked from `.routing/CONTEXT.md`.
+- [x] `.tickets/013-build-search-modal/` (`completed`): built responsive floating search combobox modal (`SearchModal.vue`) with Reka UI Dialog, `@vueuse/core` shortcuts, dynamic featured entry sync on keyboard navigation, and `--uno` scoped styles.
 
 ## Draft tickets
 - [ ] `.tickets/009-build-dictionary-route/` (`draft`): build the `/dictionary` route and search/explore view.
 - [ ] `.tickets/010-build-collections-route/` (`draft`): build the `/collections` public catalog.
 - [ ] `.tickets/011-build-decks-route/` (`draft`): build the `/decks` public catalog.
+- [ ] `.tickets/014-backend-search-fts/` (`draft`): backend schema & sqlc FTS for decks & collections, plus expanded `WordSearchResult` (`part_of_speech`, `region_name`).
+- [ ] `.tickets/015-integrate-search-modal/` (`draft`): frontend integration wiring `SearchModal.vue` to live Wails bindings from ticket 014 with debouncing.
 
 ## Next steps
 - [ ] Wire backend authentication (`useAuth` / Wails bindings) and error banner to `SignInView.vue` and `SignUpView.vue`, or decide the next route in scope.

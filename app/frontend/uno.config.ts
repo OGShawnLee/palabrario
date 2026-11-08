@@ -1,4 +1,4 @@
-import { defineConfig, presetWind3, presetWebFonts } from "unocss"
+﻿import { defineConfig, presetWind3, presetWebFonts, transformerDirectives } from "unocss"
 
 export default defineConfig({
   presets: [
@@ -9,6 +9,11 @@ export default defineConfig({
         sans: "Satoshi",
       },
     }),
+  ],
+  transformers: [
+    transformerDirectives({
+      applyVariable: "--uno"
+    })
   ],
   theme: {
     colors: {
@@ -23,7 +28,10 @@ export default defineConfig({
     button: "h-12 px-4 border border-black border-solid rounded-none inline-flex items-center justify-center disabled:opacity-50",
     "button-main": "button bg-main font-medium text-white",
     "button-side": "button bg-ground text-main",
+    "button-side--light": "button bg-white text-main border-light",
     "button-icon": "h-12 min-w-12 w-12 bg-light text-black disabled:opacity-50",
+    binding: "h-6 px-2 bg-light font-black text-xs text-black inline-flex items-center justify-center rounded-none",
     field: "h-12 px-4 border border-solid border-dull rounded-none font-medium placeholder-dull disabled:opacity-50",
+    "dialog-overlay": "fixed inset-0 z-50 bg-black/40 backdrop-filter backdrop-blur-xs"
   },
 })

@@ -1,4 +1,4 @@
-# DESIGN
+﻿# DESIGN
 
 Monochrome, minimal design for the minibrario rework. Defined decisions only. Open items are tracked in PROGRESS.md. The source of truth for values is `app/frontend/uno.config.ts`; this file describes the intent.
 
@@ -37,6 +37,15 @@ Colors are theme aliases in `uno.config.ts`:
 
 ## Language
 - UI copy is in English. Button labels use title case (`Sign In`, `Sign Up`).
+
+## Keyboard Key Bindings
+- Shortcut: binding.
+- Height h-6, horizontal padding px-3, light gray background (bg-light), medium weight (font-medium), black text (text-black), sharp corners (rounded-none).
+- Accompanied by descriptive text (text-xs text-black), wrapped together in a container (flex items-center gap-2).
+
+## Regional Flags Rule
+- It is strictly forbidden to render flag_emoji anywhere in the app (poor rendering on Windows).
+- Always render the full textual name of the region (e.g. Cuba, Chile, Mexico), using REGIONS from app/frontend/src/data/regions.ts. Regional codes (e.g. CU, CL, MX) and flag emojis are strictly forbidden.
 
 ## Buttons
 - Shortcuts: `button`, `button-main`, `button-side`, `button-icon`.

@@ -6,6 +6,8 @@ import TopBarDesktopStatus from "@/components/TopBarDesktopStatus.vue"
 import TopBarMobileMenu from "@/components/TopBarMobileMenu.vue"
 import type { AuthState, TopBarUser } from "@/types/user"
 
+const emit = defineEmits<{ "open-search": [] }>()
+
 const authState = ref<AuthState>("logged-in")
 
 const user: TopBarUser = {
@@ -33,7 +35,12 @@ function signOut() {
       </nav>
 
       <div class="col-span-6 md:col-span-4 flex items-center justify-end gap-3">
-        <button type="button" class="button-icon inline-flex items-center justify-center" aria-label="Search">
+        <button
+          type="button"
+          class="button-icon inline-flex items-center justify-center cursor-pointer"
+          aria-label="Search"
+          @click="emit('open-search')"
+        >
           <Search class="w-5 h-5" />
         </button>
         <TopBarMobileMenu :auth-state="authState" :user="user" @sign-out="signOut" />

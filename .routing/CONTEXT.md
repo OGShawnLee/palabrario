@@ -1,4 +1,4 @@
-# CONTEXT
+﻿# CONTEXT
 
 Central routing directory for all agents. Read this first.
 
@@ -24,6 +24,7 @@ Central routing directory for all agents. Read this first.
 - **Icons:** `lucide-vue-next`.
 
 ## Ground rules
+- Forbidden to render `flag_emoji` or dialect codes (e.g. `CU`, `CL`, `MX`) anywhere in the app. Always render the full textual name of the region (e.g. `Cuba`, `Chile`, `Mexico`).
 - Routes in scope: landing page, `auth/sign-in`, `auth/sign-up`. Others are decided as we move.
 - Mobile-first design: write base styles for mobile viewports first and scale up with responsive breakpoints (`sm:`, `md:`, `lg:`).
 - The UI is written in English from scratch. Existing Spanish UI strings are replaced by the rework, not translated.
@@ -44,3 +45,5 @@ Central routing directory for all agents. Read this first.
 - Workers must not modify files outside their ticket's scope.
 - Workers do not edit [uno.config.ts](../app/frontend/uno.config.ts) directly. They log proposed shortcuts or tokens for the router to approve.
 - The router accepts a ticket only after its spec checks pass, not on the worker's self-report.
+
+
