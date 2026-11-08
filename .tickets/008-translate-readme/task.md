@@ -1,52 +1,53 @@
-﻿# 008 — Translate README.md to English and update architecture references
+# 008 — Translate README.md to English and Simplify Architecture
 
 | Field | Value |
 | :--- | :--- |
 | **ID** | 008 |
-| **Status** | draft |
+| **Status** | completed |
 | **Model** | Gemini 3.8 Flash, `thinking_level: high` (`gemini-3.8-flash`, Antigravity provider) |
 | **Role** | Translator |
 | **Spec** | [spec.md](spec.md) |
 
-> **Draft Note / Blocker:**  
-> This ticket is held in `draft` status until `.routing/` has stable and complete documentation. The existing `README.md` references the older `.context/` directory and earlier monorepo layout (`local-app/`, `packages/ui`). When activated, it will translate `README.md` to English and retarget architecture links to `.routing/`.
-
 ## Scope
 
-May create or edit:
-- `README.md` (edit in place)
+May edit:
+- `README.md`
+- `.tickets/008-translate-readme/changelog.md` (create)
 
 Must not touch:
-- `.routing/` (read-only reference)
-- `.context/` (legacy reference, read-only)
 - `app/` or any application code
 - `core-service/`, `realtime-service/`, `image-service/`, `pkg/`, `sql/`
+- `.context/`
+- `.routing/` (read-only reference)
 - Any file outside `README.md` and this ticket folder
 
 ## Inputs
 
-- [README.md](../../README.md): source in Spanish.
-- [.routing/CONTEXT.md](../../.routing/CONTEXT.md): active context and architecture overview.
-- [.routing/PROGRESS.md](../../.routing/PROGRESS.md): current progress and roadmap.
-- Terminology glossary: retain standard terms unchanged (FTS, SM-2, RBAC, JWT, WebSocket, Wails v3, Chi, etc.).
+- [README.md](../../README.md): Spanish source.
+- [.routing/CONTEXT.md](../../.routing/CONTEXT.md): architecture context.
+- [.routing/PROGRESS.md](../../.routing/PROGRESS.md): active progress.
+- [.routing/ROUTES.md](../../.routing/ROUTES.md): active routes.
 
 ## Task
 
-1. Translate `README.md` into clear, professional technical English.
-2. Update the "Architectural Documentation Map" table:
-   - Redirect links from `.context/*` to the corresponding translated `.routing/*` files where available ([`.routing/CONTEXT.md`](../../.routing/CONTEXT.md), [`.routing/DOMAIN.md`](../../.routing/DOMAIN.md), [`.routing/INTERFACES.md`](../../.routing/INTERFACES.md), [`.routing/INFRASTRUCTURE.md`](../../.routing/INFRASTRUCTURE.md)).
-   - Note any pending documents clearly.
-3. Update project structure sections to reflect the current `app/` desktop client on `minibrario` while preserving the stable Go backend services description.
-4. Keep all shields/badges, formatting, and tables aligned.
-5. Write the change log in `changelog.md`.
+1. Translate `README.md` in full into clear, professional technical English.
+2. **Update the Architectural Documentation Map table**:
+   - Link only verified files: `.routing/CONTEXT.md`, `.routing/PROGRESS.md`, `.routing/ROUTES.md`, `.routing/DESIGN.md`, `.routing/DOMAIN.md`, `.routing/INTERFACES.md`, `SCHEMA_FINAL.sql`, `.routing/INFRASTRUCTURE.md`, and `.context/academic/`.
+   - Remove references to legacy files that have no `.routing/` counterpart (`PALETTE.md`, `UI_FLOWS.md`, `UI_SPECIFICATION.md`, and `.context/PLAN.md`).
+3. **Rework Section 9**:
+   - Retitle to `## 🗺️ 9. Project Status & Roadmap`.
+   - State that the backend architecture is 100% complete and verified (Go 1.24, PostgreSQL 17, `core-service`, `realtime-service`, `image-service`, 16 Use Cases, 13 Business Rules, RAM test suite).
+   - State that the frontend is currently undergoing a complete from-scratch UI rewrite under `app/` (Wails v3, Vue 3, UnoCSS, monochrome design system) tracked in `.routing/PROGRESS.md` and `.routing/ROUTES.md`.
+4. **Remove Section 10**:
+   - Completely delete `## 📖 10. Bitácora de la Imprenta: Los Tejedores`.
+5. Keep sections 1 through 8, the badges, Docker instructions, test harness, seed data tables, and License intact in English.
+6. Write `.tickets/008-translate-readme/changelog.md`.
 
 ## Verification
 
-All checks are listed in [spec.md](spec.md). The router runs them before accepting the ticket, not the worker's self-report.
+All checks are listed in [spec.md](spec.md).
 
 ## Change log
 
-Write `.tickets/008-translate-readme/changelog.md` with:
-- Line counts (source vs translated).
-- Documentation links updated to `.routing/`.
-- Unresolved terms or questions for the user.
+Write `.tickets/008-translate-readme/changelog.md` detailing lines translated, removed sections, and link updates.
+

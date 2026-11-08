@@ -11,10 +11,10 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] `.tickets/005-build-auth-pages/` (`completed`): two-column mobile-first `AuthLayout.vue` (inverted left editorial panel on desktop), `AuthHeader.vue`, `FormField.vue`, `regions.ts`, reactive `SignInView.vue`, and 2-step `SignUpView.vue` with optional full-name toggle and region grid.
 - [x] `.tickets/006-build-window-bar/` (`completed`): frameless window setup (`app/main.go`), Wails v3 window methods (`OnMinimize`, `OnMaximize`, `OnClose` in `app/app_window.go`), and macOS-style `WindowBar.vue` wired into `App.vue`.
 - [x] `.tickets/007-build-topbar-and-app-layout/` (`completed`): responsive `TopBar.vue` (`max-w-6xl` + `grid-cols-12` center alignment), `TopBarMobileMenu.vue` (full-screen Reka UI `Dialog`), `TopBarDesktopStatus.vue` (Reka UI user status `Popover`), `TOP-BAR.md` state machine docs, universal `AppLayout.vue` wrapping non-auth routes, and `/dictionary`, `/arena`, `/studio`, `/settings` route placeholders.
+- [x] `.tickets/008-translate-readme/` (`completed`): translated `README.md` to English, updated architectural map links to `.routing/`, reworked Section 9 (Project Status & Roadmap), and removed Section 10.
 - [x] `.tickets/012-translate-routes-map/` (`completed`): created standalone `.routing/ROUTES.md` canonical route inventory table (9 active/planned routes) and linked from `.routing/CONTEXT.md`.
 
 ## Draft tickets
-- [ ] `.tickets/008-translate-readme/` (`draft`): translate `README.md` to English and retarget legacy `.context/` links to `.routing/` (held until `.routing/` documentation stabilizes).
 - [ ] `.tickets/009-build-dictionary-route/` (`draft`): build the `/dictionary` route and search/explore view.
 - [ ] `.tickets/010-build-collections-route/` (`draft`): build the `/collections` public catalog.
 - [ ] `.tickets/011-build-decks-route/` (`draft`): build the `/decks` public catalog.
@@ -41,7 +41,7 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [ ] Translate the codebase documentation to English (`.context/`, `README.md`, `AGENT_WORKFLOW.md`, `proposals/`). Translators: Gemini 3.8 Flash. Flash tends to delete large chunks, so each translation ticket must check that the translated length is within 100 lines of the Spanish original.
   - [x] `.tickets/001-translate-domain-infrastructure/` (`completed`) — translated `.context/DOMAIN.md` (excluding section 3.6) to `.routing/DOMAIN.md` and `.context/INFRASTRUCTURE.md` to `.routing/INFRASTRUCTURE.md`.
   - [x] `.tickets/002-translate-interfaces/` (`completed`) — translated `.context/INTERFACES.md` into `.routing/INTERFACES.md`.
-  - Pending translation targets: `README.md`, `AGENT_WORKFLOW.md`, `proposals/`.
+  - Pending translation targets: `AGENT_WORKFLOW.md`, `proposals/`.
 - [ ] Create a terminology glossary before translating, so technical terms (RBAC, FTS, SM-2, quorum) stay consistent.
   - Proposed entries from `001-translate-domain-infrastructure` (pending user review): `Canonical Lemma` (*Lema Canónico*), `Sense` (*Acepción / Sentido Dialectal*), `Anchor Dialect` (*Dialecto Ancla*), `Engaging Cultural Blurb` (*Reseña Cultural Amena*), `Transdialectal Heteronymy` (*Heteronimia Transdialectal*), `Prompt` (*Reactivo*), `Deck` (*Baraja*), `Ledger` (*Libro mayor*).
   - Proposed entries from `002-translate-interfaces` (pending user review): `Invitation Ticket` (*Boleto de invitación*), `Internal Prompt` (*Reactivo interno*), `Batch Flush` (*Descarga por lotes*), `Session Vault` (*Bóveda de sesión*).

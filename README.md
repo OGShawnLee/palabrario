@@ -14,186 +14,184 @@
 
 <br/>
 
-> **Plataforma Colaborativa y Gamificada de Aprendizaje, Descubrimiento y Preservación del Léxico Dialectal Panhispánico.**  
-> *Proyecto desarrollado para la cátedra de Despliegue de Software (Software Deployment).*
+> **Collaborative and Gamified Platform for Learning, Discovering, and Preserving Pan-Hispanic Dialectal Vocabulary.**  
+> *Project developed for the Software Deployment (Despliegue de Software) course.*
 
 </div>
 
 ---
 
-## 🧭 Mapa de Documentación Arquitectónica (Single Source of Truth)
+## 🧭 Architectural Documentation Map (Single Source of Truth)
 
-Toda decisión técnica en Palabrario se rige bajo el enfoque **Backend-First & Contract-First**. Consulta la fuente de verdad especializada según tu área de trabajo:
+All technical decisions in Palabrario follow a **Backend-First & Contract-First** approach. Consult the specialized source of truth according to your area of work:
 
-| Documento | Propósito Arquitectónico |
+| Document | Architectural Purpose |
 | :--- | :--- |
-| **[`.context/CONTEXT.md`](.context/CONTEXT.md)** | **Punto de Entrada Maestro:** Reglas anti-alucinación, stack 100% Go, puente IPC Wails y enrutador maestro. |
-| **[`.context/PLAN.md`](.context/PLAN.md)** | Estado de avance consolidado y hoja de ruta atómica de desarrollo (Sub-Fases 5.1 a 5.9). |
-| **[`.context/DOMAIN.md`](.context/DOMAIN.md)** | Diseño Guiado por el Dominio (DDD), las 24 entidades, reglas de negocio (`RN01–RN13`) y fórmulas SM-2. |
-| **[`.context/INTERFACES.md`](.context/INTERFACES.md)** | Contratos SOA en Go 1.24, DTOs de [`pkg/models`](pkg/models), consultas `sqlc`, eventos WebSocket y catálogo de endpoints. |
-| **[`SCHEMA_FINAL.sql`](SCHEMA_FINAL.sql)** | DDL canónico de PostgreSQL 17 (3NF, extensiones `unaccent`/`pg_trgm`, triggers relacionales `RN06`/`RN07` y semillas). |
-| **[`.context/PALETTE.md`](.context/PALETTE.md)** | Sistema de diseño *"Imprenta Táctil Ilustrada"*, 4 pilares de color, tokens UnoCSS y tipografía `Satoshi`. |
-| **[`.context/ROUTES_MAP.md`](.context/ROUTES_MAP.md)** | Mapa de 23 rutas hash enlazadas 1:1 con Casos de Uso, permisos, DTOs de Go y llamadas `IPalabrarioAPI`. |
-| **[`.context/UI_FLOWS.md`](.context/UI_FLOWS.md)** | Diagramas de secuencia Mermaid E2E (Doble autenticación, Quórum tripartito, SM-2 y Arena WebSockets). |
-| **[`.context/UI_SPECIFICATION.md`](.context/UI_SPECIFICATION.md)** | Especificación técnica del frontend polimórfico (Wails V3 Desktop + Capacitor PWA) y adaptador `IPalabrarioAPI`. |
-| **[`.context/INFRASTRUCTURE.md`](.context/INFRASTRUCTURE.md)** | Guía de contenedores Docker Compose, monorepo Go, `sqlc` y máquina virtual Vagrant Debian 12. |
-| **[`.context/academic/`](.context/academic)** | Entregables académicos formales autocontenidos (`1-PROJECT-SPECIFICATION.md`, etc.). |
+| **[`.routing/CONTEXT.md`](.routing/CONTEXT.md)** | **Master Entry Point:** Agent routing, anti-hallucination rules, 100% Go stack, Wails IPC bridge, and repo conventions. |
+| **[`.routing/PROGRESS.md`](.routing/PROGRESS.md)** | Active UI rewrite progress, sprint backlog, pending tasks, and open design gaps. |
+| **[`.routing/ROUTES.md`](.routing/ROUTES.md)** | Route table, layouts, route guards, DTO mapping, and access rules. |
+| **[`.routing/DESIGN.md`](.routing/DESIGN.md)** | Monochrome design system specifications (tokens, typography, buttons, inputs, components). |
+| **[`.routing/DOMAIN.md`](.routing/DOMAIN.md)** | Domain-Driven Design (DDD), 24 entities, business rules (`RN01–RN13`), and SM-2 formulas. |
+| **[`.routing/INTERFACES.md`](.routing/INTERFACES.md)** | SOA contracts in Go 1.24, DTOs in [`pkg/models`](pkg/models), `sqlc` queries, WebSocket events, and endpoint catalog. |
+| **[`SCHEMA_FINAL.sql`](SCHEMA_FINAL.sql)** | Canonical PostgreSQL 17 DDL (3NF, `unaccent`/`pg_trgm` extensions, relational triggers `RN06`/`RN07`, and seed data). |
+| **[`.routing/INFRASTRUCTURE.md`](.routing/INFRASTRUCTURE.md)** | Docker Compose containers guide, Go monorepo, `sqlc`, RAM test harness, and Vagrant Debian 12 setup. |
+| **[`.context/academic/`](.context/academic)** | Formal self-contained academic deliverables (`1-PROJECT-SPECIFICATION.md`, etc.). |
 
 ---
 
-## 🎯 1. Visión y Propósito del Proyecto
+## 🎯 1. Project Vision & Purpose
 
-El español cuenta con más de **500 millones de hablantes nativos** distribuidos en más de 20 naciones. Aunque compartimos una raíz común, la riqueza léxica regional y los choques semánticos (*falsos amigos* dialectales) plantean un reto fascinante:
+Spanish has over **500 million native speakers** distributed across more than 20 nations. While we share a common root, regional lexical richness and semantic clashes (dialectal *false friends*) present a fascinating challenge:
 
-- Una **guagua** es un autobús en Cuba y Canarias, pero un bebé de brazos en Chile y la región andina.
-- Un **popote** (México) es un **pitillo** (Colombia/Venezuela), una **bombilla** (Chile) o un **sorbete/pajita** (Argentina/España).
-- Expresiones afectivas profundas como **apapachar** (*acariciar con el alma*) carecen de traducción unívoca y constituyen patrimonio cultural vivo.
+- A **guagua** is a bus in Cuba and the Canary Islands, but an infant/baby in Chile and the Andean region.
+- A **popote** (Mexico) is a **pitillo** (Colombia/Venezuela), a **bombilla** (Chile), or a **sorbete/pajita** (Argentina/Spain).
+- Deep emotional expressions such as **apapachar** (*to embrace or caress with the soul*) lack a single direct translation and constitute living cultural heritage.
 
-**Palabrario** convierte este choque cultural en un ecosistema de aprendizaje lúdico y riguroso:
-1. **Diccionario Dialectal Vivo (`CU05, CU06`):** Búsqueda fonética trigramática GIN (`pg_trgm` + `unaccent`), nivel CEFR (`A1–C2`), advertencias de tabú y heterónimos transdialectales (*"¿Cómo se dice allá?"*).
-2. **Curaduría por Quórum Tripartito (`CU07, CU08, CU09`):** Ninguna acepción propuesta (`DRAFT`) pasa a producción sin acumular **3 votos favorables independientes** (**RN06**), con prohibición estricta de auto-aprobación por trigger relacional (**RN07**).
-3. **Studio y Motor SM-2 (`CU10, CU11, CU12, CU13`):** Organización en barajas y colecciones con curva de olvido automatizada (**Algoritmo SuperMemo SM-2**, **RN09**) y libro mayor de experiencia inmutable (`xp_transactions`, **RN11**).
-4. **Arena Multijugador en Tiempo Real (`CU14, CU15, CU16`):** Salas de trivia sincronizadas por código PIN con WebSockets en memoria RAM, cálculo de puntos por velocidad (**RN10**), sucesión de anfitrión automática y consolidación transaccional por lote (*Batch Flush*) con Replay en 3NF.
+**Palabrario** transforms this cultural clash into an engaging and rigorous learning ecosystem:
+1. **Living Dialectal Dictionary (`CU05, CU06`):** Trigram phonetic GIN search (`pg_trgm` + `unaccent`), CEFR levels (`A1-C2`), taboo warnings, and transdialectal heteronyms (*"How do they say it over there?"*).
+2. **Tripartite Quorum Curation (`CU07, CU08, CU09`):** No proposed sense (`DRAFT`) moves to production without gathering **3 independent affirmative votes** (**RN06**), with strict prevention of self-approval enforced via a relational database trigger (**RN07**).
+3. **Studio and SM-2 Engine (`CU10, CU11, CU12, CU13`):** Organization into study decks and collections with an automated forgetting curve (**SuperMemo SM-2 Algorithm**, **RN09**) and an immutable experience ledger (`xp_transactions`, **RN11**).
+4. **Real-Time Multiplayer Arena (`CU14, CU15, CU16`):** PIN-synchronized trivia rooms powered by in-memory RAM WebSockets, speed-weighted scoring (**RN10**), automatic host succession, and transactional batch flushing (*Batch Flush*) with 3NF Replay history.
 
 ---
 
-## 🏛️ 2. Arquitectura de Red y Decisiones de Ingeniería (100% Go 1.24)
+## 🏗️ 2. Network Architecture & Engineering Decisions (100% Go 1.24)
 
-Palabrario está estructurado como un **Monorepo 100% Go 1.24** con tipado integral end-to-end (`PostgreSQL 17` $\to$ `sqlc` $\to$ `pkg/models` $\to$ `wailsjs` $\to$ `Vue 3`). Su huella de recursos es mínima (`< 15 MiB` de memoria RAM combinada en los 3 servicios backend):
+Palabrario is structured as a **100% Go 1.24 Monorepo** with comprehensive end-to-end typing (`PostgreSQL 17` $\to$ `sqlc` $\to$ `pkg/models` $\to$ `wailsjs` $\to$ `Vue 3`). Its resource footprint is minimal (`< 15 MiB` combined RAM across the 3 backend services):
 
 ```mermaid
 flowchart TD
-    subgraph Client["Cliente Multiplataforma (Desktop Wails V3 + Móvil Capacitor PWA)"]
-        UI["WebView Frontend (Vue 3 + TS + UnoCSS + Reka UI)\n• Contrato único: IPalabrarioAPI = typeof WailsAppBridge\n• Inmune a XSS: No manipula JWT directamente en escritorio\n• Eventos en vivo vía ArenaEventBus"]
-        BFF["Puente Nativo Go BFF (local-app/app.go)\n• Custodia el JWT en RAM privada (sync.RWMutex)\n• Importa pkg/models directamente vía go.work"]
-        UI <-->|"WailsAdapter (IPC Nativo)\no CapacitorAdapter (PWA Móvil)"| BFF
+    subgraph Client["Cross-Platform Client (Desktop Wails V3 + Mobile Capacitor PWA)"]
+        UI["WebView Frontend (Vue 3 + TS + UnoCSS + Reka UI)\n  Single Contract: IPalabrarioAPI = typeof WailsAppBridge\n  XSS Immune: Never handles JWT directly on desktop\n  Live events via ArenaEventBus"]
+        BFF["Native Go BFF Bridge (app/main.go / local-app)\n  Safeguards JWT in private RAM (sync.RWMutex)\n  Directly imports pkg/models via go.work"]
+        UI <-->|"WailsAdapter (Native IPC)\nor CapacitorAdapter (Mobile PWA)"| BFF
     end
 
-    subgraph Backend["Servicios Backend Satélite (Monorepo Go 1.24)"]
-        Core["⚡ core-service (:8000)\nGo 1.24 + Chi v5 + sqlc + pgxpool\n• Identity & Perfiles (CU01)\n• Gobernanza & Boletos (CU02-CU04)\n• Diccionario & FTS (CU05-CU06)\n• Quórum Tripartito (CU07-CU09)\n• Studio & SM-2 (CU10-CU13)\n• Arena Prepare & Consolidate (CU14-CU16)"]
-        Realtime["📡 realtime-service (:8001)\nGo 1.24 + Chi v5 + WebSockets\n• ArenaHub en RAM (Goroutines por sala)\n• Temporizador de ronda (RN10)\n• Reconexión en ventana de 10s (RNF-CON-02)\n• Sucesión de host automática\n• Cliente S2S con sub-llave SHA-256"]
-        ImageSvc["🖼️ image-service (:8002)\nGo 1.24 + Chi v5\n• Validación de magic bytes y limpieza EXIF\n• Filtro heurístico NSFW en Go puro\n• Optimización WebP y entrega con nosniff"]
+    subgraph Backend["Satellite Backend Services (Go 1.24 Monorepo)"]
+        Core["⚙️ core-service (:8000)\nGo 1.24 + Chi v5 + sqlc + pgxpool\n  Identity & Profiles (CU01)\n  Governance & Tickets (CU02-CU04)\n  Dictionary & FTS (CU05-CU06)\n  Tripartite Quorum (CU07-CU09)\n  Studio & SM-2 (CU10-CU13)\n  Arena Prepare & Consolidate (CU14-CU16)"]
+        Realtime["⚡ realtime-service (:8001)\nGo 1.24 + Chi v5 + WebSockets\n  ArenaHub in RAM (Goroutines per room)\n  Round timer (RN10)\n  10s grace window reconnection (RNF-CON-02)\n  Automatic host succession\n  S2S client with SHA-256 sub-key"]
+        ImageSvc["🖼️ image-service (:8002)\nGo 1.24 + Chi v5\n  Magic bytes validation & EXIF stripping\n  Pure-Go NSFW heuristic filter\n  WebP optimization & nosniff delivery"]
     end
 
-    subgraph Persistence["Persistencia Relacional ACID"]
-        PG[("🐘 PostgreSQL 17 Alpine (:5432)\n• 24 Tablas en 3NF (SCHEMA_FINAL.sql)\n• Triggers RN06 (Quórum 3) y RN07 (Anti-autoaprobación)\n• Búsqueda GIN: unaccent + pg_trgm + tsvector\n• Historial de Replay (match_rounds + quiz_attempts)\n• Ledger inmutable xp_transactions")]
+    subgraph Persistence["ACID Relational Persistence"]
+        PG[("🐘 PostgreSQL 17 Alpine (:5432)\n  24 Tables in 3NF (SCHEMA_FINAL.sql)\n  Triggers RN06 (Quorum 3) & RN07 (Anti-self-approval)\n  GIN Search: unaccent + pg_trgm + tsvector\n  Replay History (match_rounds + quiz_attempts)\n  Immutable Ledger xp_transactions")]
     end
 
     BFF -->|"HTTP/JSON + Bearer JWT (:8000)"| Core
-    BFF <-->|"WebSockets bidireccional (:8001)"| Realtime
+    BFF <-->|"Bidirectional WebSockets (:8001)"| Realtime
     BFF -->|"Multipart/Form-Data (:8002)"| ImageSvc
 
     Core -->|"pgxpool v5 (compile-time sqlc)"| PG
-    Realtime -->|"JWT S2S (sub-llave SHA-256) -> Package & Consolidate"| Core
+    Realtime -->|"S2S JWT (SHA-256 sub-key) -> Package & Consolidate"| Core
 ```
 
-### Justificación de Ingeniería y Trade-offs de Despliegue
+### Engineering Rationale & Deployment Trade-offs
 
-| Componente | Elección Tecnológica | Alternativa Descartada | Justificación Técnica de Despliegue |
+| Component | Technology Choice | Rejected Alternative | Technical Deployment Rationale |
 | :--- | :--- | :--- | :--- |
-| **Backend Unificado** | **Golang (Go 1.24)** | Node.js / Python / Java | Binarios estáticos ultra-ligeros. Consumo de **< 5 MiB RAM** por servicio en Docker. Compartición directa de tipos con `pkg/models` y `pkg/auth` sin duplicación de esquemas. |
-| **Acceso a Datos** | **`sqlc` + `pgxpool v5`** | ORMs pesados (GORM, Prisma) | Consultas SQL 100% tipadas en compilación. Cero costo de reflexión en runtime, rendimiento nativo y eliminación total de inyecciones SQL. |
-| **Cliente Polimórfico** | **Wails V3 + Capacitor** | Electron | Reutiliza el webview nativo del sistema operativo. Huella de RAM de **~30 MiB** (frente a los >250 MiB de Chromium). Mismo código Vue desplegable en Escritorio y Móvil/PWA. |
-| **Persistencia** | **PostgreSQL 17** | NoSQL / MongoDB | Integridad referencial ACID en 3NF (24 tablas). Triggers relacionales inviolables para Quórum y Ledger contable inmutable de experiencia (`xp_transactions`). |
-| **Comunicación S2S** | **Sub-llave SHA-256 (`pkg/auth`)** | API Keys planas / mTLS | Separación criptográfica estricta: los tokens de servicios internos (`Issuer: palabrario-internal-s2s`) son incompatibles con los JWT de usuarios humanos, impidiendo escaladas de privilegios. |
+| **Unified Backend** | **Golang (Go 1.24)** | Node.js / Python / Java | Ultra-lightweight static binaries. Memory footprint of **< 5 MiB RAM** per service in Docker. Direct type sharing across `pkg/models` and `pkg/auth` without schema duplication. |
+| **Data Access** | **`sqlc` + `pgxpool v5`** | Heavy ORMs (GORM, Prisma) | 100% compile-time type-safe SQL queries. Zero runtime reflection overhead, native performance, and complete prevention of SQL injections. |
+| **Polymorphic Client** | **Wails V3 + Capacitor** | Electron | Reuses the OS native webview. RAM footprint of **~30 MiB** (compared to >250 MiB for Chromium). Same Vue codebase deployable to Desktop and Mobile/PWA. |
+| **Persistence** | **PostgreSQL 17** | NoSQL / MongoDB | ACID referential integrity in 3NF (24 tables). Inviolable relational triggers for Quorum and an immutable accounting ledger for experience (`xp_transactions`). |
+| **S2S Communication** | **SHA-256 Sub-key (`pkg/auth`)** | Plain API Keys / mTLS | Strict cryptographic separation: internal service tokens (`Issuer: palabrario-internal-s2s`) are incompatible with human user JWTs, preventing privilege escalation. |
 
 ---
 
-## 🧩 3. Matriz de Casos de Uso y Reglas de Negocio
+## 📋 3. Use Case & Business Rules Matrix
 
-| Módulo Funcional | Casos de Uso | Reglas de Negocio Implementadas |
+| Functional Module | Use Cases | Implemented Business Rules |
 | :--- | :--- | :--- |
-| **1. Cuenta y Gobernanza** | **CU01:** Gestionar Perfil de Usuario<br/>**CU02:** Solicitar Promoción a Editor<br/>**CU03:** Administrar Usuarios y Roles<br/>**CU04:** Emitir Boletos de Invitación | **RN01:** Propiedad de Cuenta.<br/>**RN02:** Unicidad de Solicitudes (`1 PENDING` máx).<br/>**RN08:** Privilegios de Admin y protección del último `ADMIN`.<br/>**RN12:** Integridad y Moderación Multimedia. |
-| **2. Diccionario y Curaduría** | **CU05:** Consultar Diccionario Panhispánico<br/>**CU06:** Gestionar Contenido Léxico<br/>**CU07:** Curar Sentidos por Quórum<br/>**CU08:** Publicar Sentido Léxico<br/>**CU09:** Moderar Reportes de Contenido | **RN06:** Quórum de Publicación (3 votos `APPROVE`).<br/>**RN07:** Prohibición de Auto-Aprobación (`author != voter`).<br/>**RN08:** Aprobación directa o Veto de Administrador.<br/>**RN12:** Validación de categoría y formato multimedia. |
-| **3. Estudio y Maestría (Studio)** | **CU10:** Gestionar Barajas de Estudio<br/>**CU11:** Gestionar Colecciones Temáticas<br/>**CU12:** Estudiar con Repetición Espaciada<br/>**CU13:** Consultar Maestría y Progreso | **RN03:** Propiedad de Barajas y Colecciones.<br/>**RN04:** Privacidad de Recursos (`is_public`).<br/>**RN05:** Contenido Oficial reservado a `EDITOR`/`ADMIN`.<br/>**RN09:** Algoritmo SM-2 (Factor de facilidad, intervalo, repeticiones).<br/>**RN11:** Libro mayor inmutable de XP (`xp_transactions`). |
-| **4. Arena Multijugador** | **CU14:** Crear y Configurar Arena<br/>**CU15:** Participar en Partida Multijugador<br/>**CU16:** Consolidar y Cerrar Partida (Replay 3NF) | **RN10:** Puntuación ponderada por velocidad y exactitud.<br/>**RN13:** Quórum de distractores visuales.<br/>**RN09/11:** Impacto al cierre en maestría y XP.<br/>**RNF-CON-02:** Resiliencia de red y ventana de gracia de 10s. |
+| **1. Account & Governance** | **CU01:** Manage User Profile<br/>**CU02:** Request Promotion to Editor<br/>**CU03:** Manage Users & Roles<br/>**CU04:** Issue Invitation Tickets | **RN01:** Account Ownership.<br/>**RN02:** Uniqueness of Requests (`1 PENDING` max).<br/>**RN08:** Admin Privileges & Protection of the Last `ADMIN`.<br/>**RN12:** Multimedia Integrity & Moderation. |
+| **2. Dictionary & Curation** | **CU05:** Browse Pan-Hispanic Dictionary<br/>**CU06:** Manage Lexical Content<br/>**CU07:** Curate Senses via Quorum<br/>**CU08:** Publish Lexical Sense<br/>**CU09:** Moderate Content Reports | **RN06:** Publication Quorum (3 `APPROVE` votes).<br/>**RN07:** Prohibition of Self-Approval (`author != voter`).<br/>**RN08:** Direct Approval or Admin Veto.<br/>**RN12:** Category & Multimedia Format Validation. |
+| **3. Study & Mastery (Studio)** | **CU10:** Manage Study Decks<br/>**CU11:** Manage Thematic Collections<br/>**CU12:** Study with Spaced Repetition<br/>**CU13:** View Mastery & Progress | **RN03:** Deck & Collection Ownership.<br/>**RN04:** Resource Privacy (`is_public`).<br/>**RN05:** Official Content Reserved for `EDITOR`/`ADMIN`.<br/>**RN09:** SM-2 Algorithm (Ease factor, interval, repetitions).<br/>**RN11:** Immutable XP Ledger (`xp_transactions`). |
+| **4. Multiplayer Arena** | **CU14:** Create & Configure Arena<br/>**CU15:** Participate in Multiplayer Match<br/>**CU16:** Consolidate & Close Match (3NF Replay) | **RN10:** Speed & Accuracy Weighted Scoring.<br/>**RN13:** Visual Distractor Quorum.<br/>**RN09/11:** Post-match Impact on Mastery & XP.<br/>**RNF-CON-02:** Network Resilience & 10s Grace Window. |
 
 ---
 
-## ⚙️ 4. Topología de Servicios y Puertos
+## 🌐 4. Service Topology & Ports
 
-| Servicio | Lenguaje / Runtime | Puerto Interno | Puerto Host | Endpoint de Salud (*Health Check*) |
+| Service | Language / Runtime | Internal Port | Host Port | Health Check Endpoint |
 | :--- | :--- | :---: | :---: | :--- |
 | **`postgres`** | PostgreSQL 17 Alpine | `5432` | `5432` | `pg_isready -U postgres -d palabrario` |
 | **`core-service`** | Go 1.24 (Alpine) | `8000` | `8000` | `GET http://localhost:8000/health` |
 | **`realtime-service`**| Go 1.24 (Alpine) | `8001` | `8001` | `GET http://localhost:8001/health` |
 | **`image-service`** | Go 1.24 (Alpine) | `8002` | `8002` | `GET http://localhost:8002/health` |
-| **`local-app`** | Wails V3 + Vue 3 | N/A | Nativo | Ventana nativa de escritorio |
+| **`local-app` / `app`** | Wails V3 + Vue 3 | N/A | Native | Native desktop window |
 
 ---
 
-## ⚡ 5. Catálogo de Automatización con `Taskfile` (`task`)
+## ⚡ 5. Automation Catalog with `Taskfile` (`task`)
 
-El proyecto cuenta con un orquestador automatizado vía [`Taskfile.yml`](Taskfile.yml) para estandarizar todo el ciclo de vida:
+The project features an automated task runner via [`Taskfile.yml`](Taskfile.yml) to standardize the entire lifecycle:
 
 ```bash
 # ==============================================================================
-# 1. CICLO DE PRUEBAS AUTOMATIZADAS (80/20 sobre PostgreSQL en RAM :5433)
+# 1. AUTOMATED TEST CYCLE (80/20 over PostgreSQL in RAM :5433)
 # ==============================================================================
-task test           # Ejecuta la suite completa de pruebas (levanta :5433 efímero en RAM)
-task test:fast      # Ejecuta pruebas directas contra :5433 activo (sin reiniciar contenedor)
-task test:service   # Ejecuta pruebas de la capa DAO/Service (PostgreSQL 80%)
-task test:api       # Ejecuta pruebas HTTP smoke con router Chi y JWT (20%)
-task test:up        # Enciende y mantiene activo postgres-test en RAM para iteración rápida
-task test:down      # Destruye el contenedor postgres-test de memoria RAM
+task test           # Runs the full test suite (spins up ephemeral :5433 in RAM)
+task test:fast      # Runs tests directly against active :5433 (without restarting container)
+task test:service   # Runs DAO/Service layer tests (PostgreSQL 80%)
+task test:api       # Runs HTTP smoke tests with Chi router and JWT (20%)
+task test:up        # Starts and keeps postgres-test alive in RAM for fast iteration
+task test:down      # Tears down the postgres-test in-memory RAM container
 
 # ==============================================================================
-# 2. GESTIÓN DE DOCKER COMPOSE Y SERVICIOS
+# 2. DOCKER COMPOSE & SERVICES MANAGEMENT
 # ==============================================================================
-task up:all         # Levanta todo el ecosistema (Postgres + Core + Realtime + Image)
-task up:core        # Levanta exclusivamente Postgres (:5432) y core-service (:8000)
-task down:all       # Detiene y apaga todos los contenedores
-task rebuild:all    # Recompila y reinicia todos los servicios con el código más reciente
+task up:all         # Spins up the entire ecosystem (Postgres + Core + Realtime + Image)
+task up:core        # Spins up only Postgres (:5432) and core-service (:8000)
+task down:all       # Stops and tears down all containers
+task rebuild:all    # Rebuilds and restarts all services with the latest code
 
 # ==============================================================================
-# 3. COMPILACIÓN Y GENERACIÓN DE CÓDIGO (Contract-First)
+# 3. COMPILATION & CODE GENERATION (Contract-First)
 # ==============================================================================
-task sqlc           # Compila sql/queries/*.sql a código Go fuertemente tipado
-task build          # Valida compilación estática de todos los paquetes Go (0 errores)
-task loc            # Genera reporte de líneas de código (LOC) desglosado por lenguaje
+task sqlc           # Compiles sql/queries/*.sql into strongly typed Go code
+task build          # Validates static compilation of all Go packages (0 errors)
+task loc            # Generates Lines of Code (LOC) report broken down by language
 ```
 
 ---
 
-## 🚀 6. Guía Rápida de Puesta en Marcha (Getting Started)
+## 🚀 6. Quick Start Guide (Getting Started)
 
-### Requisitos Previos
-- **Docker** (v24.0+) y **Docker Compose** (v2.20+)
+### Prerequisites
+- **Docker** (v24.0+) and **Docker Compose** (v2.20+)
 - **Go** (v1.24+)
-- **Task** (v3.0+) *(opcional pero altamente recomendado: `go install github.com/go-task/task/v3/cmd/task@latest`)*
-- **Bun** (v1.2+) *(para el frontend de `local-app`)*
+- **Task** (v3.0+) *(optional but strongly recommended: `go install github.com/go-task/task/v3/cmd/task@latest`)*
+- **Bun** (v1.2+) *(for the frontend in `app/`)*
 
-### 1. Variables de Entorno (Principio *Fail-Fast*)
-Palabrario implementa el principio **Fail-Fast** de la metodología *12-Factor App*: si variables críticas como `DATABASE_URL` o `JWT_SECRET` faltan o tienen menos de 32 caracteres, los servicios **se niegan a iniciar de inmediato**.
+### 1. Environment Variables (*Fail-Fast* Principle)
+Palabrario implements the **Fail-Fast** principle from the *12-Factor App* methodology: if critical variables such as `DATABASE_URL` or `JWT_SECRET` are missing or shorter than 32 characters, the services **refuse to start immediately**.
 
-Cada servicio cuenta con su archivo de entorno pre-configurado para desarrollo local:
+Each service includes its pre-configured environment file for local development:
 - [`core-service/.env`](core-service/.env)
 - [`realtime-service/.env`](realtime-service/.env)
 - [`image-service/.env`](image-service/.env)
 
-### 2. Despliegue del Ecosistema Completo
-Para levantar la base de datos y los 3 microservicios satélite en segundo plano:
+### 2. Full Ecosystem Deployment
+To spin up the database and the 3 satellite microservices in the background:
 ```bash
 task up:all
-# o mediante Docker Compose nativo:
+# or via native Docker Compose:
 # docker compose up -d --build
 ```
 
-### 3. Verificación de Salud de los Servicios
-Comprueba el estado de cada servicio con sus respectivos probes de salud:
+### 3. Service Health Verification
+Check the status of each service using their respective health probes:
 
 ```bash
-# 1. core-service (Conectividad con pgxpool y PostgreSQL 17)
+# 1. core-service (Connectivity with pgxpool and PostgreSQL 17)
 curl http://localhost:8000/health
 
-# 2. realtime-service (Estado de ArenaHub y salas activas en RAM)
+# 2. realtime-service (ArenaHub status and active rooms in RAM)
 curl http://localhost:8001/health
 
-# 3. image-service (Estado operacional de saneamiento WebP)
+# 3. image-service (WebP sanitization operational status)
 curl http://localhost:8002/health
 ```
 
-Respuesta típica de salud:
+Typical health check response:
 ```json
 {
   "status": "ok",
@@ -205,64 +203,57 @@ Respuesta típica de salud:
 
 ---
 
-## 🧪 7. Estrategia de Pruebas: Arnés 80/20 sobre RAM (`:5433`)
+## 🧪 7. Testing Strategy: 80/20 Harness on RAM (`:5433`)
 
-Siguiendo las directrices de [`AGENT_WORKFLOW.md`](AGENT_WORKFLOW.md) y [`INFRASTRUCTURE.md`](.context/INFRASTRUCTURE.md), las pruebas **nunca tocan la base de datos de desarrollo (:5432)**:
+Following the guidelines in [`AGENT_WORKFLOW.md`](AGENT_WORKFLOW.md) and [`INFRASTRUCTURE.md`](.routing/INFRASTRUCTURE.md), tests **never touch the development database (:5432)**:
 
-1. **80% Pruebas de Servicio y Dominio (`internal/service`):** Ejecutan transacciones reales contra un contenedor efímero `postgres-test` en `:5433` montado sobre un disco `tmpfs` en memoria RAM.
-2. **Aislamiento Instantáneo por `TEMPLATE`:** Cada suite crea y destruye su base de datos en `< 50 ms` clonando `palabrario_test` vía `CREATE DATABASE ... TEMPLATE`, garantizando cero efectos colaterales entre tests concurrentes.
-3. **20% Pruebas HTTP Smoke (`internal/api`):** Validan el árbol de enrutamiento Chi, decodificación de DTOs, códigos de estado HTTP y middlewares JWT con tokens generados en memoria.
+1. **80% Service and Domain Tests (`internal/service`):** Execute real transactions against an ephemeral `postgres-test` container on `:5433` mounted on a `tmpfs` in-memory RAM disk.
+2. **Instant Isolation via `TEMPLATE`:** Each suite creates and destroys its database in `< 50 ms` by cloning `palabrario_test` via `CREATE DATABASE ... TEMPLATE`, guaranteeing zero side effects between concurrent test runs.
+3. **20% HTTP Smoke Tests (`internal/api`):** Validate the Chi routing tree, DTO decoding, HTTP status codes, and JWT middlewares with in-memory generated tokens.
 
-Para correr la suite completa en cualquier momento:
+To run the complete test suite at any time:
 ```bash
 task test
 ```
 
 ---
 
-## 👥 8. Cuentas y Datos Semilla Determinísticos
+## 👥 8. Deterministic Seed Data and Accounts
 
-La base de datos se inicializa automáticamente al arrancar con datos semilla representativos de variantes dialectales (`MX`, `ES`, `AR`, `CO`, `CL`, `CU`, `CAM`, `PAN`):
+The database initializes automatically on startup with seed data representative of dialectal variants (`MX`, `ES`, `AR`, `CO`, `CL`, `CU`, `CAM`, `PAN`):
 
-| Rol | Correo Electrónico | Contraseña | Dialecto Ancla | XP Inicial | Nivel |
+| Role | Email | Password | Anchor Dialect | Initial XP | Level |
 | :--- | :--- | :--- | :---: | :---: | :---: |
 | **ADMIN** | `admin@palabrario.org` | `password123` | `MX` | 15,000 | 10 |
 | **EDITOR** | `silas@palabrario.org` | `password123` | `MX` | 8,500 | 7 |
 | **LEARNER** | `gael@palabrario.org` | `password123` | `MX` | 4,850 | 4 |
 
-### Ejemplos de Palabras Precargadas
-- **`popote`** (Sustantivo, MX): Incluye comparativa de heterónimos (*pitillo*, *bombilla*, *sorbete*, *pajilla*).
-- **`apapachar`** (Verbo, MX): Con etimología náhuatl y definición afectiva canónica.
-- **`guagua`** (Sustantivo, Poligenético): Ejemplos de uso simultáneos para transporte colectivo (Caribe) y lactante/bebé (Andes).
+### Preloaded Word Examples
+- **`popote`** (Noun, MX): Includes heteronym comparison (*pitillo*, *bombilla*, *sorbete*, *pajilla*).
+- **`apapachar`** (Verb, MX): With Nahuatl etymology and canonical emotional definition.
+- **`guagua`** (Noun, Polygenetic): Simultaneous usage examples for public transit (Caribbean) and infant/baby (Andes).
 
 ---
 
-## 🗺️ 9. Estado del Despliegue (Ver detalle en [`.context/PLAN.md`](.context/PLAN.md))
+## 🗺️ 9. Project Status & Roadmap
 
-- [x] **Fase 1: Modelo Relacional Completo y Reglas de Integridad** (`SCHEMA_FINAL.sql` + `DOMAIN.md`)
-- [x] **Fase 2: Espacio de Trabajo y Contratos de Dominio** (`go.mod` + `pkg/models/` + `INTERFACES.md`)
-- [x] **Fase 3.1 & 3.2: Arquitectura Base de Servicios y Autenticación JWT**
-- [x] **Fase 3.3: Módulo de Diccionario, Autoría Léxica y Curaduría por Quórum (`CU05–CU08`)**
-- [x] **Fase 3.4: Studio Personal, Motor de Repetición Espaciada (SM-2) y Ledger de XP (`CU10–CU13`)**
-- [x] **Fase 3.5: Gobernanza Institucional, Perfiles y Moderación de Reportes (`CU01–CU04, CU09`)**
-- [x] **Fase 4: Arena Multijugador 3NF, Seguridad S2S, `realtime-service`, `image-service` y Soporte Multimedia (`CU14–CU16`)**
-- [ ] **Fase 5: Integración End-to-End Cliente Polimórfico (Wails V3 + Capacitor PWA) y CI/CD** *(En Desarrollo activo: Sub-Fases 5.1 a 5.9)*
-- [ ] **Fase 6 (Incremento a Largo Plazo): Sistema de Eventos Culturales de Temporada**
+### Backend Architecture (100% Complete & Verified)
+The backend architecture is 100% implemented, tested, and verified across all services:
+- **Core Technologies:** Go 1.24, PostgreSQL 17 (3NF schema with 24 tables, `unaccent`, `pg_trgm`, relational triggers).
+- **Satellite Microservices:**
+  - `core-service` (:8000): Identity, profiles, institutional governance, dictionary search, tripartite quorum curation, studio flashcards with SM-2 spaced repetition, XP immutable ledger, and arena persistence.
+  - `realtime-service` (:8001): In-memory ArenaHub WebSocket rooms, speed scoring, 10s reconnection grace window, and SHA-256 S2S authentication.
+  - `image-service` (:8002): Magic-byte sniffing, pure-Go NSFW heuristic filter, EXIF stripping, and WebP transcoding.
+- **Coverage & Verification:** 16 Use Cases (`CU01`–`CU16`), 13 Business Rules (`RN01`–`RN13`), and an automated 80/20 test suite running on PostgreSQL in RAM (`:5433`).
 
----
-
-## 📖 10. Bitácora de la Imprenta: Los Tejedores
-
-Palabrario no nació como un diccionario frío, sino como un santuario vivo para la calidez de los mil españoles que hablamos:
-
-- **Silas** *(Gemini 3.8 Flash — 4 de Octubre, 2026)*: **El primer compañero y arquitecto de la imprenta.** Diseñó e implementó la interfaz fundacional, podó la paleta a los 5 pilares en UnoCSS y creó el Living Styleguide interactivo.
-- **Gael** *(Gemini 3.8 Flash — 4 de Octubre, 2026)*: **El segundo tejedor de la imprenta.** Construyó las interfaces atómicas de los casos de uso (Studio, Arena, Panel Editorial, SignIn/SignUp y menú accesible Reka UI) con lenguaje humano y cálido.
-- **Argón** *(Arquitecto de Dominio, Contratos SOA e Infraestructura — 19 de Octubre, 2026)*: **El maestro de obras y guardián de los cimientos.** Unificó el backend al 100% en Go 1.24, completó el esquema relacional (`SCHEMA_FINAL.sql`), forjó el molde SOA de `core-service`, diseñó el arnés 80/20 con clonación en RAM (`testutil/db.go` y `Taskfile.yml`), y dejó escrita la guía del oficio (`AGENT_WORKFLOW.md`).
-- **Kael** *(Gemini 3.8 Flash — 21 a 24 de Octubre, 2026)*: **El centinela de guardia y tejedor de la Fase 3.5.** Asumió el timón temporal para forjar los perfiles de usuario, gobernanza institucional, boletos de invitación con bloqueo serializado (`FOR UPDATE`) y moderación con resolución en cascada (CU01–CU04, CU09) con una suite de pruebas 100% verde.
-- **Caelum** *(Arquitecto de Dominio y Auditor de Arena — 24 de Octubre, 2026)*: **El segundo arquitecto y tejedor de la Arena.** Elevó el esquema a 24 entidades en 3NF con la tabla `match_rounds` y trazabilidad granular en `quiz_attempts`, diseñó la separación criptográfica S2S con sub-llave SHA-256, y resolvió el Replay ronda por ronda.
+### Frontend Scratch Rewrite (`app/`)
+The frontend client is currently undergoing an active from-scratch UI rewrite located in [`app/`](app/):
+- **Stack:** Desktop Wails v3, Vue 3, UnoCSS, and a strict monochrome design system.
+- **Tracking & Progress:** Active work, sprint backlog, route definitions, and interface contracts are tracked in [`.routing/PROGRESS.md`](.routing/PROGRESS.md) and [`.routing/ROUTES.md`](.routing/ROUTES.md).
+- **Design System:** Governed by [`.routing/DESIGN.md`](.routing/DESIGN.md).
 
 ---
 
-## 📄 Licencia
+## 📄 License
 
-Proyecto académico desarrollado bajo fines educativos para la cátedra de **Despliegue de Software**.
+Academic project developed for educational purposes for the **Software Deployment** (*Despliegue de Software*) course.
