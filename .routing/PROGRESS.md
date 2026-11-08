@@ -7,9 +7,9 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] `.tickets/003-scaffold-app/` (`completed`): new app under `app/` (Wails 3, Vue 3, Vite, Bun, UnoCSS) with the Go services and bindings copied from `local-app/`, a Satoshi-based `uno.config.ts` with color aliases and the shortcuts `button`, `button-main`, `button-side`, `field`, and a minimal home page. `wails3 task check` and `wails3 task dev` pass.
 - [x] Set up by hand after ticket 003: `@unocss/reset` imported in `main.ts`, `presetWind3`, Satoshi as the font, and the root `Taskfile.yml` `client:*` tasks point to `app`.
 - [x] Fontshare setup confirmed working with the UnoCSS web fonts preset.
+- [x] `.tickets/004-build-landing-page/` (`completed`): static mobile-first monochrome hero on `/` (`HomeView.vue`), Vue Router hash history setup (`router/index.ts`), and route placeholders for `/auth/sign-in` and `/auth/sign-up`.
 
 ## Next steps
-- [ ] Rebuild the root landing page on top of the scaffold: `.tickets/004-build-landing-page/` (`draft`) — static mobile-first hero adapted from `HomeHero.vue` + Vue Router setup (`/`, `/auth/sign-in`, `/auth/sign-up`).
 - [ ] Rebuild `auth/sign-in`.
 - [ ] Rebuild `auth/sign-up`.
 - [ ] Decide what happens to the Capacitor adapter (`capacitor.adapter.ts`) during the frontend rebuild.
