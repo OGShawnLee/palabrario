@@ -1,4 +1,4 @@
-﻿# PROGRESS
+ PROGRESS
 
 Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md` and `CONTEXT.md`. Current stance: absolute minimalism. Items below are deferred until the routes are rebuilt.
 
@@ -14,8 +14,13 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] `.tickets/008-translate-readme/` (`completed`): translated `README.md` to English, updated architectural map links to `.routing/`, reworked Section 9 (Project Status & Roadmap), and removed Section 10.
 - [x] `.tickets/012-translate-routes-map/` (`completed`): created standalone `.routing/ROUTES.md` canonical route inventory table (9 active/planned routes) and linked from `.routing/CONTEXT.md`.
 - [x] `.tickets/013-build-search-modal/` (`completed`): built responsive floating search combobox modal (`SearchModal.vue`) with Reka UI Dialog, `@vueuse/core` shortcuts, dynamic featured entry sync on keyboard navigation, and `--uno` scoped styles.
+- [x] `.tickets/016-modularize-domain-services/` (`completed`): modularized monolithic `DOMAIN.md` and `INTERFACES.md` into 8 self-contained `*_service.md` files in `.routing/services/`, rewrote root `DOMAIN.md` as the route dispatcher with `TBD` placeholders, deleted `INTERFACES.md`, and updated all project documentation and active ticket references.
 
 ## Draft tickets
+- [ ] `.tickets/020-audit-service-specs-with-backend/` (`draft`): audit and synchronize all 8 `.routing/services/*_service.md` specifications against authoritative Go source code (`pkg/models/`, `core-service/internal/service/`, and `routes.go`).
+- [ ] `.tickets/017-build-arena-route/` (`draft`): build the `/arena` lobby route, reusable Dialog components (`AppDialog.vue`, `AppDialogOverlay.vue` with customizable width), room configuration modal, and open public matches table.
+- [ ] `.tickets/018-backend-arena-public-rooms/` (`draft`): backend schema, sqlc query, and endpoint `GET /api/v1/arena/matches/public` for listing waiting public matches.
+- [ ] `.tickets/019-build-arena-history-route/` (`draft`): build dedicated `/arena/history` route and 3NF round-by-round replay modal (`MatchReplayDialog.vue`).
 - [ ] `.tickets/009-build-dictionary-route/` (`draft`): build the `/dictionary` route and search/explore view.
 - [ ] `.tickets/010-build-collections-route/` (`draft`): build the `/collections` public catalog.
 - [ ] `.tickets/011-build-decks-route/` (`draft`): build the `/decks` public catalog.
@@ -53,6 +58,8 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [ ] Define the remaining component classes (cards, lists, tables, dividers, feedback messages) when their routes are built.
 - [x] `field` border color defined (`border-dull`, `#737373`).
 - [x] Contrast increased: theme colors are now `main` (`black`), `side` (`#404040`), and `dull` (`#737373`, ~4.6:1 contrast on white).
+- [x] `header` shortcut added to `uno.config.ts` (`h-12 px-4 flex items-center justify-between border-b border-light`).
+- [x] `section-label` shortcut added to `uno.config.ts` (`text-sm font-bold text-dull mb-3`) and all-caps styling discouraged in `DESIGN.md`.
 - [ ] The Satoshi font loads from the Fontshare CDN at runtime, so the app needs network access for it. Decide whether to self-host it.
 
 ## Scaffold follow-ups
@@ -74,3 +81,4 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 ## Medal coloring
 - [ ] Medal tiers (Bronze, Silver, Gold, Platinum, Diamond) currently depend on color. In monochrome, differentiate them by label, weight, or shape.
 - [ ] Decide the medal representation before the achievements route is rebuilt.
+

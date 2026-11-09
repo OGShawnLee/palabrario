@@ -1,4 +1,4 @@
-﻿import { defineConfig, presetWind3, presetWebFonts, transformerDirectives } from "unocss"
+import { defineConfig, presetWind3, presetWebFonts, transformerDirectives } from "unocss"
 
 export default defineConfig({
   presets: [
@@ -32,6 +32,8 @@ export default defineConfig({
     "button-icon": "h-12 min-w-12 w-12 bg-light text-black disabled:opacity-50",
     binding: "h-6 px-2 bg-light font-black text-xs text-black inline-flex items-center justify-center rounded-none",
     field: "h-12 px-4 border border-solid border-dull rounded-none font-medium placeholder-dull disabled:opacity-50",
-    "dialog-overlay": "fixed inset-0 z-50 bg-black/40 backdrop-filter backdrop-blur-xs"
+    "dialog-overlay": "fixed inset-0 z-50 bg-black/40 backdrop-filter backdrop-blur-xs",
+    "header": "h-12 px-4 flex items-center justify-between border-b border-light",
+    "section-label": "text-sm font-bold text-dull mb-3"
   },
 })

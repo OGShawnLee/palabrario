@@ -1,4 +1,4 @@
-﻿# DESIGN
+# DESIGN
 
 Monochrome, minimal design for the minibrario rework. Defined decisions only. Open items are tracked in PROGRESS.md. The source of truth for values is `app/frontend/uno.config.ts`; this file describes the intent.
 
@@ -35,8 +35,9 @@ Colors are theme aliases in `uno.config.ts`:
 ## Icons
 - Library: `lucide-vue-next`.
 
-## Language
+## Language & Casing
 - UI copy is in English. Button labels use title case (`Sign In`, `Sign Up`).
+- Section labels, metadata tags, and eyebrows use natural sentence case (`text-sm font-bold text-dull`). Forced all-caps (`uppercase tracking-widest`) is discouraged and restricted to standard acronyms (e.g. `CEFR`, `SM-2`, `XP`).
 
 ## Keyboard Key Bindings
 - Shortcut: binding.
@@ -61,3 +62,8 @@ Colors are theme aliases in `uno.config.ts`:
 - Height `h-12`, horizontal padding `px-4`, 1px solid `dull` border (`border border-solid border-dull`), no rounding (`rounded-none`), medium weight (`font-medium`).
 - Placeholder color: `dull` (`placeholder-dull`).
 - Disabled: `disabled:opacity-50`.
+
+## Headers & Structural Containers
+- Header shortcut: `header`. Height `h-12`, horizontal padding `px-4`, flex container with `justify-between`, bottom hairline border (`border-b border-light`). Used for dialog title bars and sub-panels.
+- Section label shortcut: `section-label`. Font size `text-sm`, bold weight (`font-bold`), muted color (`text-dull`), bottom margin `mb-3`. Used for section headings and metadata labels.
+

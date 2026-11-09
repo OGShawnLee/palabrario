@@ -1,4 +1,4 @@
-﻿# 014 — Backend: Dedicated FTS for Decks & Collections and Expanded Word Search
+ 014 — Backend: Dedicated FTS for Decks & Collections and Expanded Word Search
 
 | Field | Value |
 | :--- | :--- |
@@ -25,16 +25,19 @@ May create or edit:
 - `core-service/internal/service/studio_mastery_test.go` (add unit/integration tests for deck & collection search)
 - `core-service/internal/api/handlers/` (expose/update endpoints in `dictionary_handler.go`, `studio_handler.go`)
 - `app/` (Wails App bridge methods in `app_dictionary.go` / `app_studio.go` and regenerate bindings)
+- `.routing/services/dictionary_service.md` (document expanded `WordSearchResult` fields)
+- `.routing/services/studio_service.md` (document `DeckSearchResult` / `CollectionSearchResult` DTOs and endpoints)
 - `.tickets/014-backend-search-fts/changelog.md` (create)
 
 Must not touch:
 - Frontend UI components (`app/frontend/src/`)
-- `.routing/` (read-only reference)
+- `.context/`
+- Any file outside the above scope
 
 ## Inputs
 
-- [.routing/DOMAIN.md](../../.routing/DOMAIN.md): Section 3.1 & 3.2 (Lexicon, Senses, and Anchor Dialect).
-- [.routing/INTERFACES.md](../../.routing/INTERFACES.md): Section 2.3 (Dictionary contracts) and Section 2.5 (Studio contracts).
+- [.routing/services/dictionary_service.md](../../.routing/services/dictionary_service.md): Lexicon, senses, anchor dialect, and dictionary service contracts (`CU05–CU06`).
+- [.routing/services/studio_service.md](../../.routing/services/studio_service.md): Study decks, collections, and studio service contracts (`CU10–CU11`).
 - [`SCHEMA_FINAL.sql`](../../SCHEMA_FINAL.sql): Base schema for `decks` and `collections`.
 - [`core-service/internal/service/service_test.go`](../../core-service/internal/service/service_test.go): Test harness and existing dictionary tests.
 
@@ -70,7 +73,11 @@ Must not touch:
 6. **Validation:**
    - Run `wails3 task check` from `app/` (exiting with code 0).
 
-7. **Change log:**
+7. **Update Service Specifications (`.routing/services/`):**
+   - In `dictionary_service.md`: Document `part_of_speech` and `region_name` on `WordSearchResult`.
+   - In `studio_service.md`: Document `DeckSearchResult` and `CollectionSearchResult` DTOs and search endpoints.
+
+8. **Change log:**
    - Document all changes and test outputs in `.tickets/014-backend-search-fts/changelog.md`.
 
 ## Verification
