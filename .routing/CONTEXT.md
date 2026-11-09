@@ -1,12 +1,11 @@
-﻿# CONTEXT
+﻿ CONTEXT
 
 Central routing directory for all agents. Read this first.
 
 ## Files
 - [DESIGN.md](DESIGN.md): monochrome design decisions (shape, color, type, buttons, fields).
 - [PROGRESS.md](PROGRESS.md): pending work, next steps, and open design gaps.
-- [DOMAIN.md](DOMAIN.md): domain entities, bounded contexts, and business rules.
-- [INTERFACES.md](INTERFACES.md): SOA contracts, DTOs, `sqlc` queries, and HTTP/WS endpoints.
+- [DOMAIN.md](DOMAIN.md): domain service dispatcher and index. Directs to the modular `*_service.md` files in [services/](services/).
 - [INFRASTRUCTURE.md](INFRASTRUCTURE.md): deployment, ports, Docker/Vagrant setup, and testing architecture.
 - [ROUTES.md](ROUTES.md): route table, layouts, and access rules. Read only when a ticket touches a route.
 

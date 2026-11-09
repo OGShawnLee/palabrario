@@ -1,4 +1,4 @@
-﻿# 011 — Build the Public Decks Route (/decks)
+﻿ 011 — Build the Public Decks Route (/decks)
 
 | Field | Value |
 | :--- | :--- |
@@ -27,7 +27,7 @@ Must not touch:
 
 - [.routing/CONTEXT.md](../../.routing/CONTEXT.md): ground rules and constraints.
 - [.routing/DESIGN.md](../../.routing/DESIGN.md): design tokens and surface hierarchy.
-- [.routing/DOMAIN.md](../../.routing/DOMAIN.md): Section 3.4 (Studio decks and SM-2 readiness).
+- [.routing/services/studio_service.md](../../.routing/services/studio_service.md): Studio decks, cards, and SM-2 readiness.
 
 ## Task
 

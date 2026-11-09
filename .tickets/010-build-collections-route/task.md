@@ -1,4 +1,4 @@
-﻿# 010 — Build the Public Collections Route (/collections)
+﻿ 010 — Build the Public Collections Route (/collections)
 
 | Field | Value |
 | :--- | :--- |
@@ -27,7 +27,7 @@ Must not touch:
 
 - [.routing/CONTEXT.md](../../.routing/CONTEXT.md): ground rules and constraints.
 - [.routing/DESIGN.md](../../.routing/DESIGN.md): design tokens and surface hierarchy.
-- [.routing/DOMAIN.md](../../.routing/DOMAIN.md): Section 3.4 (Studio and collections domain rules).
+- [.routing/services/studio_service.md](../../.routing/services/studio_service.md): Studio and collections domain rules and contracts.
 
 ## Task
 

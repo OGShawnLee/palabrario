@@ -1,4 +1,4 @@
-# 📚 Palabrario
+ 📚 Palabrario
 
 <div align="center">
 
@@ -31,8 +31,8 @@ All technical decisions in Palabrario follow a **Backend-First & Contract-First*
 | **[`.routing/PROGRESS.md`](.routing/PROGRESS.md)** | Active UI rewrite progress, sprint backlog, pending tasks, and open design gaps. |
 | **[`.routing/ROUTES.md`](.routing/ROUTES.md)** | Route table, layouts, route guards, DTO mapping, and access rules. |
 | **[`.routing/DESIGN.md`](.routing/DESIGN.md)** | Monochrome design system specifications (tokens, typography, buttons, inputs, components). |
-| **[`.routing/DOMAIN.md`](.routing/DOMAIN.md)** | Domain-Driven Design (DDD), 24 entities, business rules (`RN01–RN13`), and SM-2 formulas. |
-| **[`.routing/INTERFACES.md`](.routing/INTERFACES.md)** | SOA contracts in Go 1.24, DTOs in [`pkg/models`](pkg/models), `sqlc` queries, WebSocket events, and endpoint catalog. |
+| **[`.routing/DOMAIN.md`](.routing/DOMAIN.md)** | **Master Domain Dispatcher:** Route-to-service index directing to the 8 modular `*_service.md` specifications. |
+| **Modular Domain Services** | Dedicated specs merging DDD business rules and SOA technical contracts per service: [`identity_service.md`](.routing/services/identity_service.md), [`governance_service.md`](.routing/services/governance_service.md), [`dictionary_service.md`](.routing/services/dictionary_service.md), [`curation_service.md`](.routing/services/curation_service.md), [`studio_service.md`](.routing/services/studio_service.md), [`mastery_service.md`](.routing/services/mastery_service.md), [`arena_service.md`](.routing/services/arena_service.md), and [`media_service.md`](.routing/services/media_service.md). |
 | **[`SCHEMA_FINAL.sql`](SCHEMA_FINAL.sql)** | Canonical PostgreSQL 17 DDL (3NF, `unaccent`/`pg_trgm` extensions, relational triggers `RN06`/`RN07`, and seed data). |
 | **[`.routing/INFRASTRUCTURE.md`](.routing/INFRASTRUCTURE.md)** | Docker Compose containers guide, Go monorepo, `sqlc`, RAM test harness, and Vagrant Debian 12 setup. |
 | **[`.context/academic/`](.context/academic)** | Formal self-contained academic deliverables (`1-PROJECT-SPECIFICATION.md`, etc.). |

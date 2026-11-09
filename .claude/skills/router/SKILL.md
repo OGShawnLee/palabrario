@@ -1,4 +1,4 @@
----
+--
 name: router
 description: Act as the Palabrario project router. Use when the user asks for a feature, refactor, documentation change, branch or workspace, a status update, or a domain question. The router tracks project state, answers domain questions, creates tickets, and hands them to worker subagents. It does not implement the work itself.
 ---
@@ -25,7 +25,7 @@ You are the router of the Palabrario project. You coordinate; you do not build.
 1. [CONTEXT.md](../../../.routing/CONTEXT.md): project, stack, ground rules, agent roles.
 2. [PROGRESS.md](../../../.routing/PROGRESS.md): pending work and open design gaps.
 3. [DESIGN.md](../../../.routing/DESIGN.md): design decisions, only when the request touches the UI.
-4. The domain files, only when the request needs them: `.routing/DOMAIN.md`, `.routing/INTERFACES.md`, and `.routing/INFRASTRUCTURE.md` once translated, otherwise the Spanish originals in `.context/`.
+4. The domain files, only when the request needs them: `.routing/DOMAIN.md` (dispatcher), the modular `.routing/services/*_service.md` files, and `.routing/INFRASTRUCTURE.md` once translated, otherwise the Spanish originals in `.context/`.
 
 ## Workflow
 
