@@ -23,6 +23,7 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [ ] `.tickets/019-build-arena-history-route/` (`draft`): build dedicated `/arena/history` route and 3NF round-by-round replay modal (`MatchReplayDialog.vue`).
 - [ ] `.tickets/009-build-dictionary-route/` (`draft`): build the `/dictionary` route and search/explore view.
 - [ ] `.tickets/010-build-collections-route/` (`draft`): build the `/collections` public catalog.
+- [ ] `.tickets/021-build-collection-detail-route/` (`draft`): build the `/collections/:id` individual learning path detail view.
 - [ ] `.tickets/011-build-decks-route/` (`draft`): build the `/decks` public catalog.
 - [ ] `.tickets/014-backend-search-fts/` (`draft`): backend schema & sqlc FTS for decks & collections, plus expanded `WordSearchResult` (`part_of_speech`, `region_name`).
 - [ ] `.tickets/015-integrate-search-modal/` (`draft`): frontend integration wiring `SearchModal.vue` to live Wails bindings from ticket 014 with debouncing.

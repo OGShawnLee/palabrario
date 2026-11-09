@@ -11,6 +11,7 @@ Canonical inventory of active and planned routes in app/. Read this file only wh
 | `/auth/sign-up` | `sign-up` | `views/auth/SignUpView.vue` | `auth` | guest only | built (static) | 005 |
 | `/dictionary` | `dictionary` | `views/DictionaryView.vue` | `app` | public | placeholder | 007 (impl: 009) |
 | `/collections` | `collections` | TBD | `app` | public | planned | 010 |
+| `/collections/:id` | `collection-detail` | TBD | `app` | public | planned | 021 |
 | `/decks` | `decks` | TBD | `app` | public | planned | 011 |
 | `/arena` | `arena` | `views/ArenaView.vue` | `app` | public | placeholder | 007 |
 | `/studio` | `studio` | `views/StudioView.vue` | `app` | requireAuth | placeholder | 007 |
