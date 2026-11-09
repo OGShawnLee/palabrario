@@ -27,6 +27,7 @@ bin/
 **/node_modules/
 dist/
 build/
+!app/build/
 out/
 .cache/
 *.tsbuildinfo

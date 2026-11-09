@@ -65,7 +65,7 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 
 ## Scaffold follow-ups
 - [ ] `app/build/config.yml` still has template values: company, product identifier, description, and copyright.
-- [ ] `app/build/` is git-ignored by the root `.gitignore` (`build/`). Decide whether to add a negation rule so it is tracked.
+- [x] Added negation rule `!app/build/` to root `.gitignore` so Wails build configuration is tracked.
 - [ ] The `summary:` texts in `app/Taskfile.yml` are still in Spanish.
 - [x] Moved `@unocss/reset` from the root `package.json` to `app/frontend/package.json`.
 
