@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed } from "vue"
 import { RouterLink } from "vue-router"
-import { Volume2 } from "lucide-vue-next"
 import type { WordDetail, HeteronymItem } from "@bindings/palabrario/pkg/models/index.js"
-import type { HeteronymGroup } from "@/data/mockWordOfTheDay"
+
+export interface HeteronymGroup {
+  label: string
+  items: HeteronymItem[]
+}
 
 const props = defineProps<{
   word: WordDetail

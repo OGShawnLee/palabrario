@@ -1,10 +1,25 @@
 <script setup lang="ts">
+import { onMounted, ref } from "vue"
 import WordOfTheDayCard from "@/components/dictionary/WordOfTheDayCard.vue"
 import { Search } from "lucide-vue-next"
 import { useSearchModal } from "@/composables/useSearchModal"
-import { mockWordOfTheDay, mockHeteronymGroups } from "@/data/mockWordOfTheDay"
+import { api } from "@/api"
+import type { WordDetail } from "@bindings/palabrario/pkg/models/index.js"
 
 const { isOpen, open } = useSearchModal()
+
+const word = ref<WordDetail | null>(null)
+const isLoading = ref(true)
+
+onMounted(async () => {
+  try {
+    word.value = await api.dictionary.getWordOfTheDay()
+  } catch {
+    word.value = null
+  } finally {
+    isLoading.value = false
+  }
+})
 </script>
 
 <template>
@@ -35,10 +50,19 @@ const { isOpen, open } = useSearchModal()
 
     <!-- Word of the Day Section -->
     <section class="w-full max-w-5xl mx-auto px-4 pb-20">
-      <WordOfTheDayCard
-        :word="mockWordOfTheDay"
-        :heteronym-groups="mockHeteronymGroups"
-      />
+      <WordOfTheDayCard v-if="word" :word="word" />
+      <div
+        v-else-if="isLoading"
+        class="w-full bg-ground border border-light p-6 sm:p-10 text-sm text-dull"
+      >
+        Loading word of the day...
+      </div>
+      <div
+        v-else
+        class="w-full bg-ground border border-light p-6 sm:p-10 text-sm text-dull"
+      >
+        No word of the day is available right now.
+      </div>
     </section>
   </main>
 </template>

@@ -4,7 +4,7 @@
 | :--- | :--- |
 | **ID** | 021 |
 | **Status** | draft |
-| **Model** | Sonnet 5.5 (`claude-sonnet-5-5`, Antigravity provider) |
+| **Model** | Claude Sonnet 5.5, `effort: medium` (`claude-sonnet-5-5`) |
 | **Role** | Frontend Implementer |
 | **Spec** | [spec.md](spec.md) |
 

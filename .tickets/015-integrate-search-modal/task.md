@@ -3,8 +3,8 @@
 | Field | Value |
 | :--- | :--- |
 | **ID** | 015 |
-| **Status** | in-progress |
-| **Model** | Claude Sonnet 5.5 (`claude-sonnet-5-5`, Claude provider) |
+| **Status** | completed |
+| **Model** | Claude Sonnet 5.5, `effort: medium` (`claude-sonnet-5-5`) |
 | **Role** | Frontend Implementer |
 | **Spec** | [spec.md](spec.md) |
 

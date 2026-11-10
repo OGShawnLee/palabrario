@@ -20,12 +20,12 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] `.tickets/020-audit-service-specs-with-backend/` (`completed`): audited and synchronized all 8 `.routing/services/*_service.md` specifications against authoritative Go source code (`pkg/models/`, `core-service/internal/service/`, `core-service/internal/api/`, and `sql/queries/`).
 - [x] `.tickets/009-build-dictionary-route/` (`completed`): built the `/dictionary` route (`DictionaryView.vue`), singleton `useSearchModal.ts` composable, typed `mockWordOfTheDay.ts`, and responsive `WordOfTheDayCard.vue` with dialectal senses, full region names, and cross-regional heteronym equivalents.
 - [x] `.tickets/022-scaffold-api-adapter-architecture/` (`completed`): scaffolded the `src/api/` adapter architecture (pure TypeScript contracts, authentic Spanish mock fixtures, live `WailsAdapter`, and runtime mode switcher) for Auth, Dictionary, and Studio.
+- [x] `.tickets/015-integrate-search-modal/` (`completed`): frontend integration wiring `SearchModal.vue` and `DictionaryView.vue` to the universal API client (`api.dictionary`, `api.studio`) with debouncing, eliminating all hardcoded mock arrays from views.
 
 ## In progress
-- [ ] `.tickets/015-integrate-search-modal/` (`in-progress`): frontend integration wiring `SearchModal.vue` and `DictionaryView.vue` to the universal API client (`api.dictionary`, `api.studio`) with debouncing, eliminating all hardcoded mock arrays from views.
+- [ ] `.tickets/010-build-collections-route/` (`in-progress`): build the `/collections` public catalog backed by `api.studio.listCollections()`, universal `AppBreadcrumb.vue`, and inspection dialog.
 
 ## Draft tickets
-- [ ] `.tickets/010-build-collections-route/` (`draft`): build the `/collections` public catalog backed by `api.studio.listCollections()`, universal `AppBreadcrumb.vue`, and inspection dialog.
 - [ ] `.tickets/021-build-collection-detail-route/` (`draft`): build the `/collections/:id` individual learning path detail view backed by `api.studio.getCollection(id)` and `api.auth.getMe()`.
 - [ ] `.tickets/011-build-decks-route/` (`draft`): build the `/decks` public catalog backed by `api.studio.listDecks()`.
 - [ ] `.tickets/017-build-arena-route/` (`draft`): define `IArenaAPI` in `src/api/` and build the `/arena` lobby route, reusable Dialog components (`AppDialog.vue`, `AppDialogOverlay.vue`), room configuration modal, and open public matches table backed by `api.arena`.

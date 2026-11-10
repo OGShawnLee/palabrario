@@ -248,7 +248,7 @@ const bacanWord: WordDetail = new WordDetail({
       cultural_note: null,
       image_url: null,
       cefr_level: "B2",
-      usage_frequency: "OCCASIONAL",
+      usage_frequency: "COMMON",
       state: "APPROVED",
       examples: [
         new Example({

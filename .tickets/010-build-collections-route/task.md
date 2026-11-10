@@ -3,8 +3,8 @@
 | Field | Value |
 | :--- | :--- |
 | **ID** | 010 |
-| **Status** | draft |
-| **Model** | Sonnet 5.5 (`claude-sonnet-5-5`, Antigravity provider) |
+| **Status** | in-progress |
+| **Model** | Claude Sonnet 5.5, `effort: medium` (`claude-sonnet-5-5`) |
 | **Role** | Frontend Implementer |
 | **Spec** | [spec.md](spec.md) |
 
