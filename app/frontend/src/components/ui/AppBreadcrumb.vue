@@ -1,3 +1,10 @@
+<script lang="ts">
+import { ref } from "vue"
+
+/** Views set this to replace the label of the last crumb (e.g. a loaded title). */
+export const breadcrumbLeafLabel = ref<string | null>(null)
+</script>
+
 <script setup lang="ts">
 import { computed } from "vue"
 import { RouterLink, useRoute } from "vue-router"
@@ -6,7 +13,10 @@ const route = useRoute()
 
 const crumbs = computed(() => {
   if (route.path === "/") return []
-  return route.meta.breadcrumb ?? []
+  const list = route.meta.breadcrumb ?? []
+  const leaf = breadcrumbLeafLabel.value
+  if (!leaf || list.length === 0) return list
+  return [...list.slice(0, -1), { ...list[list.length - 1], label: leaf }]
 })
 </script>
 

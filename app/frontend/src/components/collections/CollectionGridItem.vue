@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { useRouter } from "vue-router"
 import type { Collection } from "@bindings/palabrario/pkg/models/index.js"
 
 defineProps<{ collection: Collection }>()
-defineEmits<{ explore: [collection: Collection] }>()
+const router = useRouter()
 </script>
 
 <template>
@@ -11,8 +12,8 @@ defineEmits<{ explore: [collection: Collection] }>()
       <span class="text-xs font-bold text-dull">{{ collection.is_official ? "Official" : "Curated" }}</span>
       <button
         type="button"
-        class="bg-transparent text-xs font-semibold text-main hover:underline cursor-pointer"
-        @click="$emit('explore', collection)"
+        class="button-side button--small"
+        @click="router.push(`/collections/${collection.id_collection}`)"
       >
         Explore →
       </button>

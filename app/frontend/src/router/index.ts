@@ -18,6 +18,18 @@ const router = createRouter({
           component: () => import("@/views/CollectionsView.vue"),
           meta: { breadcrumb: [{ label: "Home", to: "/" }, { label: "Collections" }] },
         },
+        {
+          path: "collections/:id",
+          name: "collection-detail",
+          component: () => import("@/views/CollectionDetailView.vue"),
+          meta: {
+            breadcrumb: [
+              { label: "Home", to: "/" },
+              { label: "Collections", to: "/collections" },
+              { label: "Collection Detail" },
+            ],
+          },
+        },
         { path: "arena", name: "arena", component: () => import("@/views/ArenaView.vue") },
         { path: "studio", name: "studio", component: () => import("@/views/StudioView.vue") },
         { path: "settings", name: "settings", component: () => import("@/views/SettingsView.vue") },

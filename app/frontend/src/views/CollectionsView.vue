@@ -1,15 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue"
 import { api } from "@/api"
-import CollectionDetailDialog from "@/components/collections/CollectionDetailDialog.vue"
 import CollectionGridItem from "@/components/collections/CollectionGridItem.vue"
 import FeaturedCollectionCard from "@/components/collections/FeaturedCollectionCard.vue"
 import type { Collection } from "@bindings/palabrario/pkg/models/index.js"
 
 const collections = ref<Collection[]>([])
 const isLoading = ref(true)
-const selected = ref<Collection | null>(null)
-const isDialogOpen = ref(false)
 
 onMounted(async () => {
   try {
@@ -27,11 +24,6 @@ const featured = computed(
 const others = computed(() =>
   collections.value.filter((c) => c.id_collection !== featured.value?.id_collection),
 )
-
-function explore(collection: Collection) {
-  selected.value = collection
-  isDialogOpen.value = true
-}
 </script>
 
 <template>
@@ -48,7 +40,7 @@ function explore(collection: Collection) {
       No collections are available right now.
     </div>
     <template v-else>
-      <FeaturedCollectionCard :collection="featured" @explore="explore" />
+      <FeaturedCollectionCard :collection="featured" />
 
       <template v-if="others.length > 0">
         <h2 class="text-xl font-bold text-main mt-12 mb-6">More Collections</h2>
@@ -57,12 +49,10 @@ function explore(collection: Collection) {
             v-for="collection in others"
             :key="collection.id_collection"
             :collection="collection"
-            @explore="explore"
           />
         </div>
       </template>
     </template>
 
-    <CollectionDetailDialog v-model:open="isDialogOpen" :collection="selected" />
   </main>
 </template>

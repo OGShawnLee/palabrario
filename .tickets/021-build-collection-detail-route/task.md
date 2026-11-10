@@ -3,7 +3,7 @@
 | Field | Value |
 | :--- | :--- |
 | **ID** | 021 |
-| **Status** | draft |
+| **Status** | completed |
 | **Model** | Claude Sonnet 5.5, `effort: medium` (`claude-sonnet-5-5`) |
 | **Role** | Frontend Implementer |
 | **Spec** | [spec.md](spec.md) |
@@ -18,9 +18,15 @@ May create or edit:
 - `app/frontend/src/components/collections/CollectionHeader.vue` (headline, blurb, metadata, and primary CTAs)
 - `app/frontend/src/components/collections/CollectionDeckItem.vue` (individual deck card in the sequential path)
 - `app/frontend/src/components/collections/CollectionAdminBar.vue` (role-gated owner/administrator actions bar)
+- `app/frontend/src/components/SearchModal.vue` (navigate to `/collections/:id` upon selecting a collection)
+- `app/frontend/src/views/CollectionsView.vue` (remove modal workaround; navigate directly to `/collections/:id`)
+- `app/frontend/src/components/collections/FeaturedCollectionCard.vue` (navigate directly to `/collections/:id`)
+- `app/frontend/src/components/collections/CollectionGridItem.vue` (navigate directly to `/collections/:id`)
+- `app/frontend/src/components/collections/CollectionDetailDialog.vue` (remove/retire modal component)
 - `app/frontend/src/api/contract/studio.contract.ts` (ensure getCollection, saveCollection, unsaveCollection exist)
 - `app/frontend/src/api/live/wails/studio.wails.ts` (implement getCollection, saveCollection, unsaveCollection)
 - `app/frontend/src/api/mock/mock.adapter.ts` (implement mock getCollection, saveCollection, unsaveCollection)
+- `app/frontend/src/api/mock/fixtures/decks.fixture.ts` (expand collection fixtures with full deck list)
 - `app/frontend/src/router/index.ts` (register `/collections/:id` route and breadcrumb resolver)
 - `.tickets/021-build-collection-detail-route/changelog.md` (create)
 
@@ -127,10 +133,21 @@ Must not touch:
      - `<button class="text-sm font-semibold text-dull hover:text-black py-2 px-3 text-center cursor-pointer">Delete</button>`
    - On mobile: Buttons stack vertically with min-44px touch height, matching the mobile reference.
 
-6. **Validation:**
+6. **Navigation Integration & Modal Cleanup:**
+   - **`SearchModal.vue`:**
+     - Update `selectCollectionResult(col: CollectionSearchResult)` to navigate to `/collections/${col.id_collection}` (`router.push(`/collections/${col.id_collection}`)`).
+   - **`CollectionsView.vue`:**
+     - Remove dialog state (`isDialogOpen`, `selected`) and the `<CollectionDetailDialog>` component.
+     - Navigate directly to `/collections/${collection.id_collection}` when exploring a collection.
+   - **`FeaturedCollectionCard.vue` & `CollectionGridItem.vue`:**
+     - Wire *"Explore Collection →"* and *"Explore →"* actions to navigate to `/collections/${collection.id_collection}` (via `router.push` or `<RouterLink>`).
+   - **`CollectionDetailDialog.vue`:**
+     - Cleanly decommission/remove this interim inspection dialog now that `/collections/:id` is the canonical destination.
+
+7. **Validation:**
    - Run `cd app && wails3 task check` to verify TypeScript and Vue compilation with 0 errors.
 
-7. **Change log:**
+8. **Change log:**
    - Document all changes in `.tickets/021-build-collection-detail-route/changelog.md`.
 
 ## Verification

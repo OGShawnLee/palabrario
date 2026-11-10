@@ -105,7 +105,7 @@ export const mockCollections: CollectionSearchResult[] = [
 ]
 
 const OWNER_IDS: Record<string, string> = {
-  palabrario: "00000000-0000-4000-8000-000000000001",
+  palabrario: "00000000-0000-4000-8000-000000000099",
   caribe_viva: "00000000-0000-4000-8000-000000000002",
   editora_andina: "00000000-0000-4000-8000-000000000003",
 }

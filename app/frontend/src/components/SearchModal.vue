@@ -135,14 +135,14 @@ const selectableItems = computed<SelectableItem[]>(() => {
       list.push({ id: `word-${item.id_word}`, type: "dictionary", item })
     }
   }
-  if (selectedTab.value === "all" || selectedTab.value === "decks") {
-    for (const deck of deckResults.value) {
-      list.push({ id: `deck-${deck.id_deck}`, type: "deck", item: deck })
-    }
-  }
   if (selectedTab.value === "all" || selectedTab.value === "collections") {
     for (const col of collectionResults.value) {
       list.push({ id: `col-${col.id_collection}`, type: "collection", item: col })
+    }
+  }
+  if (selectedTab.value === "all" || selectedTab.value === "decks") {
+    for (const deck of deckResults.value) {
+      list.push({ id: `deck-${deck.id_deck}`, type: "deck", item: deck })
     }
   }
   return list
@@ -198,9 +198,9 @@ function selectDeckResult(_deck: DeckSearchResult) {
   router.push("/studio")
 }
 
-function selectCollectionResult(_col: CollectionSearchResult) {
+function selectCollectionResult(col: CollectionSearchResult) {
   open.value = false
-  router.push("/collections")
+  router.push(`/collections/${col.id_collection}`)
 }
 
 function selectItem(selected: SelectableItem) {

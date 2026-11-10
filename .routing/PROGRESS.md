@@ -22,12 +22,12 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] `.tickets/022-scaffold-api-adapter-architecture/` (`completed`): scaffolded the `src/api/` adapter architecture (pure TypeScript contracts, authentic Spanish mock fixtures, live `WailsAdapter`, and runtime mode switcher) for Auth, Dictionary, and Studio.
 - [x] `.tickets/015-integrate-search-modal/` (`completed`): frontend integration wiring `SearchModal.vue` and `DictionaryView.vue` to the universal API client (`api.dictionary`, `api.studio`) with debouncing, eliminating all hardcoded mock arrays from views.
 - [x] `.tickets/010-build-collections-route/` (`completed`): built the `/collections` public catalog backed by `api.studio.listCollections()`, universal `AppBreadcrumb.vue` mounted in `AppLayout.vue`, `FeaturedCollectionCard.vue`, `CollectionGridItem.vue`, and inspection dialog.
+- [x] `.tickets/021-build-collection-detail-route/` (`completed`): built the `/collections/:id` individual learning path detail view backed by `api.studio.getCollection(id)` and `api.auth.getMe()`, dynamic leaf breadcrumb, and retired the temporary dialog.
 
 ## In progress
 *(None)*
 
 ## Draft tickets
-- [ ] `.tickets/021-build-collection-detail-route/` (`draft`): build the `/collections/:id` individual learning path detail view backed by `api.studio.getCollection(id)` and `api.auth.getMe()`.
 - [ ] `.tickets/011-build-decks-route/` (`draft`): build the `/decks` public catalog backed by `api.studio.listDecks()`.
 - [ ] `.tickets/017-build-arena-route/` (`draft`): define `IArenaAPI` in `src/api/` and build the `/arena` lobby route, reusable Dialog components (`AppDialog.vue`, `AppDialogOverlay.vue`), room configuration modal, and open public matches table backed by `api.arena`.
 - [ ] `.tickets/019-build-arena-history-route/` (`draft`): expand `IArenaAPI` and build dedicated `/arena/history` route and 3NF round-by-round replay modal (`MatchReplayDialog.vue`) backed by `api.arena`.

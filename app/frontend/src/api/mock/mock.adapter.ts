@@ -190,6 +190,24 @@ class MockDictionaryAPI implements IDictionaryAPI {
 }
 
 class MockStudioAPI implements IStudioAPI {
+  private savedCollectionIds = new Set<number>()
+
+  async getCollection(id: number): Promise<Collection | null> {
+    await delay()
+    const collection = mockCollectionDetails.find((candidate) => candidate.id_collection === id)
+    return collection ? clone(collection) : null
+  }
+
+  async saveCollection(id: number): Promise<void> {
+    await delay()
+    this.savedCollectionIds.add(id)
+  }
+
+  async unsaveCollection(id: number): Promise<void> {
+    await delay()
+    this.savedCollectionIds.delete(id)
+  }
+
   async listCollections(featured = false): Promise<Collection[]> {
     await delay()
     return clone(

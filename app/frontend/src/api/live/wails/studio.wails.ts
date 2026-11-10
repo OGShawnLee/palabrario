@@ -11,6 +11,18 @@ export class WailsStudioAdapter implements IStudioAPI {
     return await Wails.ListCollections(featured)
   }
 
+  async getCollection(id: number): Promise<Collection | null> {
+    return await Wails.GetCollection(id)
+  }
+
+  async saveCollection(id: number): Promise<void> {
+    await Wails.SaveCollection(id)
+  }
+
+  async unsaveCollection(id: number): Promise<void> {
+    await Wails.UnsaveCollection(id)
+  }
+
   async searchDecks(query: string, limit = 20): Promise<DeckSearchResult[]> {
     return await Wails.SearchDecks(query, limit)
   }
