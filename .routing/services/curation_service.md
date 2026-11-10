@@ -1,7 +1,7 @@
 # Curation Service (`curation_service.md`)
 
 > **Domain service file — self-contained.** Combines the domain entities and business rules (from the former `DOMAIN.md`) with the technical contracts: DTOs, SOA interface, `sqlc` queries, and HTTP/WS endpoints (from the former `INTERFACES.md`).
-> **Service:** `CurationService` · **Use Cases:** `CU07`, `CU08`, `CU09` · **Business Rules:** `RN06` (Quorum of 3), `RN07` (No self-approval), `RN08` (Admin override) · **Domain:** Authorship, Community Reports · **Routes:** `TBD`
+> **Service:** `CurationService` · **Use Cases:** `CU07`, `CU08`, `CU09` · **Business Rules:** `RN06` (Quorum of 3), `RN07` (No self-approval), `RN08` (Admin override) · **Domain:** Authorship, Community Reports · **Routes:** backend API `/api/v1/curation/*` and `/api/v1/reports/*` (see section 2.4.3); frontend routes: see [`ROUTES.md`](../ROUTES.md)
 > **Global rules:** the contract-first rules, SOA architecture, and domain-error-to-HTTP mapping shared by every service live in [`DOMAIN.md`](../DOMAIN.md) (sections 3 and 4).
 > **Canonical persistence:** PostgreSQL 17 ([`SCHEMA_FINAL.sql`](../../SCHEMA_FINAL.sql)) · **Shared DTOs:** [`pkg/models/`](../../pkg/models)
 
@@ -95,6 +95,7 @@ type SenseQuorumItem struct {
 	ShortDefinition  string         `json:"short_definition"`
 	Definition       string         `json:"definition"`
 	CulturalNote     *string        `json:"cultural_note,omitempty"`
+	ImageURL         *string        `json:"image_url,omitempty"`
 	CEFRLevel        string         `json:"cefr_level"`
 	UsageFrequency   string         `json:"usage_frequency"`
 	IsTabooOrVulgar  bool           `json:"is_taboo_or_vulgar"`
@@ -106,6 +107,9 @@ type SenseQuorumItem struct {
 	RequiredQuorum   int            `json:"required_quorum"`  // Constant: 3 (RN06)
 	CreatedAt        time.Time      `json:"created_at"`
 }
+
+// PendingSenseItem is the canonical alias for curation queue items
+type PendingSenseItem = SenseQuorumItem
 
 type SenseQuorumDetail struct {
 	Proposal SenseQuorumItem     `json:"proposal"`
@@ -134,7 +138,7 @@ type ContentReport struct {
 	IDSense         *int       `json:"id_sense,omitempty"`
 	IDExample       *int       `json:"id_example,omitempty"`
 	TargetPreview   string     `json:"target_preview"`   // Lemma or reported text for quick inspection
-	Reason          string     `json:"reason"`           // 'INACCURATE_DEFINITION', 'OFFENSIVE_UNMARKED', 'SPAM_OR_VANDALISM', 'DUPLICATE', 'OTHER'
+	Reason          string     `json:"reason"`           // 'INACCURATE', 'OFFENSIVE_UNMARKED', 'SPAM_OR_VANDALISM', 'DUPLICATE', 'OTHER'
 	Details         string     `json:"details"`
 	Status          string     `json:"status"`           // 'PENDING', 'RESOLVED_HIDDEN', 'RESOLVED_AMENDED', 'DISMISSED'
 	ResolvedBy      *string    `json:"resolved_by,omitempty"`
@@ -158,21 +162,44 @@ type ResolveReportRequest struct {
 }
 ```
 
-#### 2.4.2. `SubmitQuorumVote` Behavior Against PostgreSQL Triggers (`RN06` and `RN07`)
-1. When `SubmitQuorumVote` executes `UpsertSenseApproval` in `sense_approvals`:
+> `Example` (used by `SenseQuorumDetail.Examples`) and `SenseDetail` (returned by `AdminOverrideState`) are defined in `pkg/models/dictionary.go`; see [`dictionary_service.md`](dictionary_service.md). `flag_emoji` is part of the wire contract but must never be rendered in the UI.
+
+#### 2.4.1b. SOA Interface (`CurationService`)
+
+```go
+type CurationService interface {
+	ListPendingQueue(ctx context.Context, regionFilter *string) ([]models.SenseQuorumItem, error)
+	ListMyProposals(ctx context.Context, editorID string, stateFilter *string) ([]models.SenseQuorumItem, error)
+	GetProposalDetail(ctx context.Context, senseID int) (*models.SenseQuorumDetail, error)
+	SubmitVote(ctx context.Context, editorID string, senseID int, req models.SubmitVoteRequest) (*models.SenseQuorumDetail, error)
+	AdminOverrideState(ctx context.Context, adminID string, senseID int, req models.AdminOverrideStateRequest) (*models.SenseDetail, error)
+
+	CreateReport(ctx context.Context, reporterID string, req models.CreateReportRequest) (*models.ContentReport, error)
+	ListOpenReports(ctx context.Context, statusFilter *string) ([]models.ContentReport, error)
+	ResolveReport(ctx context.Context, adminID string, reportID string, req models.ResolveReportRequest) (*models.ContentReport, error)
+}
+```
+
+#### 2.4.2. `SubmitVote` Behavior Against PostgreSQL Triggers (`RN06` and `RN07`)
+1. When `SubmitVote` executes `UpsertSenseApproval` in `sense_approvals`:
    - If `editorID == sense.id_editor`, both Go validation and the `trg_prevent_self_approval` trigger (**RN07**) reject the operation $\to$ the handler responds `403 Forbidden {"error": "Violación de integridad (RN07): Un editor no puede votar ni aprobar su propia contribución"}`.
    - If `req.Decision == "REQUEST_CHANGES"` or `"REJECT"` and `req.FeedbackNotes` is empty $\to$ responds `400 Bad Request {"error": "Debes incluir notas de retroalimentación al solicitar correcciones o rechazar una propuesta"}`.
-   - If `req.Decision == "APPROVE"` and with this vote the sum of `decision = 'APPROVE'` reaches **3**, the `trg_auto_approve_sense` trigger (**RN06 / CU08**) automatically updates `senses.state = 'APPROVED'` within the same PostgreSQL operation. Promptly afterward, `SubmitQuorumVote` re-reads `GetProposalInspection` and returns the updated `SenseQuorumDetail` with `state: "APPROVED"` and `approvals_count: 3`.
+   - If `req.Decision == "APPROVE"` and with this vote the sum of `decision = 'APPROVE'` reaches **3**, the `trg_auto_approve_sense` trigger (**RN06 / CU08**) automatically updates `senses.state = 'APPROVED'` within the same PostgreSQL operation. Promptly afterward, `SubmitVote` re-reads the proposal via `GetProposalDetail` and returns the updated `SenseQuorumDetail` with `state: "APPROVED"` and `approvals_count: 3`.
 
 #### 2.4.3. Curation and Moderation HTTP Endpoints (`/api/v1/curation` and `/api/v1/reports`)
 
+Registered in `core-service/internal/api/router.go`: every `/curation` and `/reports` route sits behind `RequireAuth` (`401` without a valid token); `RequireRole(...)` adds `403` for insufficient role.
+
 | Method | Path | Middleware | Use Case | Status | Successful Response |
 | :---: | :--- | :---: | :---: | :---: | :--- |
-| `GET` | `/api/v1/curation/queue` | `RequireRole(EDITOR, ADMIN)` | CU07 (RN06/07) | ✅ Ready | `200 OK` $\to$ `[]models.SenseQuorumItem` (`?region=MX`) |
-| `GET` | `/api/v1/curation/my-proposals` | `RequireRole(EDITOR, ADMIN)` | CU06 / CU07 | ✅ Ready | `200 OK` $\to$ `[]models.SenseQuorumItem` (`?state=DRAFT`) |
-| `GET` | `/api/v1/curation/senses/{senseId}` | `RequireRole(EDITOR, ADMIN)` | CU07 | ✅ Ready | `200 OK` $\to$ `models.SenseQuorumDetail` |
-| `POST` | `/api/v1/curation/senses/{senseId}/vote` | `RequireRole(EDITOR, ADMIN)` | CU07 / CU08 | ✅ Ready | `200 OK` $\to$ `models.SenseQuorumDetail` (`403` on RN07) |
-| `PUT` | `/api/v1/curation/senses/{senseId}/state` | `RequireRole(ADMIN)` | CU08 (1b, RN08)| ✅ Ready | `200 OK` $\to$ `models.SenseDetail` |
+| `GET` | `/api/v1/curation/queue` | `RequireAuth` + `RequireRole(EDITOR, ADMIN)` | CU07 (RN06/07) | ✅ Ready | `200 OK` $\to$ `[]models.SenseQuorumItem` (`?region=MX`) |
+| `GET` | `/api/v1/curation/my-proposals` | `RequireAuth` + `RequireRole(EDITOR, ADMIN)` | CU06 / CU07 | ✅ Ready | `200 OK` $\to$ `[]models.SenseQuorumItem` (`?state=DRAFT`) |
+| `GET` | `/api/v1/curation/senses/{senseId}` | `RequireAuth` + `RequireRole(EDITOR, ADMIN)` | CU07 | ✅ Ready | `200 OK` $\to$ `models.SenseQuorumDetail` |
+| `POST` | `/api/v1/curation/senses/{senseId}/vote` | `RequireAuth` + `RequireRole(EDITOR, ADMIN)` | CU07 / CU08 | ✅ Ready | `200 OK` $\to$ `models.SenseQuorumDetail` (`403` on RN07) |
+| `PUT` | `/api/v1/curation/senses/{senseId}/state` | `RequireAuth` + `RequireRole(ADMIN)` | CU08 (1b, RN08)| ✅ Ready | `200 OK` $\to$ `models.SenseDetail` (body: `models.AdminOverrideStateRequest`) |
 | `POST` | `/api/v1/reports` | `RequireAuth` | CU09 (RF11) | ✅ Ready | `201 Created` $\to$ `models.ContentReport` |
-| `GET` | `/api/v1/reports` | `RequireRole(ADMIN)` | CU09 | ✅ Ready | `200 OK` $\to$ `[]models.ContentReport` (`?status=PENDING`) |
-| `PUT` | `/api/v1/reports/{reportId}/resolve` | `RequireRole(ADMIN)` | CU09 (RN08) | ✅ Ready | `200 OK` $\to$ `models.ContentReport` |
+| `GET` | `/api/v1/reports` | `RequireAuth` + `RequireRole(ADMIN)` | CU09 | ✅ Ready | `200 OK` $\to$ `[]models.ContentReport` (`?status=PENDING`) |
+| `PUT` | `/api/v1/reports/{reportId}/resolve` | `RequireAuth` + `RequireRole(ADMIN)` | CU09 (RN08) | ✅ Ready | `200 OK` $\to$ `models.ContentReport` (`409` if the report is no longer `PENDING`) |
+
+#### 2.4.4. `sqlc` Queries (`sql/queries/curation.sql`)
+`ListPendingQuorumQueue :many`, `ListEditorProposals :many`, `GetSenseQuorumItemByID :one`, `ListVotesBySenseID :many`, `UpsertSenseApproval :one`, `AdminUpdateSenseState :one`, `CreateContentReport :one`, `GetContentReportByID :one`, `ListContentReports :many`, `ResolveContentReport :one`. The service additionally reuses `GetSenseByID` and `GetExamplesBySenseID` from `dictionary.sql` (see [`dictionary_service.md`](dictionary_service.md)).

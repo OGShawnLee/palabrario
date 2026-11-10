@@ -81,7 +81,79 @@ Model the phenomenon of **Transdialectal Heteronymy** (*"How do they say it over
 
 #### 2.3.1. Complete Data Structures (`pkg/models/dictionary.go`)
 
-In addition to already existing structures (`WordGender`, `WordSearchResult`, `Example`, `HeteronymItem`, `SenseDetail`, `WordDetail`), the following are defined in `pkg/models/dictionary.go`:
+```go
+type WordGender string
+
+const (
+	GenderMale      WordGender = "MALE"
+	GenderFemale    WordGender = "FEMALE"
+	GenderNeutral   WordGender = "NEUTRAL"
+	GenderAmbiguous WordGender = "AMBIGUOUS"
+)
+
+type WordSearchResult struct {
+	IDWord          int     `json:"id_word"`
+	Lemma           string  `json:"lemma"`
+	ShortDefinition string  `json:"short_definition"`
+	FlagEmoji       string  `json:"flag_emoji"`
+	CountryCode     string  `json:"country_code"`
+	Similarity      float32 `json:"similarity"`
+}
+
+type Example struct {
+	IDExample int     `json:"id_example"`
+	IDSense   int     `json:"id_sense"`
+	Sentence  string  `json:"sentence"`
+	Source    *string `json:"source,omitempty"`
+}
+
+type HeteronymItem struct {
+	RegionCode  string `json:"region_code"`
+	RegionName  string `json:"region_name"`
+	CountryCode string `json:"country_code"`
+	FlagEmoji   string `json:"flag_emoji"`
+	Term        string `json:"term"`
+}
+
+type SenseDetail struct {
+	IDSense         int       `json:"id_sense"`
+	IDWord          int       `json:"id_word"`
+	RegionCode      string    `json:"region_code"`
+	RegionName      string    `json:"region_name"`
+	CountryCode     string    `json:"country_code"`
+	FlagEmoji       string    `json:"flag_emoji"`
+	ShortDefinition string    `json:"short_definition"`
+	Definition      string    `json:"definition"`
+	IsPrimary       bool      `json:"is_primary"`
+	IsTabooOrVulgar bool      `json:"is_taboo_or_vulgar"`
+	CulturalNote    *string   `json:"cultural_note,omitempty"`
+	ImageURL        *string   `json:"image_url,omitempty"`
+	CEFRLevel       string    `json:"cefr_level"`
+	UsageFrequency  string    `json:"usage_frequency"`
+	State           string    `json:"state"`
+	Examples        []Example `json:"examples"`
+}
+
+type WordDetail struct {
+	IDWord          int             `json:"id_word"`
+	Lemma           string          `json:"lemma"`
+	NormalizedLemma string          `json:"normalized_lemma"`
+	PartOfSpeech    string          `json:"part_of_speech"`
+	Gender          WordGender      `json:"gender"`
+	Etymology       *string         `json:"etymology,omitempty"`
+	FriendlyBlurb   *string         `json:"friendly_blurb,omitempty"`
+	ImageURL        *string         `json:"image_url,omitempty"`
+	OriginRegion    *Region         `json:"origin_region,omitempty"` // Region: see identity_service.md
+	Senses          []SenseDetail   `json:"senses"`
+	Heteronyms      []HeteronymItem `json:"heteronyms"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+}
+```
+
+> `Region` (referenced by `WordDetail.OriginRegion`) is defined in `pkg/models/user.go` and documented in [`identity_service.md`](identity_service.md). The `flag_emoji` fields are part of the wire contract but must never be rendered in the UI (see [`CONTEXT.md`](../CONTEXT.md) ground rules).
+
+The following authoring and exploration DTOs are also defined in `pkg/models/dictionary.go`:
 
 ```go
 // Paginated exploration filter (GET /api/v1/words)
@@ -102,7 +174,6 @@ type WordSummaryCard struct {
 	PartOfSpeech     string     `json:"part_of_speech"`
 	Gender           WordGender `json:"gender"`
 	FriendlyBlurb    *string    `json:"friendly_blurb,omitempty"`
-	ImageURL         *string    `json:"image_url,omitempty"`
 	ImageURL         *string    `json:"image_url,omitempty"`
 	PrimarySenseID   int        `json:"primary_sense_id"`
 	ShortDefinition  string     `json:"short_definition"`
@@ -161,7 +232,6 @@ type UpdateWordRequest struct {
 	Etymology        *string    `json:"etymology,omitempty"`
 	FriendlyBlurb    *string    `json:"friendly_blurb,omitempty"`
 	ImageURL         *string    `json:"image_url,omitempty"`
-	ImageURL         *string    `json:"image_url,omitempty"`
 	OriginRegionCode *string    `json:"origin_region_code,omitempty"`
 }
 
@@ -190,9 +260,33 @@ type CreateConceptRequest struct {
 }
 ```
 
+#### 2.3.1b. SOA Interface (`DictionaryService`)
+
+```go
+type DictionaryService interface {
+	SearchDropdown(ctx context.Context, query string, userDialect string, limit int) ([]models.WordSearchResult, error)
+	GetWordDetail(ctx context.Context, wordID int) (*models.WordDetail, error)
+	ListRegions(ctx context.Context) ([]models.Region, error)
+	GetWordOfTheDay(ctx context.Context, dialect string) (*models.WordDetail, error)
+	ExploreWords(ctx context.Context, filter models.WordExploreFilter) (*models.PaginatedWords, error)
+	CreateWordProposal(ctx context.Context, actorID string, actorRole models.AccountRole, req models.CreateWordProposalRequest) (*models.WordDetail, error)
+	UpdateWord(ctx context.Context, actorID string, actorRole models.AccountRole, wordID int, req models.UpdateWordRequest) (*models.WordDetail, error)
+	CreateSense(ctx context.Context, actorID string, actorRole models.AccountRole, wordID int, req models.CreateSenseRequest) (*models.SenseDetail, error)
+	UpdateSense(ctx context.Context, actorID string, actorRole models.AccountRole, senseID int, req models.UpdateSenseRequest) (*models.SenseDetail, error)
+	DeleteSense(ctx context.Context, actorID string, actorRole models.AccountRole, senseID int) error
+	CreateExample(ctx context.Context, actorID string, actorRole models.AccountRole, senseID int, req models.CreateExampleInput) (*models.Example, error)
+	UpdateExample(ctx context.Context, actorID string, actorRole models.AccountRole, exampleID int, req models.CreateExampleInput) (*models.Example, error)
+	DeleteExample(ctx context.Context, actorID string, actorRole models.AccountRole, exampleID int) error
+	ListSemanticConcepts(ctx context.Context, search string) ([]models.SemanticConcept, error)
+	CreateSemanticConcept(ctx context.Context, req models.CreateConceptRequest) (*models.SemanticConcept, error)
+	LinkSenseToConcept(ctx context.Context, senseID int, conceptID int) error
+	UnlinkSenseFromConcept(ctx context.Context, senseID int, conceptID int) error
+}
+```
+
 #### 2.3.2. Exact `sqlc` Queries in `sql/queries/dictionary.sql`
 
-In addition to the 5 base queries (`SearchVocabularyDropdown`, `GetWordByID`, `GetApprovedSensesByWordID`, `GetExamplesBySenseIDs`, `GetHeteronymsByWordID`), it includes:
+In addition to the base queries (`SearchVocabularyDropdown`, `GetWordDetailByID`, `GetApprovedSensesByWordID`, `GetExamplesByWordID`, `GetHeteronymsByWordID`), it includes:
 
 1. `-- name: ListRegions :many`
    Selects all rows from `regions` ordered by `name ASC`.
@@ -205,39 +299,41 @@ In addition to the 5 base queries (`SearchVocabularyDropdown`, `GetWordByID`, `G
 5. `-- name: GetWordByNormalizedLemmaAndPOS :one`
    Checks if a lemma already exists with `(normalized_lemma = $1 AND part_of_speech = $2)`. If it already exists during `CreateWordProposal`, reuses the existing `id_word` and adds the new `Sense` in `DRAFT` (**CU06 Main Flow Step 2**).
 6. `-- name: CreateWord :one`
-   Inserts into `words (lemma, normalized_lemma, part_of_speech, gender, etymology, friendly_blurb, id_origin_region)` and returns the created row.
+   Inserts into `words (lemma, normalized_lemma, part_of_speech, gender, etymology, friendly_blurb, image_url, id_origin_region)` and returns the created row.
 7. `-- name: UpdateWordMetadata :one`
-   Updates metadata in `words` and `updated_at = now()` by `id_word`.
+   Updates metadata in `words` (including `image_url`) and `updated_at = now()` by `id_word`.
 8. `-- name: CreateSense :one`
-   Inserts into `senses (id_word, id_region, id_editor, short_definition, definition, is_primary, is_taboo_or_vulgar, cultural_note, cefr_level, usage_frequency, state)`.
+   Inserts into `senses (id_word, id_region, id_editor, short_definition, definition, is_primary, is_taboo_or_vulgar, cultural_note, image_url, cefr_level, usage_frequency, state)`.
    - **Business Rule in `CreateSense`:** If the actor has the `ADMIN` role, they may choose to create directly in `'APPROVED'` (`RN08`); if `EDITOR`, it is always inserted with `state = 'DRAFT'` (`CU06 Step 5`).
 9. `-- name: GetSenseByID :one`
    Retrieves the sense (any `state`) along with its `id_editor` to verify authorship before edit/delete (`CU06 2a`).
 10. `-- name: UpdateSense :one` and `-- name: DeleteSense :exec`
     Updates or deletes a sense. If the actor is `EDITOR` (not `ADMIN`), verifies that `sense.id_editor == actorID` and `sense.state == 'DRAFT'`.
-11. `-- name: CreateExample :one`, `-- name: UpdateExample :one`, `-- name: DeleteExample :exec`
+11. `-- name: CreateExample :one`, `-- name: GetExampleByID :one`, `-- name: GetExamplesBySenseID :many`, `-- name: UpdateExample :one`, `-- name: DeleteExample :exec`
     CRUD of example sentences in `examples`.
 12. `-- name: ListSemanticConcepts :many`, `-- name: CreateSemanticConcept :one`, `-- name: LinkSenseToConcept :exec`, `-- name: UnlinkSenseFromConcept :exec`
     Management of the heteronym graph in `semantic_concepts` and `concept_mappings`.
 
-#### 2.3.3. Dictionary HTTP Endpoints Specification (`/api/v1/regions`, `/api/v1/words`, `/api/v1/senses`, `/api/v1/concepts`)
+#### 2.3.3. Dictionary HTTP Endpoints Specification (`/api/v1/regions`, `/api/v1/words`, `/api/v1/senses`, `/api/v1/examples`, `/api/v1/concepts`)
+
+Authoring routes are registered in `core-service/internal/api/router.go` inside a group with `RequireAuth` followed by `RequireRole(EDITOR, ADMIN)` (`401` without a valid token, `403` for a `LEARNER`). `OptionalAuth` injects the JWT claims when a valid Bearer token is sent but never rejects anonymous requests; the handlers use `claims.AnchorDialect` as the default dialect.
 
 | Method | Path | Middleware | Use Case | Status | Successful Response |
 | :---: | :--- | :---: | :---: | :---: | :--- |
 | `GET` | `/api/v1/regions` | Public | CU05 | ✅ Ready | `200 OK` $\to$ `[]models.Region` |
-| `GET` | `/api/v1/words/word-of-the-day` | Public | CU05 | ✅ Ready | `200 OK` $\to$ `models.WordDetail` (`?dialect=MX`) |
-| `GET` | `/api/v1/words/search` | Public | CU05 (RF06) | ✅ Ready | `200 OK` $\to$ `[]models.WordSearchResult` (`?q=&dialect=&limit=8`) |
-| `GET` | `/api/v1/words` | Public | CU05 (RF07) | ✅ Ready | `200 OK` $\to$ `models.PaginatedWords` |
+| `GET` | `/api/v1/words/word-of-the-day` | `OptionalAuth` | CU05 | ✅ Ready | `200 OK` $\to$ `models.WordDetail` (`?dialect=MX`; if omitted, falls back to the caller's `AnchorDialect` claim; with no dialect, or if no word matches the region, the service picks from all regions; `404` if no words are available) |
+| `GET` | `/api/v1/words/search` | `OptionalAuth` | CU05 (RF06) | ✅ Ready | `200 OK` $\to$ `[]models.WordSearchResult` (`?q=&dialect=&limit=10`; empty `q` returns `[]`; `dialect` defaults to the `AnchorDialect` claim, else `MX`) |
+| `GET` | `/api/v1/words` | Public | CU05 (RF07) | ✅ Ready | `200 OK` $\to$ `models.PaginatedWords` (`?q=&region=&pos=&cefr=&frequency=&include_taboo=true&page=1&limit=20`; `limit` must be `1..50`, otherwise the default `20` is used) |
 | `GET` | `/api/v1/words/{id}` | Public | CU05 (RF07) | ✅ Ready | `200 OK` $\to$ `models.WordDetail` |
-| `POST` | `/api/v1/words` | `RequireRole(EDITOR, ADMIN)` | CU06 (RF08) | ✅ Ready | `201 Created` $\to$ `models.WordDetail` |
-| `PUT` | `/api/v1/words/{id}` | `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Ready | `200 OK` $\to$ `models.WordDetail` |
-| `POST` | `/api/v1/words/{id}/senses` | `RequireRole(EDITOR, ADMIN)` | CU06 (RF08) | ✅ Ready | `201 Created` $\to$ `models.SenseDetail` |
-| `PUT` | `/api/v1/senses/{senseId}` | `RequireRole(EDITOR, ADMIN)` | CU06 (2a) | ✅ Ready | `200 OK` $\to$ `models.SenseDetail` (`403` if another editor or already approved) |
-| `DELETE` | `/api/v1/senses/{senseId}` | `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Ready | `204 No Content` |
-| `POST` | `/api/v1/senses/{senseId}/examples` | `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Ready | `201 Created` $\to$ `models.Example` |
-| `PUT` | `/api/v1/examples/{exampleId}` | `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Ready | `200 OK` $\to$ `models.Example` |
-| `DELETE` | `/api/v1/examples/{exampleId}` | `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Ready | `204 No Content` |
+| `POST` | `/api/v1/words` | `RequireAuth` + `RequireRole(EDITOR, ADMIN)` | CU06 (RF08) | ✅ Ready | `201 Created` $\to$ `models.WordDetail` |
+| `PUT` | `/api/v1/words/{id}` | `RequireAuth` + `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Ready | `200 OK` $\to$ `models.WordDetail` |
+| `POST` | `/api/v1/words/{id}/senses` | `RequireAuth` + `RequireRole(EDITOR, ADMIN)` | CU06 (RF08) | ✅ Ready | `201 Created` $\to$ `models.SenseDetail` |
+| `PUT` | `/api/v1/senses/{senseId}` | `RequireAuth` + `RequireRole(EDITOR, ADMIN)` | CU06 (2a) | ✅ Ready | `200 OK` $\to$ `models.SenseDetail` (`403` if another editor or already approved) |
+| `DELETE` | `/api/v1/senses/{senseId}` | `RequireAuth` + `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Ready | `204 No Content` |
+| `POST` | `/api/v1/senses/{senseId}/examples` | `RequireAuth` + `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Ready | `201 Created` $\to$ `models.Example` |
+| `PUT` | `/api/v1/examples/{exampleId}` | `RequireAuth` + `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Ready | `200 OK` $\to$ `models.Example` (body: `models.CreateExampleInput`) |
+| `DELETE` | `/api/v1/examples/{exampleId}` | `RequireAuth` + `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Ready | `204 No Content` |
 | `GET` | `/api/v1/concepts` | Public | CU05 / CU06 | ✅ Ready | `200 OK` $\to$ `[]models.SemanticConcept` (`?q=`) |
-| `POST` | `/api/v1/concepts` | `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Ready | `201 Created` $\to$ `models.SemanticConcept` |
-| `POST` | `/api/v1/senses/{senseId}/concepts/{conceptId}` | `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Ready | `204 No Content` |
-| `DELETE` | `/api/v1/senses/{senseId}/concepts/{conceptId}` | `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Ready | `204 No Content` |
+| `POST` | `/api/v1/concepts` | `RequireAuth` + `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Ready | `201 Created` $\to$ `models.SemanticConcept` |
+| `POST` | `/api/v1/senses/{senseId}/concepts/{conceptId}` | `RequireAuth` + `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Ready | `204 No Content` |
+| `DELETE` | `/api/v1/senses/{senseId}/concepts/{conceptId}` | `RequireAuth` + `RequireRole(EDITOR, ADMIN)` | CU06 | ✅ Ready | `204 No Content` |

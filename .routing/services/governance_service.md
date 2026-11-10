@@ -1,7 +1,7 @@
 # Governance Service (`governance_service.md`)
 
 > **Domain service file — self-contained.** Combines the domain entities and business rules (from the former `DOMAIN.md`) with the technical contracts: DTOs, SOA interface, `sqlc` queries, and HTTP/WS endpoints (from the former `INTERFACES.md`).
-> **Service:** `GovernanceService` · **Use Cases:** `CU02`, `CU03`, `CU04` · **Business Rules:** `RN02` (Editor Promotion request uniqueness), `RN08` (Admin-only ticket issuance), VIP invitation tickets, Last Admin Protection · **Routes:** `TBD`
+> **Service:** `GovernanceService` · **Use Cases:** `CU02`, `CU03`, `CU04` · **Business Rules:** `RN02` (Editor Promotion request uniqueness), `RN08` (Admin-only ticket issuance), VIP invitation tickets, Last Admin Protection · **Routes:** backend API `/api/v1/governance/*` (see section 2.2.4); frontend routes: see [`ROUTES.md`](../ROUTES.md)
 > **Global rules:** the contract-first rules, SOA architecture, and domain-error-to-HTTP mapping shared by every service live in [`DOMAIN.md`](../DOMAIN.md) (sections 3 and 4).
 > **Canonical persistence:** PostgreSQL 17 ([`SCHEMA_FINAL.sql`](../../SCHEMA_FINAL.sql)) · **Shared DTOs:** [`pkg/models/`](../../pkg/models)
 
@@ -54,7 +54,9 @@ Materialize the institutional access model without payment gateways (**CU04**). 
 
 ### MODULE 2: Institutional Governance, Roles, and Tickets (`GovernanceService` — `CU02, CU03, CU04`)
 
-#### 2.2.1. Data Structures (`pkg/models/governance.go` — New File)
+#### 2.2.1. Data Structures (`pkg/models/governance.go`)
+
+> `ListUsers` and `UpdateUserRoleOrStatus` return `models.UserProfile` (documented in [`identity_service.md`](identity_service.md)); `AccountRole` is defined in `pkg/models/user.go`.
 
 ```go
 package models
@@ -154,15 +156,20 @@ type GovernanceService interface {
 
 #### 2.2.4. HTTP Endpoints (`/api/v1/governance`)
 
+All routes are registered in `core-service/internal/api/router.go` inside a `RequireAuth` group; the admin-only rows are additionally nested in a `RequireRole(ADMIN)` group (`401` if the token is missing/invalid, `403` if the role is not `ADMIN`).
+
 | Method | Path | Middleware | Use Case | HTTP Status Codes |
 | :---: | :--- | :---: | :---: | :--- |
-| `POST` | `/api/v1/governance/editor-requests` | `RequireAuth` | CU02 (RN02) | `201`, `400`, `409` (pending request or already an editor) |
-| `GET` | `/api/v1/governance/editor-requests/me` | `RequireAuth` | CU02 | `200` |
-| `GET` | `/api/v1/governance/editor-requests` | `RequireRole(ADMIN)` | CU03 | `200` (`?status=PENDING`) |
-| `PUT` | `/api/v1/governance/editor-requests/{id}/resolve` | `RequireRole(ADMIN)` | CU03 (RN08) | `200`, `400`, `404`, `409` |
-| `GET` | `/api/v1/governance/users` | `RequireRole(ADMIN)` | CU03 | `200` (`?q=&role=&limit=20&offset=0`) |
-| `PUT` | `/api/v1/governance/users/{id}/access` | `RequireRole(ADMIN)` | CU03 (RN08) | `200`, `404`, `409` (last admin) |
-| `POST` | `/api/v1/governance/tickets` | `RequireRole(ADMIN)` | CU04 (RN08) | `201`, `400`, `409` |
-| `GET` | `/api/v1/governance/tickets` | `RequireRole(ADMIN)` | CU04 | `200` (`?active_only=true`) |
-| `DELETE` | `/api/v1/governance/tickets/{id}` | `RequireRole(ADMIN)` | CU04 | `204`, `404` |
-| `POST` | `/api/v1/governance/tickets/redeem` | `RequireAuth` | CU04 | `200`, `400`, `404`, `409` (exhausted, expired, or already redeemed by user) |
+| `POST` | `/api/v1/governance/editor-requests` | `RequireAuth` | CU02 (RN02) | `201`, `400`, `401`, `409` (pending request or already an editor) |
+| `GET` | `/api/v1/governance/editor-requests/me` | `RequireAuth` | CU02 | `200`, `401` |
+| `POST` | `/api/v1/governance/tickets/redeem` | `RequireAuth` | CU04 | `200`, `400`, `401`, `404`, `409` (exhausted, expired, or already redeemed by user) |
+| `GET` | `/api/v1/governance/editor-requests` | `RequireAuth` + `RequireRole(ADMIN)` | CU03 | `200` (`?status=PENDING`), `401`, `403` |
+| `PUT` | `/api/v1/governance/editor-requests/{id}/resolve` | `RequireAuth` + `RequireRole(ADMIN)` | CU03 (RN08) | `200`, `400`, `401`, `403`, `404`, `409` |
+| `GET` | `/api/v1/governance/users` | `RequireAuth` + `RequireRole(ADMIN)` | CU03 | `200` (`?q=&role=&limit=20&offset=0`; total returned in the `X-Total-Count` response header), `401`, `403` |
+| `PUT` | `/api/v1/governance/users/{id}/access` | `RequireAuth` + `RequireRole(ADMIN)` | CU03 (RN08) | `200`, `401`, `403`, `404`, `409` (last admin) |
+| `POST` | `/api/v1/governance/tickets` | `RequireAuth` + `RequireRole(ADMIN)` | CU04 (RN08) | `201`, `400`, `401`, `403`, `409` |
+| `GET` | `/api/v1/governance/tickets` | `RequireAuth` + `RequireRole(ADMIN)` | CU04 | `200` (`?active_only=true`), `401`, `403` |
+| `DELETE` | `/api/v1/governance/tickets/{id}` | `RequireAuth` + `RequireRole(ADMIN)` | CU04 | `204`, `401`, `403`, `404` |
+
+#### 2.2.5. `sqlc` Queries (`sql/queries/governance.sql`)
+`CreateEditorRequest :one`, `ListMyEditorRequests :many`, `ListEditorRequests :many`, `GetEditorRequestByID :one`, `ResolveEditorRequest :one`, `UpdateAccountRole :exec`, `CountActiveAdmins :one`, `UpdateUserRoleOrStatus :one`, `ListUsers :many`, `CountUsers :one`, `CreateInvitationTicket :one`, `ListInvitationTickets :many`, `GetInvitationTicketByID :one`, `RevokeInvitationTicket :exec`, `GetInvitationTicketByCodeForUpdate :one`, `HasUserRedeemedTicket :one`, `CreateTicketRedemption :exec`, `IncrementTicketUses :one`. The service additionally reuses `GetAccountByID` and `GetUserProfileByID` from `users.sql` (see [`identity_service.md`](identity_service.md)).

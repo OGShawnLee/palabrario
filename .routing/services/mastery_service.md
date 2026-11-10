@@ -56,6 +56,36 @@ Implement the auditable progression economy (**RN11**).
 #### 2.6.1. Data Structures in `pkg/models/studio.go`
 
 ```go
+type MasteryStage string
+
+const (
+	StageNew       MasteryStage = "NEW"
+	StageLearning  MasteryStage = "LEARNING"
+	StageReviewing MasteryStage = "REVIEWING"
+	StageMastered  MasteryStage = "MASTERED"
+)
+
+const (
+	XPReasonQuizCorrect         = "QUIZ_CORRECT"
+	XPReasonMatchWin            = "MATCH_WIN"
+	XPReasonDailyStreak         = "DAILY_STREAK"
+	XPReasonDeckCompleted       = "DECK_COMPLETED"
+	XPReasonAchievementUnlocked = "ACHIEVEMENT_UNLOCKED"
+)
+
+type UserMastery struct {
+	IDUser              string       `json:"id_user"`
+	IDSense             int          `json:"id_sense"`
+	ProgressStage       MasteryStage `json:"progress_stage"`
+	MasteryPercentage   float32      `json:"mastery_percentage"`
+	ConsecutiveCorrect  int          `json:"consecutive_correct"`
+	TimesReviewed       int          `json:"times_reviewed"`
+	EasinessFactor      float32      `json:"easiness_factor"`
+	CurrentIntervalDays int          `json:"current_interval_days"`
+	NextReviewAt        time.Time    `json:"next_review_at"`
+	LastReviewedAt      time.Time    `json:"last_reviewed_at"`
+}
+
 type StudyCardItem struct {
 	IDSense         int          `json:"id_sense"`
 	IDWord          int          `json:"id_word"`
@@ -130,6 +160,20 @@ type MasteryDashboard struct {
 }
 ```
 
+> `Example` (used by `StudyCardItem.Examples`) is defined in `pkg/models/dictionary.go`; see [`dictionary_service.md`](dictionary_service.md). `AchievementStatus` is also embedded in `PublicUserProfile.UnlockedBadges` ([`identity_service.md`](identity_service.md)). `StudyCardItem.flag_emoji` is part of the wire contract but must never be rendered in the UI.
+
+#### 2.6.1b. SOA Interface (`MasteryService`)
+
+```go
+type MasteryService interface {
+	GetStudySession(ctx context.Context, userID string, userRole models.AccountRole, deckID *int, limit int) (*models.StudySessionPayload, error)
+	SubmitReview(ctx context.Context, userID string, req models.SubmitReviewRequest) (*models.CardReviewResult, error)
+	GetMasteryDashboard(ctx context.Context, userID string) (*models.MasteryDashboard, error)
+	ListMasteryItems(ctx context.Context, userID string, stage *string) ([]models.StudyCardItem, error)
+	ListXPLedger(ctx context.Context, userID string, limit int) ([]models.XPTransactionItem, error)
+}
+```
+
 #### 2.6.2. SuperMemo SM-2 Deterministic Algorithm in `MasteryService` (`RN09` and `RN11`)
 
 The pure function `CalculateSM2(prev *UserMastery, qualityRating int, now time.Time) (UserMastery, int)` strictly adheres to this specification:
@@ -139,13 +183,13 @@ The pure function `CalculateSM2(prev *UserMastery, qualityRating int, now time.T
    - `3` (*Good*) $\to q = 4$ (Correct with normal pace)
    - `4` (*Easy*) $\to q = 5$ (Perfect instant recall)
 2. **Calculation of Easiness Factor ($EF$), Interval ($I$), and Stage (`progress_stage`):**
-   - Initial state if `prev == nil`: $EF = 2.5$, `ConsecutiveCorrect = 0`, `TimesReviewed = 0`, `CurrentIntervalDays = 0`.
+   - Initial state if `prev == nil`: $EF = 2.5$, `ConsecutiveCorrect = 0`, `TimesReviewed = 0`, previous interval defaults to `1` day (`prevInterval := 1` in `CalculateSM2`; only consumed when `ConsecutiveCorrect > 2`).
    - `TimesReviewed = prev.TimesReviewed + 1`.
    - If `qualityRating == 1` ($q < 3$):
      - `ConsecutiveCorrect = 0`
      - `CurrentIntervalDays = 1`
      - $EF' = \max(1.3,\; EF - 0.20)$
-     - `ProgressStage = "LEARNING"`
+     - `ProgressStage = "LEARNING"`, `MasteryPercentage = 20.0`
      - `XPAwarded = 5` (Consolation XP for review effort)
    - If `qualityRating >= 2` ($q \ge 3$):
      - `ConsecutiveCorrect = prev.ConsecutiveCorrect + 1`
@@ -163,10 +207,15 @@ The pure function `CalculateSM2(prev *UserMastery, qualityRating int, now time.T
 
 #### 2.6.3. SM-2 and Mastery HTTP Endpoints (`/api/v1/studio`)
 
+Registered in `core-service/internal/api/router.go` under `/api/v1/studio` inside a single `RequireAuth` group (`401` without a valid token).
+
 | Method | Path | Middleware | Use Case | Status | Successful Response |
 | :---: | :--- | :---: | :---: | :---: | :--- |
-| `GET` | `/api/v1/studio/study-session` | `RequireAuth` | CU12 (RN09) | ✅ Ready | `200 OK` $\to$ `models.StudySessionPayload` (`?deck_id=1&limit=15`) |
+| `GET` | `/api/v1/studio/study-session` | `RequireAuth` | CU12 (RN09) | ✅ Ready | `200 OK` $\to$ `models.StudySessionPayload` (`?deck_id=1&limit=15`; an invalid `deck_id` is ignored, `limit` defaults to `15` and is clamped to `50` by the service) |
 | `POST` | `/api/v1/studio/study-session/review` | `RequireAuth` | CU12 (RN09/11)| ✅ Ready | `200 OK` $\to$ `models.CardReviewResult` |
 | `GET` | `/api/v1/studio/mastery` | `RequireAuth` | CU13 (RN09/11)| ✅ Ready | `200 OK` $\to$ `models.MasteryDashboard` |
 | `GET` | `/api/v1/studio/mastery/items` | `RequireAuth` | CU13 | ✅ Ready | `200 OK` $\to$ `[]models.StudyCardItem` (`?stage=MASTERED`) |
-| `GET` | `/api/v1/studio/xp-ledger` | `RequireAuth` | CU13 (RN11) | ✅ Ready | `200 OK` $\to$ `[]models.XPTransactionItem` (`?limit=50`) |
+| `GET` | `/api/v1/studio/xp-ledger` | `RequireAuth` | CU13 (RN11) | ✅ Ready | `200 OK` $\to$ `[]models.XPTransactionItem` (`?limit=50`; default `50`, clamped to `100` by the service) |
+
+#### 2.6.4. `sqlc` Queries (`sql/queries/mastery.sql`)
+`GetStudySessionCardsByDeck :many`, `CountDueStudySessionCardsByDeck :one`, `GetStudySessionCardsAll :many`, `CountDueStudySessionCardsAll :one`, `GetUserMasteryForSense :one`, `UpsertUserMastery :one`, `InsertXPTransaction :one`, `AddUserXPAndUpdateStreak :one` (recomputes `current_level = (total_xp / 1000) + 1` and the streak), `GetMasteryStageCounts :one`, `GetUserGamificationProfile :one`, `ListUserAchievements :many`, `UnlockUserAchievement :exec`, `ListMasteryCardsByStage :many`, `ListRecentXPTransactions :many`, `GetExamplesForSenses :many`. The service additionally reuses `GetDeckByID` from `studio.sql` (see [`studio_service.md`](studio_service.md)).

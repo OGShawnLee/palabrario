@@ -1,7 +1,7 @@
 # Arena Service (`arena_service.md`)
 
 > **Domain service file — self-contained.** Combines the domain entities and business rules (from the former `DOMAIN.md`) with the technical contracts: DTOs, SOA interface, `sqlc` queries, and HTTP/WS endpoints (from the former `INTERFACES.md`).
-> **Services:** `ArenaCatalogService` (`core-service :8000`) + `realtime-service` (`:8001`) · **Use Cases:** `CU14`, `CU15`, `CU16` · **Business Rules:** `RN10` (Monotonic speed scoring), `RN13` (Image distractor quorum); `RN11` and `RN09` apply on consolidation · **Domain:** 3NF match rounds and replay, S2S token · **Routes:** `TBD` (planned `/arena`; see [`ROUTES.md`](../ROUTES.md))
+> **Services:** `ArenaCatalogService` (`core-service :8000`) + `realtime-service` (`:8001`) · **Use Cases:** `CU14`, `CU15`, `CU16` · **Business Rules:** `RN10` (Monotonic speed scoring), `RN13` (Image distractor quorum); `RN11` and `RN09` apply on consolidation · **Domain:** 3NF match rounds and replay, S2S token · **Routes:** backend API `/api/v1/arena/matches/*` and WS `/ws/arena/*` (see section 2.7.5); frontend routes: `TBD` (planned `/arena`; see [`ROUTES.md`](../ROUTES.md))
 > **Global rules:** the contract-first rules, SOA architecture, and domain-error-to-HTTP mapping shared by every service live in [`DOMAIN.md`](../DOMAIN.md) (sections 3 and 4).
 > **Canonical persistence:** PostgreSQL 17 ([`SCHEMA_FINAL.sql`](../../SCHEMA_FINAL.sql)) · **Shared DTOs:** [`pkg/models/`](../../pkg/models)
 
@@ -88,9 +88,54 @@ Represent the lifecycle, room operating rules, and consolidated outcome of a mul
 
 #### 2.7.2. Complete Data Structures in `pkg/models/arena.go`
 
-In addition to `MatchStatus`, `ArenaParticipant`, `ArenaQuestion`, `ArenaRoomState`, and `WSEvent`, the following are defined in `pkg/models/arena.go`:
-
 ```go
+type MatchStatus string
+
+const (
+	MatchStatusWaiting    MatchStatus = "WAITING"
+	MatchStatusInProgress MatchStatus = "IN_PROGRESS"
+	MatchStatusFinished   MatchStatus = "FINISHED"
+)
+
+type ArenaParticipant struct {
+	IDUser      string `json:"id_user"`
+	UserName    string `json:"user_name"`
+	Name        string `json:"name"`
+	AvatarURL   string `json:"avatar_url"`
+	Score       int    `json:"score"`
+	Rank        int    `json:"rank"`
+	IsHost      bool   `json:"is_host"`
+	IsReady     bool   `json:"is_ready"`
+	DialectCode string `json:"dialect_code"`
+	FlagEmoji   string `json:"flag_emoji"`
+}
+
+type ArenaQuestion struct {
+	RoundNumber   int      `json:"round_number"`
+	Modality      string   `json:"modality"` // 'DEFINITION_TO_WORD', 'WORD_TO_DEFINITION', 'WORD_TO_IMAGE', etc.
+	Prompt        string   `json:"prompt"`
+	Options       []string `json:"options"`
+	Explanation   string   `json:"explanation"`
+	TimeLimitSecs int      `json:"time_limit_secs"`
+}
+
+type ArenaRoomState struct {
+	RoomCode     string             `json:"room_code"`
+	DeckID       int                `json:"deck_id"`
+	DeckTitle    string             `json:"deck_title"`
+	Status       MatchStatus        `json:"status"`
+	TotalRounds  int                `json:"total_rounds"`
+	CurrentRound int                `json:"current_round"`
+	RoundTimeSec int                `json:"round_time_sec"`
+	Participants []ArenaParticipant `json:"participants"`
+}
+
+// WebSocket Event Wrapper
+type WSEvent struct {
+	Type    string      `json:"type"` // e.g. "ROOM_STATE", "COUNTDOWN", "QUESTION", "ROUND_RESULT", "PODIUM"
+	Payload interface{} `json:"payload,omitempty"`
+}
+
 // Client request to core-service to prepare a new room (CU14)
 type CreateMatchRequest struct {
 	IDDeck       int   `json:"id_deck"`             // Required: Base deck (min. 8 APPROVED senses and >= TotalRounds)
@@ -253,10 +298,27 @@ In `realtime-service`, response time is measured using the server's monotonic cl
 
 | Service | Method / Protocol | Path | Middleware | Use Case | Description |
 | :---: | :---: | :--- | :---: | :---: | :--- |
-| `core-service (:8000)` | `POST` | `/api/v1/arena/matches/prepare` | `RequireAuth` | CU14 (RN04/10) | Validates privacy (`RN04`), requires that `Deck` has $\ge 8$ `APPROVED` senses and $\ge \text{TotalRounds}$ (`422` if not), generates unique PIN in `matches` (`WAITING`), persists rounds in `match_rounds` (3NF), and returns `MatchPackage`. |
-| `core-service (:8000)` | `GET` | `/api/v1/arena/matches/{roomCode}/package` | `RequireInternalService` (JWT S2S) | CU14 / CU15 | Exclusively allows `realtime-service` to load into RAM the `MatchPackage` of a room in `WAITING` state. |
-| `core-service (:8000)` | `POST` | `/api/v1/arena/matches/consolidate` | `RequireInternalService` (JWT S2S) | CU16 (RN09/11)| Executes in a single `pgx.Tx` transaction the closing of `matches` (`FINISHED`), insertion into `match_participants`, breakdown of rounds into `quiz_attempts`, entries in `xp_transactions`, and adjustments in `user_mastery`. |
-| `core-service (:8000)` | `GET` | `/api/v1/arena/matches/history` | `RequireAuth` | CU13 / CU16 | Returns recent matches played by the authenticated user (`[]models.MatchSummary`). |
+| `core-service (:8000)` | `POST` | `/api/v1/arena/matches/prepare` | `RequireAuth` | CU14 (RN04/10) | Validates privacy (`RN04`), requires that `Deck` has $\ge 8$ `APPROVED` senses and $\ge \text{TotalRounds}$ (`422` if not), generates unique PIN in `matches` (`WAITING`), persists rounds in `match_rounds` (3NF), and returns `MatchPackage` with `201 Created`. |
+| `core-service (:8000)` | `GET` | `/api/v1/arena/matches/{roomCode}/package` | `RequireInternalService` (JWT S2S) | CU14 / CU15 | Exclusively allows `realtime-service` to load into RAM the `MatchPackage` of a room in `WAITING` state (`200 OK`). A non-S2S token is rejected with `403`; a missing/malformed header with `401`. |
+| `core-service (:8000)` | `POST` | `/api/v1/arena/matches/consolidate` | `RequireInternalService` (JWT S2S) | CU16 (RN09/11)| Executes in a single `pgx.Tx` transaction the closing of `matches` (`FINISHED`), insertion into `match_participants`, breakdown of rounds into `quiz_attempts`, entries in `xp_transactions`, and adjustments in `user_mastery`. Returns `models.MatchSummary` with `200 OK`. |
+| `core-service (:8000)` | `GET` | `/api/v1/arena/matches/history` | `RequireAuth` | CU13 / CU16 | Returns recent matches played by the authenticated user (`[]models.MatchSummary`; `?limit=20`, valid range `1..50`, otherwise the default `20`). |
 | `core-service (:8000)` | `GET` | `/api/v1/arena/matches/{matchId}` | `RequireAuth` | CU16 (Replay) | Returns complete `models.MatchReplayDetail` with podium and round-by-round breakdown (`match_rounds` + `quiz_attempts`). |
-| `realtime-service (:8001)` | `GET` | `/health` | Public | Infra | Verifies Go process health and active room count in RAM. |
-| `realtime-service (:8001)` | `WS` | `/ws/arena/{roomCode}?token={jwt}` | JWT (`pkg/auth`) | CU15 / CU16 | Low-latency ($< 50\text{ ms}$) bidirectional channel for events `JOIN_ROOM`, `ROOM_STATE`, `START_MATCH`, `COUNTDOWN`, `QUESTION`, `SUBMIT_ANSWER`, `ROUND_RESULT`, `PODIUM`. |
+| `realtime-service (:8001)` | `GET` | `/health` | Public | Infra | Verifies Go process health and active room count in RAM (`{"status","service","active_rooms","timestamp"}`). |
+| `realtime-service (:8001)` | `GET` | `/` | Public | Infra | Welcome message (`{"message": ...}`). |
+| `realtime-service (:8001)` | `WS` | `/ws/arena/{roomCode}?token={jwt}` | JWT (`pkg/auth`, validated in the handler via `VerifyToken`; also accepts `Authorization: Bearer {jwt}`) | CU15 / CU16 | Low-latency ($< 50\text{ ms}$) bidirectional channel (see event table below). Pre-upgrade failures: `400` (empty room code), `401` (missing/invalid token), `404` (room package unavailable in `core-service`). |
+
+**WebSocket events (`models.WSEvent{type, payload}`).** Joining a room is implicit: the room join happens when the WebSocket upgrade succeeds (there is **no** client `JOIN_ROOM` event in the code); a successful join (or reconnection) triggers a `ROOM_STATE` broadcast.
+
+| Direction | `type` | Payload |
+| :---: | :--- | :--- |
+| Client $\to$ Server | `START_MATCH` | none; only honored when sent by the host while the room is `WAITING` |
+| Client $\to$ Server | `SUBMIT_ANSWER` | `models.SubmitAnswerPayload` |
+| Server $\to$ Clients | `ROOM_STATE` | `models.ArenaRoomState` |
+| Server $\to$ Clients | `COUNTDOWN` | `{"seconds": 3}` |
+| Server $\to$ Clients | `QUESTION` | `models.ArenaQuestion` (never includes `correct_option`) |
+| Server $\to$ Clients | `ROUND_RESULT` | `models.RoundResultPayload` |
+| Server $\to$ Clients | `PODIUM` | final standings |
+| Server $\to$ Joining client | `ERROR` | `{"error": "..."}` (e.g. match already in progress, room full); the socket is then closed |
+
+#### 2.7.6. `sqlc` Queries (`sql/queries/arena.sql`)
+`GetApprovedDeckSensesForArena :many`, `GetCuratedQuestionsBySenseIDs :many`, `CreateMatch :one`, `InsertMatchRound :exec`, `GetMatchByRoomCode :one`, `GetMatchByID :one`, `ListMatchRoundsByMatchID :many`, `UpdateMatchStatus :exec`, `MarkMatchFinished :one`, `UpsertMatchParticipant :exec`, `UpsertMatchRoundQuizAttempt :exec`, `ListUserMatchHistory :many`, `ListMatchParticipantsByMatchIDs :many`, `ListMatchQuizAttemptsByMatchID :many`. The service additionally reuses `GetDeckByID` from `studio.sql` (see [`studio_service.md`](studio_service.md)), and `InsertXPTransaction`, `UpsertUserMastery` from `mastery.sql` (see [`mastery_service.md`](mastery_service.md)).

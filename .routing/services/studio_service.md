@@ -1,7 +1,7 @@
 # Studio Service (`studio_service.md`)
 
 > **Domain service file — self-contained.** Combines the domain entities and business rules (from the former `DOMAIN.md`) with the technical contracts: DTOs, SOA interface, `sqlc` queries, and HTTP/WS endpoints (from the former `INTERFACES.md`).
-> **Service:** `StudioService` · **Use Cases:** `CU10`, `CU11` · **Business Rules:** `RN03` (Ownership), `RN04` (Privacy), `RN05` (Official content) · **Domain:** Decks, Collections, Saved Decks/Collections · **Routes:** `TBD` (planned `/decks`, `/collections`, `/studio`; see [`ROUTES.md`](../ROUTES.md))
+> **Service:** `StudioService` · **Use Cases:** `CU10`, `CU11` · **Business Rules:** `RN03` (Ownership), `RN04` (Privacy), `RN05` (Official content) · **Domain:** Decks, Collections, Saved Decks/Collections · **Routes:** backend API `/api/v1/decks`, `/api/v1/collections`, `/api/v1/studio/{decks,collections}` (see section 2.5.3); frontend routes: `TBD` (planned `/decks`, `/collections`, `/studio`; see [`ROUTES.md`](../ROUTES.md))
 > **Global rules:** the contract-first rules, SOA architecture, and domain-error-to-HTTP mapping shared by every service live in [`DOMAIN.md`](../DOMAIN.md) (sections 3 and 4).
 > **Canonical persistence:** PostgreSQL 17 ([`SCHEMA_FINAL.sql`](../../SCHEMA_FINAL.sql)) · **Shared DTOs:** [`pkg/models/`](../../pkg/models)
 
@@ -74,13 +74,28 @@ type Deck struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
-// Enrichment of Deck for the Personal Studio view (GUIStudioDeckCard):
+// Canonical Collection model (pkg/models/studio.go)
+type Collection struct {
+	IDCollection int       `json:"id_collection"`
+	IDUser       string    `json:"id_user"`
+	Title        string    `json:"title"`
+	Description  *string   `json:"description,omitempty"`
+	IsPublic     bool      `json:"is_public"`
+	IsFeatured   bool      `json:"is_featured"`
+	IsOfficial   bool      `json:"is_official"`
+	Decks        []Deck    `json:"decks,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+// Enrichment of Deck for the Personal Studio view (GUIStudioDeckCard).
+// `Deck` is embedded (its JSON fields are flattened into this object):
 type StudioDeckSummary struct {
 	Deck
-	OwnerUserName      string  `json:"owner_user_name"`
-	IsSavedFromComm    bool    `json:"is_saved_from_community"`
-	DueCardsToday      int     `json:"due_cards_today"`
-	RetentionPercent   float32 `json:"retention_percent"`
+	OwnerUserName    string  `json:"owner_user_name"`
+	IsSavedFromComm  bool    `json:"is_saved_from_community"`
+	DueCardsToday    int     `json:"due_cards_today"`
+	RetentionPercent float32 `json:"retention_percent"`
 }
 
 type CreateDeckRequest struct {
@@ -122,9 +137,39 @@ type UpdateCollectionRequest struct {
 }
 ```
 
+> `DeckItem.Sense` references `SenseDetail` (defined in `pkg/models/dictionary.go`; see [`dictionary_service.md`](dictionary_service.md)). `Deck` and `Collection` are also embedded in `PublicUserProfile` ([`identity_service.md`](identity_service.md)).
+
+#### 2.5.1b. SOA Interface (`StudioService`)
+
+```go
+type StudioService interface {
+	// Barajas (CU10)
+	ListPublicDecks(ctx context.Context, query *string, officialOnly *bool) ([]models.Deck, error)
+	ListStudioDecks(ctx context.Context, userID string) ([]models.StudioDeckSummary, error)
+	GetDeckDetail(ctx context.Context, viewerID *string, viewerRole *models.AccountRole, deckID int) (*models.Deck, error)
+	CreateDeck(ctx context.Context, userID string, userRole models.AccountRole, req models.CreateDeckRequest) (*models.Deck, error)
+	UpdateDeck(ctx context.Context, userID string, userRole models.AccountRole, deckID int, req models.UpdateDeckRequest) (*models.Deck, error)
+	DeleteDeck(ctx context.Context, userID string, userRole models.AccountRole, deckID int) error
+	AddDeckItem(ctx context.Context, userID string, userRole models.AccountRole, deckID int, req models.AddDeckItemRequest) (*models.DeckItem, error)
+	RemoveDeckItem(ctx context.Context, userID string, userRole models.AccountRole, deckID int, senseID int) error
+	SaveDeck(ctx context.Context, userID string, userRole models.AccountRole, deckID int) error
+	UnsaveDeck(ctx context.Context, userID string, deckID int) error
+
+	// Colecciones (CU11)
+	ListPublicCollections(ctx context.Context, featuredOnly *bool) ([]models.Collection, error)
+	ListStudioCollections(ctx context.Context, userID string) ([]models.Collection, error)
+	GetCollectionDetail(ctx context.Context, viewerID *string, viewerRole *models.AccountRole, collectionID int) (*models.Collection, error)
+	CreateCollection(ctx context.Context, userID string, userRole models.AccountRole, req models.CreateCollectionRequest) (*models.Collection, error)
+	UpdateCollection(ctx context.Context, userID string, userRole models.AccountRole, collectionID int, req models.UpdateCollectionRequest) (*models.Collection, error)
+	DeleteCollection(ctx context.Context, userID string, userRole models.AccountRole, collectionID int) error
+	SaveCollection(ctx context.Context, userID string, userRole models.AccountRole, collectionID int) error
+	UnsaveCollection(ctx context.Context, userID string, collectionID int) error
+}
+```
+
 #### 2.5.2. Business Rules in `StudioService` (`RN03`, `RN04`, `RN05`)
 - **RN03 (Ownership in Studio):** Only the owner (`deck.id_user == userID`) or an `ADMIN` (`RN08`) may execute `PUT` or `DELETE` on a deck/collection or alter its items. If a third party attempts this, returns `403 Forbidden`.
-- **RN04 (Resource Privacy):** In `GetDeckDetail`, `GetCollectionDetail`, `SavePublicDeckToStudio`, and `SavePublicCollectionToStudio`, if `is_public == false` and the requester is neither the owner nor `ADMIN`, returns `403 Forbidden`.
+- **RN04 (Resource Privacy):** In `GetDeckDetail`, `GetCollectionDetail`, `SaveDeck`, and `SaveCollection`, if `is_public == false` and the requester is neither the owner nor `ADMIN`, returns `403 Forbidden`.
 - **RN05 (Official Content):** If a `LEARNER` submits `is_official: true` or `is_featured: true`, the service silently forces both flags to `false`.
 
 #### 2.5.3. Studio HTTP Endpoints (`/api/v1/decks`, `/api/v1/collections`, `/api/v1/studio`)
@@ -149,3 +194,6 @@ type UpdateCollectionRequest struct {
 | `DELETE` | `/api/v1/collections/{id}` | `RequireAuth` | CU11 (RN03) | ✅ Ready | `204 No Content` |
 | `POST` | `/api/v1/collections/{id}/save` | `RequireAuth` | CU11 (1a) | ✅ Ready | `204 No Content` |
 | `DELETE` | `/api/v1/collections/{id}/save` | `RequireAuth` | CU11 | ✅ Ready | `204 No Content` |
+
+#### 2.5.4. `sqlc` Queries (`sql/queries/studio.sql`)
+`ListPublicDecks :many`, `ListStudioDecks :many`, `GetDeckByID :one`, `ListDeckItemsByDeckID :many`, `CreateDeck :one`, `UpdateDeck :one`, `DeleteDeck :exec`, `AddDeckItem :one`, `RemoveDeckItem :exec`, `SaveDeck :exec`, `UnsaveDeck :exec`, `IsDeckSavedByUser :one`, `ListPublicCollections :many`, `ListStudioCollections :many`, `GetCollectionByID :one`, `ListCollectionDecks :many`, `CreateCollection :one`, `UpdateCollection :one`, `DeleteCollection :exec`, `AddCollectionDeck :exec`, `ClearCollectionDecks :exec`, `SaveCollection :exec`, `UnsaveCollection :exec`, `IsCollectionSavedByUser :one`. The service additionally reuses `GetExamplesForSenses` from `sql/queries/mastery.sql` (see [`mastery_service.md`](mastery_service.md)) to hydrate `DeckItem.Sense.Examples`.

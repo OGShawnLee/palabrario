@@ -3,7 +3,7 @@
 | Field | Value |
 | :--- | :--- |
 | **ID** | 020 |
-| **Status** | draft |
+| **Status** | completed |
 | **Model** | Sonnet 5.5 (`claude-sonnet-5-5`, Antigravity provider) |
 | **Role** | Documentation / Architect |
 | **Spec** | [spec.md](spec.md) |

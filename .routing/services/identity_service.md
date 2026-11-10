@@ -52,10 +52,60 @@ Represents the member's public/private profile, their linguistic anchor point, a
 #### 2.1.1. Data Structures (`pkg/models/auth.go` and `pkg/models/user.go`)
 
 ```go
-// Existing in pkg/models/auth.go and pkg/models/user.go:
-// SignInRequest, SignUpRequest, AuthResponse, AccountRole, Region, UserProfile
+// --- pkg/models/auth.go ---
 
-// --- NEW DTOs TO ADD IN pkg/models/user.go ---
+type SignInRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type SignUpRequest struct {
+	Email         string `json:"email"`
+	Password      string `json:"password"`
+	Name          string `json:"name"`
+	UserName      string `json:"user_name"`
+	AnchorDialect string `json:"anchor_dialect"`
+}
+
+type AuthResponse struct {
+	Token string      `json:"token"`
+	User  UserProfile `json:"user"`
+}
+
+// --- pkg/models/user.go ---
+
+type AccountRole string
+
+const (
+	RoleLearner AccountRole = "LEARNER"
+	RoleEditor  AccountRole = "EDITOR"
+	RoleAdmin   AccountRole = "ADMIN"
+)
+
+type Region struct {
+	IDRegion    string  `json:"id_region"`
+	Code        string  `json:"code"`         // 'MX', 'ES', 'AR', 'CO', 'CL', 'CU', 'CAM', 'PAN'
+	Name        string  `json:"name"`         // 'México', 'España'
+	ParentZone  string  `json:"parent_zone"`  // 'Norteamérica', 'Rioplatense'
+	CountryCode *string `json:"country_code"` // 'MX', 'ES'
+	FlagEmoji   string  `json:"flag_emoji"`   // '🇲🇽', '🇪🇸' (never rendered in the UI; see CONTEXT.md ground rules)
+}
+
+type UserProfile struct {
+	IDUser        string      `json:"id_user"`
+	Email         string      `json:"email"`
+	Name          string      `json:"name"`
+	UserName      string      `json:"user_name"`
+	AvatarURL     *string     `json:"avatar_url,omitempty"`
+	AnchorDialect string      `json:"anchor_dialect"`
+	TotalXP       int         `json:"total_xp"`
+	CurrentLevel  int         `json:"current_level"`
+	CurrentStreak int         `json:"current_streak"`
+	LongestStreak int         `json:"longest_streak"`
+	Role          AccountRole `json:"role"`
+	CreatedAt     time.Time   `json:"created_at"`
+	UpdatedAt     time.Time   `json:"updated_at"`
+}
 
 type UpdateProfileRequest struct {
 	Name          string  `json:"name"`                     // Required, 2..100 chars
@@ -93,6 +143,8 @@ type PublicUserProfile struct {
 }
 ```
 
+> **Cross-linked types:** `PublicUserProfile` references `Deck` and `Collection` (defined in `pkg/models/studio.go`, see [`studio_service.md`](studio_service.md)) and `AchievementStatus` (defined in `pkg/models/studio.go`, see [`mastery_service.md`](mastery_service.md)).
+
 #### 2.1.2. SOA Interface (`IdentityService`)
 
 ```go
@@ -107,12 +159,11 @@ type IdentityService interface {
 ```
 
 #### 2.1.3. `sqlc` Queries (`sql/queries/users.sql`)
-- **Existing:** `GetAccountByEmail`, `CreateAccount`, `CreateUserProfile`, `GetUserProfileByID`, `CheckEmailOrUsernameExists`.
-- **New to add in `sql/queries/users.sql`:**
-  - `-- name: UpdateUserProfile :one` $\to$ Updates `name`, `anchor_dialect`, `avatar_url`, `updated_at = now()` in `users` filtering by `id_user` and returns the profile joined with `accounts`.
-  - `-- name: GetAccountByID :one` $\to$ Retrieves `id_account, password_hash, is_active` to verify current password.
-  - `-- name: UpdateAccountPassword :exec` $\to$ Updates `password_hash` and `updated_at = now()` in `accounts`.
-  - `-- name: GetUserProfileByUsername :one` $\to$ Looks up in `users JOIN accounts` by `LOWER(user_name) = LOWER($1)`.
+All queries below are implemented. Uniqueness conflicts on `email` / `user_name` are detected via the DB unique constraint on `CreateAccount` / `CreateUserProfile` (mapped through `MapDBError` to `409`); there is no separate `CheckEmailOrUsernameExists` query.
+- **Accounts:** `CreateAccount :one`, `GetAccountByEmail :one`, `GetAccountByID :one` (returns `id_account, email, password_hash, role, is_active, created_at, updated_at`), `UpdateAccountPassword :exec` (sets `password_hash`, `updated_at = now()`).
+- **Profiles:** `CreateUserProfile :one`, `GetUserProfileByID :one`, `GetUserProfileByUsername :one` (`users JOIN accounts` by `LOWER(user_name) = LOWER($1)`), `UpdateUserProfile :one` (updates `name`, `anchor_dialect`, `avatar_url`, `updated_at = now()` and returns the profile joined with `accounts`).
+- **Public-profile aggregates (used by `GetPublicProfileByUsername`):** `CountUserPrivateDecks :one`, `ListUserPublicDecks :many`, `ListUserPublicCollections :many`, `GetUserArenaStats :one` (`matches_won`, `podium_count`). Also reuses `ListUserAchievements` (`sql/queries/mastery.sql`, see [`mastery_service.md`](mastery_service.md)) for `unlocked_badges` and `CountDueStudySessionCardsAll` (`mastery.sql`) for `due_reviews_today`.
+
 
 #### 2.1.4. HTTP Endpoints (`/api/v1/auth` and `/api/v1/users`)
 
