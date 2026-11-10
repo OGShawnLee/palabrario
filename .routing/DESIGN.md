@@ -49,13 +49,21 @@ Colors are theme aliases in `uno.config.ts`:
 - Always render the full textual name of the region (e.g. Cuba, Chile, Mexico), using REGIONS from app/frontend/src/data/regions.ts. Regional codes (e.g. CU, CL, MX) and flag emojis are strictly forbidden.
 
 ## Buttons
-- Shortcuts: `button`, `button-main`, `button-side`, `button-icon`.
+- Shortcuts: `button`, `button-main`, `button-side`, `button-side--light`, `button-icon`, `button--small`.
 - Shared (`button`): height `h-12`, horizontal padding `px-4`, border 1px solid black (`border border-black border-solid`), no rounding (`rounded-none`), content centered.
 - Main (`button-main`): black background (`bg-main`), medium weight (`font-medium`), white text.
 - Side (`button-side`): `ground` background (`bg-ground`), black text (`text-main`).
+- Side Light (`button-side--light`): elevated card button with white background (`bg-white`), black text (`text-main`), hairline border (`border-light`).
 - Icon (`button-icon`): `h-12 min-w-12 w-12 bg-light text-black disabled:opacity-50`.
+- Small modifier (`button--small`): compact height `!h-10`, reduced horizontal padding `px-2.5`, text size `text-xs`. Used for dense/nested actions such as per-sense action buttons.
 - Disabled (all): `disabled:opacity-50`.
 - No hover, active, or focus styling yet. See PROGRESS.md.
+
+## Badges & Tags
+- Shortcuts: `badge`, `badge-main`, `badge-side`.
+- Base (`badge`): height `h-6`, horizontal padding `px-2.5`, inline flex, 1px solid border (`border border-solid`), sharp corners (`rounded-none`), bold weight (`font-bold`), text size `text-xs`.
+- Main (`badge-main`): `badge bg-main border-black font-bold text-white`. Used for high-emphasis badges such as CEFR proficiency tags (`A1`, `B2`).
+- Side (`badge-side`): `badge bg-ground border-light text-black`. Used for secondary metadata tags such as full region names (`Cuba`, `Chile`).
 
 ## Fields
 - Shortcut: `field`.
@@ -67,3 +75,6 @@ Colors are theme aliases in `uno.config.ts`:
 - Header shortcut: `header`. Height `h-12`, horizontal padding `px-4`, flex container with `justify-between`, bottom hairline border (`border-b border-light`). Used for dialog title bars and sub-panels.
 - Section label shortcut: `section-label`. Font size `text-sm`, bold weight (`font-bold`), muted color (`text-dull`), bottom margin `mb-3`. Used for section headings and metadata labels.
 
+## Overlays & Dialog Backdrops
+- Shortcut: `dialog-overlay`.
+- Full-screen fixed positioning (`fixed inset-0 z-50`), darkened backdrop (`bg-black/40`), and backdrop filter blur (`backdrop-filter backdrop-blur-sm`). Used across all modal dialogs.

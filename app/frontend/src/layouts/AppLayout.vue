@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { ref } from "vue"
 import { RouterView } from "vue-router"
 import TopBar from "@/components/TopBar.vue"
 import SearchModal from "@/components/SearchModal.vue"
+import { useSearchModal } from "@/composables/useSearchModal"
 
-const isSearchOpen = ref(false)
+const { isOpen, open } = useSearchModal()
 </script>
 
 <template>
   <div class="flex-1 w-full flex flex-col text-main">
-    <TopBar @open-search="isSearchOpen = true" />
+    <TopBar @open-search="open" />
     <RouterView />
-    <SearchModal v-model:open="isSearchOpen" />
+    <SearchModal v-model:open="isOpen" />
   </div>
 </template>

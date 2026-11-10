@@ -1,20 +1,21 @@
-﻿ 009 — Build the Dictionary Route (/dictionary)
+# 009 — Build the Dictionary Route (/dictionary)
 
 | Field | Value |
 | :--- | :--- |
 | **ID** | 009 |
-| **Status** | draft |
-| **Model** | Sonnet 5.5 (`claude-sonnet-5-5`, Antigravity provider) |
+| **Status** | completed |
+| **Model** | Gemini 3.8 Flash (`gemini-3.8-flash`, Antigravity provider) |
 | **Role** | Frontend Implementer |
 | **Spec** | [spec.md](spec.md) |
 
 ## Scope
 
 May create or edit:
+- `app/frontend/src/composables/useSearchModal.ts` (create: shared search modal state and controls)
+- `app/frontend/src/layouts/AppLayout.vue` (wire `useSearchModal` to `SearchModal` and `TopBar`)
+- `app/frontend/src/data/mockWordOfTheDay.ts` (create: typed mock data matching `WordDetail` contract)
 - `app/frontend/src/views/DictionaryView.vue` (implement view)
 - `app/frontend/src/components/dictionary/` (optional subcomponents: e.g. `WordOfTheDayCard.vue`)
-- `app/frontend/src/composables/useSearchModal.ts` (shared search modal trigger, optional)
-- `app/frontend/src/layouts/AppLayout.vue` (wire search modal trigger if composable/event used)
 - `.tickets/009-build-dictionary-route/changelog.md` (create)
 
 Must not touch:
@@ -25,9 +26,10 @@ Must not touch:
 ## Inputs
 
 - [.routing/CONTEXT.md](../../.routing/CONTEXT.md): Architecture ground rules (strict prohibition of `flag_emoji` and regional codes; full region names required).
-- [.routing/DESIGN.md](../../.routing/DESIGN.md): Monochrome design tokens (`main`, `side`, `dull`, `light`, `ground`), typography (`Satoshi`), surfaces, and buttons (`button-main`, `button-side`).
-- [.routing/services/dictionary_service.md](../../.routing/services/dictionary_service.md): Pan-Hispanic Lexicographical Core, Senses, Heteronyms, and WordDetail / SenseDetail / Example / HeteronymItem contracts.
+- [.routing/DESIGN.md](../../.routing/DESIGN.md): Monochrome design tokens (`main`, `side`, `dull`, `light`, `ground`), typography (`Satoshi`), surfaces, and buttons (`button-main`, `button-side`, `binding`).
+- [.routing/services/dictionary_service.md](../../.routing/services/dictionary_service.md): Pan-Hispanic Lexicographical Core, Senses, Heteronyms, and `WordDetail` / `SenseDetail` / `Example` / `HeteronymItem` contracts.
 - [app/frontend/src/data/regions.ts](../../app/frontend/src/data/regions.ts): Canonical region definitions.
+- [app/frontend/src/layouts/AppLayout.vue](../../app/frontend/src/layouts/AppLayout.vue): Current layout wrapping routes.
 - Visual references:
   - Big search hero bar: [Image 2: Vocabulary.com style big input bar](../../../.t3/userdata/attachments/e7510c5f-4aee-4fe2-8b04-76e954f1ea52-23a0d289-1b35-4287-a0be-aa43fa19d98c.png)
   - Word of the Day desktop layout: [Image 1: Desktop editorial layout](../../../.t3/userdata/attachments/e7510c5f-4aee-4fe2-8b04-76e954f1ea52-d217cff8-84b2-40bb-811b-d6861b1dc8bd.png)
@@ -41,23 +43,69 @@ Must not touch:
 
 ## Task
 
-1. **Section 1: Hero Search Bar:**
-   - Centered headline above input: *"Look up a word, learn it forever."* in `text-2xl sm:text-3xl font-bold text-main tracking-tight`.
-   - Big mock search input bar (`w-full max-w-3xl mx-auto h-14 sm:h-16 bg-white border border-light flex items-center px-4 sm:px-6 cursor-pointer`):
-     - Left: `Search` icon from `lucide-vue-next`.
-     - Placeholder: *"Search words or vocabulary lists from books, exams or textbooks"* in `text-dull text-sm sm:text-base`.
-     - Right: Key badge `<span class="binding">Ctrl + K</span>` or *"Word Finder"* label.
-   - **Interaction:** Clicking, focusing, or pressing any key in the mock bar triggers the global `SearchModal` (via a shared composable or custom event).
+1. **Shared Modal State: `app/frontend/src/composables/useSearchModal.ts`:**
+   - Create a module-scoped singleton composable with the following exact structure:
+     ```ts
+     import { ref } from "vue"
 
-2. **Section 2: Word of the Day (Palabra del Día):**
-   - **Data Model:** Use realistic mock data structured 1:1 against canonical backend contracts (`models.WordDetail` containing `senses: SenseDetail[]`, `heteronyms: HeteronymItem[]`, etc.) based on the *Guagua* exemplar.
+     const isOpen = ref(false)
+
+     export function useSearchModal() {
+       function open() {
+         isOpen.value = true
+       }
+       function close() {
+         isOpen.value = false
+       }
+       function toggle() {
+         isOpen.value = !isOpen.value
+       }
+
+       return {
+         isOpen,
+         open,
+         close,
+         toggle,
+       }
+     }
+     ```
+   - In `app/frontend/src/layouts/AppLayout.vue`:
+     - Replace local `const isSearchOpen = ref(false)` with `const { isOpen, open } = useSearchModal()`.
+     - Bind `<SearchModal v-model:open="isOpen" />`.
+     - Wire `<TopBar @open-search="open" />`.
+
+2. **Section 1: Hero Search Bar (`DictionaryView.vue`):**
+   - Centered headline above input: *"Look up a word, learn it forever."* in `text-2xl sm:text-3xl font-bold text-main tracking-tight mb-4 text-center`.
+   - Big mock search trigger bar:
+     - Implement as an interactive element (`<button type="button" role="combobox" aria-label="Search words or vocabulary" ...>`) styled as a prominent search input:
+       `w-full max-w-3xl mx-auto h-14 sm:h-16 bg-white border border-light flex items-center px-4 sm:px-6 cursor-pointer focus:outline-none focus:border-main`
+     - Left: `Search` icon from `lucide-vue-next` (`w-5 h-5 text-dull mr-3 sm:mr-4 shrink-0`).
+     - Center text: *"Search words or vocabulary lists from books, exams or textbooks"* in `text-dull text-sm sm:text-base text-left flex-1 truncate`.
+     - Right: Key badge `<span class="binding">Ctrl + K</span>`.
+     - **Interaction:** Trigger `open()` from `useSearchModal()` on `@click` and on `@keydown.enter` / `@keydown.space`.
+
+3. **Section 2: Word of the Day (Palabra del Día):**
+   - **Typed Mock Data (`app/frontend/src/data/mockWordOfTheDay.ts`):**
+     - Define and export `mockWordOfTheDay` conforming strictly to the canonical `WordDetail` contract in `.routing/services/dictionary_service.md`:
+       - `id_word: 101`
+       - `lemma: "Guagua"`
+       - `part_of_speech: "noun · feminine"`
+       - `gender: "FEMALE"`
+       - `etymology: "From Quechua wawa (infant, child) in the Andean zone; in the Caribbean, likely onomatopoeic or derived from the transport company Wa & Wa Co. Inc."`
+       - `friendly_blurb: "One of the most fascinating linguistic chameleons of the Spanish language. In the Caribbean, a guagua is a noisy public bus that gets you to work; in Chile, Ecuador, and Peru, a guagua is a tender newborn baby. Say it in the wrong country and you might offer to hold someone's bus!"`
+       - `senses: SenseDetail[]`:
+         - Sense 01: `region_code: "CU"`, `region_name: "Cuba"`, `cefr_level: "B1"`, `usage_frequency: "EVERYDAY"`, `short_definition: "Public transit bus"`, `definition: "Omnibús de servicio urbano o interurbano destinado al transporte masivo de pasajeros."`, example sentence: *"Ayer la guagua pasó llena y tuve que caminar."* with source *"Urban speech · Cuba"*.
+         - Sense 02: `region_code: "CL"`, `region_name: "Chile"`, `cefr_level: "A2"`, `usage_frequency: "EVERYDAY"`, `short_definition: "Baby or infant"`, `definition: "Niño de pecho o criatura de muy corta edad."`, example sentence: *"La guagua se quedó dormida en brazos de su mamá."* with source *"Everyday speech · Chile"*.
+       - `heteronyms: HeteronymItem[]`:
+         - Public transit equivalents: `Mexico · Camión`, `Argentina · Colectivo`, `Chile · Micro`, `Spain · Autobús`.
+         - Infant equivalents: `Chile · Guagua`, `Spain · Bebé`, `Mexico · Bebé`, `Argentina · Bebé`.
    - **Header & Title:**
      - Top metadata row: Eyebrows *"Word of the Day"* (left) and *"Regional Lexicon"* (right) in `text-xs font-bold uppercase tracking-widest text-dull`.
      - Huge Lemma headline: `Guagua` in `text-5xl sm:text-6xl md:text-7xl font-black text-main leading-none mt-2`.
      - Part of speech: `noun · feminine` in `text-sm text-dull mt-1 mb-6`.
    - **Editorial Blurb & Etymology:**
      - Desktop (`md:grid md:grid-cols-12 md:gap-8`):
-       - Left (`col-span-4`): `ETIMOLOGÍA` / `ETYMOLOGY` in uppercase bold label with concise derivation.
+       - Left (`col-span-4`): `ETYMOLOGY` in `text-xs font-bold uppercase tracking-widest text-dull mb-2` followed by the derivation text in `text-sm text-side leading-relaxed`.
        - Right (`col-span-8`): Friendly blurb narrative paragraph in `text-base sm:text-lg text-side leading-relaxed`.
      - Mobile (`< md`): Stacked vertically matching visual reference Image 3.
    - **Dialectal Senses Grid:**
@@ -76,10 +124,10 @@ Must not touch:
      - "Add to Studio" button: `<button class="button-main">Add to Studio</button>`.
      - "See full entry →" button/link: `<RouterLink to="/dictionary/word/101" class="text-sm font-semibold text-main inline-flex items-center gap-1">See full entry →</RouterLink>`.
 
-3. **Validation:**
+4. **Validation:**
    - Run `wails3 task check` from `app/`. It must exit with code 0.
 
-4. **Change log:**
+5. **Change log:**
    - Document all changes in `.tickets/009-build-dictionary-route/changelog.md`.
 
 ## Verification

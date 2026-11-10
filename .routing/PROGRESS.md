@@ -18,6 +18,7 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] `.tickets/018-backend-arena-public-rooms/` (`completed`): backend schema, sqlc query, and endpoint `GET /api/v1/arena/matches/public` for listing waiting public matches.
 - [x] `.tickets/014-backend-search-fts/` (`completed`): backend schema & sqlc FTS for decks & collections, plus expanded `WordSearchResult` (`part_of_speech`, `region_name`).
 - [x] `.tickets/020-audit-service-specs-with-backend/` (`completed`): audited and synchronized all 8 `.routing/services/*_service.md` specifications against authoritative Go source code (`pkg/models/`, `core-service/internal/service/`, `core-service/internal/api/`, and `sql/queries/`).
+- [x] `.tickets/009-build-dictionary-route/` (`completed`): built the `/dictionary` route (`DictionaryView.vue`), singleton `useSearchModal.ts` composable, typed `mockWordOfTheDay.ts`, and responsive `WordOfTheDayCard.vue` with dialectal senses, full region names, and cross-regional heteronym equivalents.
 
 ## In progress
 *(None)*
@@ -25,7 +26,6 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 ## Draft tickets
 - [ ] `.tickets/017-build-arena-route/` (`draft`): build the `/arena` lobby route, reusable Dialog components (`AppDialog.vue`, `AppDialogOverlay.vue` with customizable width), room configuration modal, and open public matches table.
 - [ ] `.tickets/019-build-arena-history-route/` (`draft`): build dedicated `/arena/history` route and 3NF round-by-round replay modal (`MatchReplayDialog.vue`).
-- [ ] `.tickets/009-build-dictionary-route/` (`draft`): build the `/dictionary` route and search/explore view.
 - [ ] `.tickets/010-build-collections-route/` (`draft`): build the `/collections` public catalog.
 - [ ] `.tickets/021-build-collection-detail-route/` (`draft`): build the `/collections/:id` individual learning path detail view.
 - [ ] `.tickets/011-build-decks-route/` (`draft`): build the `/decks` public catalog.
@@ -64,6 +64,9 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] Contrast increased: theme colors are now `main` (`black`), `side` (`#404040`), and `dull` (`#737373`, ~4.6:1 contrast on white).
 - [x] `header` shortcut added to `uno.config.ts` (`h-12 px-4 flex items-center justify-between border-b border-light`).
 - [x] `section-label` shortcut added to `uno.config.ts` (`text-sm font-bold text-dull mb-3`) and all-caps styling discouraged in `DESIGN.md`.
+- [x] `badge`, `badge-main`, and `badge-side` shortcuts added to `uno.config.ts` for monochrome metadata and CEFR tags.
+- [x] `button-side--light` and `button--small` shortcuts added to `uno.config.ts`.
+- [x] `dialog-overlay` shortcut added to `uno.config.ts` for modal and dialog backdrops.
 - [ ] The Satoshi font loads from the Fontshare CDN at runtime, so the app needs network access for it. Decide whether to self-host it.
 
 ## Scaffold follow-ups
