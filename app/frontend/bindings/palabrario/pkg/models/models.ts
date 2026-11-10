@@ -446,6 +446,52 @@ export class Collection {
     }
 }
 
+export class CollectionSearchResult {
+    "id_collection": number;
+    "title": string;
+    "description"?: string | null;
+    "owner_user_name": string;
+    "deck_count": number;
+    "item_count": number;
+    "is_official": boolean;
+    "is_featured": boolean;
+
+    /** Creates a new CollectionSearchResult instance. */
+    constructor($$source: Partial<CollectionSearchResult> = {}) {
+        if (!("id_collection" in $$source)) {
+            this["id_collection"] = 0;
+        }
+        if (!("title" in $$source)) {
+            this["title"] = "";
+        }
+        if (!("owner_user_name" in $$source)) {
+            this["owner_user_name"] = "";
+        }
+        if (!("deck_count" in $$source)) {
+            this["deck_count"] = 0;
+        }
+        if (!("item_count" in $$source)) {
+            this["item_count"] = 0;
+        }
+        if (!("is_official" in $$source)) {
+            this["is_official"] = false;
+        }
+        if (!("is_featured" in $$source)) {
+            this["is_featured"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CollectionSearchResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CollectionSearchResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CollectionSearchResult($$parsedSource as Partial<CollectionSearchResult>);
+    }
+}
+
 export class ConsolidateMatchRequest {
     "id_match": string;
     "room_code": string;
@@ -1120,6 +1166,48 @@ export class DeckItem {
             $$parsedSource["sense"] = $$createField3_0($$parsedSource["sense"]);
         }
         return new DeckItem($$parsedSource as Partial<DeckItem>);
+    }
+}
+
+export class DeckSearchResult {
+    "id_deck": number;
+    "title": string;
+    "description"?: string | null;
+    "region_name": string;
+    "owner_user_name": string;
+    "item_count": number;
+    "is_official": boolean;
+
+    /** Creates a new DeckSearchResult instance. */
+    constructor($$source: Partial<DeckSearchResult> = {}) {
+        if (!("id_deck" in $$source)) {
+            this["id_deck"] = 0;
+        }
+        if (!("title" in $$source)) {
+            this["title"] = "";
+        }
+        if (!("region_name" in $$source)) {
+            this["region_name"] = "";
+        }
+        if (!("owner_user_name" in $$source)) {
+            this["owner_user_name"] = "";
+        }
+        if (!("item_count" in $$source)) {
+            this["item_count"] = 0;
+        }
+        if (!("is_official" in $$source)) {
+            this["is_official"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new DeckSearchResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): DeckSearchResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new DeckSearchResult($$parsedSource as Partial<DeckSearchResult>);
     }
 }
 
@@ -3508,6 +3596,8 @@ export enum WordGender {
 export class WordSearchResult {
     "id_word": number;
     "lemma": string;
+    "part_of_speech": string;
+    "region_name": string;
     "short_definition": string;
     "flag_emoji": string;
     "country_code": string;
@@ -3520,6 +3610,12 @@ export class WordSearchResult {
         }
         if (!("lemma" in $$source)) {
             this["lemma"] = "";
+        }
+        if (!("part_of_speech" in $$source)) {
+            this["part_of_speech"] = "";
+        }
+        if (!("region_name" in $$source)) {
+            this["region_name"] = "";
         }
         if (!("short_definition" in $$source)) {
             this["short_definition"] = "";

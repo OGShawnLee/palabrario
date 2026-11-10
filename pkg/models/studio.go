@@ -75,6 +75,27 @@ type StudioDeckSummary struct {
 	RetentionPercent float32 `json:"retention_percent"`
 }
 
+type DeckSearchResult struct {
+	IDDeck        int     `json:"id_deck"`
+	Title         string  `json:"title"`
+	Description   *string `json:"description,omitempty"`
+	RegionName    string  `json:"region_name"`
+	OwnerUserName string  `json:"owner_user_name"`
+	ItemCount     int     `json:"item_count"`
+	IsOfficial    bool    `json:"is_official"`
+}
+
+type CollectionSearchResult struct {
+	IDCollection  int     `json:"id_collection"`
+	Title         string  `json:"title"`
+	Description   *string `json:"description,omitempty"`
+	OwnerUserName string  `json:"owner_user_name"`
+	DeckCount     int     `json:"deck_count"`
+	ItemCount     int     `json:"item_count"`
+	IsOfficial    bool    `json:"is_official"`
+	IsFeatured    bool    `json:"is_featured"`
+}
+
 type CreateDeckRequest struct {
 	Title       string  `json:"title"` // Obligatorio, 3..150 chars
 	Description *string `json:"description,omitempty"`

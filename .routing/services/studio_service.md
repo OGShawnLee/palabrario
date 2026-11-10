@@ -98,6 +98,27 @@ type StudioDeckSummary struct {
 	RetentionPercent float32 `json:"retention_percent"`
 }
 
+type DeckSearchResult struct {
+	IDDeck        int     `json:"id_deck"`
+	Title         string  `json:"title"`
+	Description   *string `json:"description,omitempty"`
+	RegionName    string  `json:"region_name"`
+	OwnerUserName string  `json:"owner_user_name"`
+	ItemCount     int     `json:"item_count"`
+	IsOfficial    bool    `json:"is_official"`
+}
+
+type CollectionSearchResult struct {
+	IDCollection  int     `json:"id_collection"`
+	Title         string  `json:"title"`
+	Description   *string `json:"description,omitempty"`
+	OwnerUserName string  `json:"owner_user_name"`
+	DeckCount     int     `json:"deck_count"`
+	ItemCount     int     `json:"item_count"`
+	IsOfficial    bool    `json:"is_official"`
+	IsFeatured    bool    `json:"is_featured"`
+}
+
 type CreateDeckRequest struct {
 	Title       string  `json:"title"`                 // Required, 3..150 chars
 	Description *string `json:"description,omitempty"`
@@ -154,6 +175,7 @@ type StudioService interface {
 	RemoveDeckItem(ctx context.Context, userID string, userRole models.AccountRole, deckID int, senseID int) error
 	SaveDeck(ctx context.Context, userID string, userRole models.AccountRole, deckID int) error
 	UnsaveDeck(ctx context.Context, userID string, deckID int) error
+	SearchDecks(ctx context.Context, query string, limit int) ([]models.DeckSearchResult, error)
 
 	// Colecciones (CU11)
 	ListPublicCollections(ctx context.Context, featuredOnly *bool) ([]models.Collection, error)
@@ -164,6 +186,7 @@ type StudioService interface {
 	DeleteCollection(ctx context.Context, userID string, userRole models.AccountRole, collectionID int) error
 	SaveCollection(ctx context.Context, userID string, userRole models.AccountRole, collectionID int) error
 	UnsaveCollection(ctx context.Context, userID string, collectionID int) error
+	SearchCollections(ctx context.Context, query string, limit int) ([]models.CollectionSearchResult, error)
 }
 ```
 
@@ -177,6 +200,7 @@ type StudioService interface {
 | Method | Path | Middleware | Use Case | Status | Successful Response |
 | :---: | :--- | :---: | :---: | :---: | :--- |
 | `GET` | `/api/v1/decks` | Public | CU10 (RN04) | ✅ Ready | `200 OK` $\to$ `[]models.Deck` (`?q=&official_only=false`) |
+| `GET` | `/api/v1/decks/search` | Public | CU10 | ✅ Ready | `200 OK` $\to$ `[]models.DeckSearchResult` (`?q=&limit=10`) |
 | `GET` | `/api/v1/studio/decks` | `RequireAuth` | CU10 | ✅ Ready | `200 OK` $\to$ `[]models.StudioDeckSummary` (Owned + Saved) |
 | `GET` | `/api/v1/decks/{id}` | `OptionalAuth` | CU10 (RN04) | ✅ Ready | `200 OK` $\to$ `models.Deck` (with `Items` and `SenseDetail`) |
 | `POST` | `/api/v1/decks` | `RequireAuth` | CU10 (RN03/05)| ✅ Ready | `201 Created` $\to$ `models.Deck` |
@@ -187,6 +211,7 @@ type StudioService interface {
 | `POST` | `/api/v1/decks/{id}/save` | `RequireAuth` | CU10 (RN04) | ✅ Ready | `204 No Content` |
 | `DELETE` | `/api/v1/decks/{id}/save` | `RequireAuth` | CU10 | ✅ Ready | `204 No Content` |
 | `GET` | `/api/v1/collections` | Public | CU11 (RN04) | ✅ Ready | `200 OK` $\to$ `[]models.Collection` (`?featured=true`) |
+| `GET` | `/api/v1/collections/search` | Public | CU11 | ✅ Ready | `200 OK` $\to$ `[]models.CollectionSearchResult` (`?q=&limit=10`) |
 | `GET` | `/api/v1/studio/collections` | `RequireAuth` | CU11 | ✅ Ready | `200 OK` $\to$ `[]models.Collection` (Owned + Saved) |
 | `GET` | `/api/v1/collections/{id}` | `OptionalAuth` | CU11 (RN04) | ✅ Ready | `200 OK` $\to$ `models.Collection` (with `Decks`) |
 | `POST` | `/api/v1/collections` | `RequireAuth` | CU11 (RN03/05)| ✅ Ready | `201 Created` $\to$ `models.Collection` |
@@ -196,4 +221,4 @@ type StudioService interface {
 | `DELETE` | `/api/v1/collections/{id}/save` | `RequireAuth` | CU11 | ✅ Ready | `204 No Content` |
 
 #### 2.5.4. `sqlc` Queries (`sql/queries/studio.sql`)
-`ListPublicDecks :many`, `ListStudioDecks :many`, `GetDeckByID :one`, `ListDeckItemsByDeckID :many`, `CreateDeck :one`, `UpdateDeck :one`, `DeleteDeck :exec`, `AddDeckItem :one`, `RemoveDeckItem :exec`, `SaveDeck :exec`, `UnsaveDeck :exec`, `IsDeckSavedByUser :one`, `ListPublicCollections :many`, `ListStudioCollections :many`, `GetCollectionByID :one`, `ListCollectionDecks :many`, `CreateCollection :one`, `UpdateCollection :one`, `DeleteCollection :exec`, `AddCollectionDeck :exec`, `ClearCollectionDecks :exec`, `SaveCollection :exec`, `UnsaveCollection :exec`, `IsCollectionSavedByUser :one`. The service additionally reuses `GetExamplesForSenses` from `sql/queries/mastery.sql` (see [`mastery_service.md`](mastery_service.md)) to hydrate `DeckItem.Sense.Examples`.
+`ListPublicDecks :many`, `ListStudioDecks :many`, `GetDeckByID :one`, `ListDeckItemsByDeckID :many`, `CreateDeck :one`, `UpdateDeck :one`, `DeleteDeck :exec`, `AddDeckItem :one`, `RemoveDeckItem :exec`, `SaveDeck :exec`, `UnsaveDeck :exec`, `IsDeckSavedByUser :one`, `SearchDecksDropdown :many`, `ListPublicCollections :many`, `ListStudioCollections :many`, `GetCollectionByID :one`, `ListCollectionDecks :many`, `CreateCollection :one`, `UpdateCollection :one`, `DeleteCollection :exec`, `AddCollectionDeck :exec`, `ClearCollectionDecks :exec`, `SaveCollection :exec`, `UnsaveCollection :exec`, `IsCollectionSavedByUser :one`, `SearchCollectionsDropdown :many`. The service additionally reuses `GetExamplesForSenses` from `sql/queries/mastery.sql` (see [`mastery_service.md`](mastery_service.md)) to hydrate `DeckItem.Sense.Examples`.

@@ -94,6 +94,8 @@ func (s *dictionaryService) SearchDropdown(ctx context.Context, query string, us
 		results[i] = models.WordSearchResult{
 			IDWord:          int(row.IDWord),
 			Lemma:           row.Lemma,
+			PartOfSpeech:    row.PartOfSpeech,
+			RegionName:      row.RegionName,
 			ShortDefinition: row.ShortDefinition,
 			FlagEmoji:       row.FlagEmoji,
 			CountryCode:     row.CountryCode,

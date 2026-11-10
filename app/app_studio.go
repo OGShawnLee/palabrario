@@ -33,6 +33,29 @@ func (a *App) ListCollections(featured bool) ([]models.Collection, error) {
 	return list, nil
 }
 
+// SearchCollections ejecuta búsqueda rápida FTS de colecciones públicas.
+func (a *App) SearchCollections(q string, limit int) ([]models.CollectionSearchResult, error) {
+	params := url.Values{}
+	if q != "" {
+		params.Set("q", q)
+	}
+	if limit > 0 {
+		params.Set("limit", strconv.Itoa(limit))
+	}
+	var list []models.CollectionSearchResult
+	targetURL := a.coreURL + "/api/v1/collections/search"
+	if len(params) > 0 {
+		targetURL += "?" + params.Encode()
+	}
+	if err := a.doRequest(a.context(), http.MethodGet, targetURL, nil, &list); err != nil {
+		return nil, err
+	}
+	if list == nil {
+		list = []models.CollectionSearchResult{}
+	}
+	return list, nil
+}
+
 // GetCollectionDetail obtiene la ficha detallada de una colección.
 func (a *App) GetCollectionDetail(id int) (*models.Collection, error) {
 	return a.GetCollection(id)
@@ -72,6 +95,29 @@ func (a *App) ListDecks(q string, officialOnly bool) ([]models.Deck, error) {
 	}
 	if list == nil {
 		list = []models.Deck{}
+	}
+	return list, nil
+}
+
+// SearchDecks ejecuta búsqueda rápida FTS de barajas públicas.
+func (a *App) SearchDecks(q string, limit int) ([]models.DeckSearchResult, error) {
+	params := url.Values{}
+	if q != "" {
+		params.Set("q", q)
+	}
+	if limit > 0 {
+		params.Set("limit", strconv.Itoa(limit))
+	}
+	var list []models.DeckSearchResult
+	targetURL := a.coreURL + "/api/v1/decks/search"
+	if len(params) > 0 {
+		targetURL += "?" + params.Encode()
+	}
+	if err := a.doRequest(a.context(), http.MethodGet, targetURL, nil, &list); err != nil {
+		return nil, err
+	}
+	if list == nil {
+		list = []models.DeckSearchResult{}
 	}
 	return list, nil
 }

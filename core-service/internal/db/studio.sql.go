@@ -95,8 +95,20 @@ type CreateCollectionParams struct {
 	IsOfficial  bool        `json:"is_official"`
 }
 
+type CreateCollectionRow struct {
+	IDCollection int32              `json:"id_collection"`
+	IDUser       uuid.UUID          `json:"id_user"`
+	Title        string             `json:"title"`
+	Description  pgtype.Text        `json:"description"`
+	IsPublic     bool               `json:"is_public"`
+	IsFeatured   bool               `json:"is_featured"`
+	IsOfficial   bool               `json:"is_official"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
 // 17. Crear Colección
-func (q *Queries) CreateCollection(ctx context.Context, arg CreateCollectionParams) (Collection, error) {
+func (q *Queries) CreateCollection(ctx context.Context, arg CreateCollectionParams) (CreateCollectionRow, error) {
 	row := q.db.QueryRow(ctx, createCollection,
 		arg.IDUser,
 		arg.Title,
@@ -105,7 +117,7 @@ func (q *Queries) CreateCollection(ctx context.Context, arg CreateCollectionPara
 		arg.IsFeatured,
 		arg.IsOfficial,
 	)
-	var i Collection
+	var i CreateCollectionRow
 	err := row.Scan(
 		&i.IDCollection,
 		&i.IDUser,
@@ -142,8 +154,19 @@ type CreateDeckParams struct {
 	IsOfficial  bool        `json:"is_official"`
 }
 
+type CreateDeckRow struct {
+	IDDeck      int32              `json:"id_deck"`
+	IDUser      uuid.UUID          `json:"id_user"`
+	Title       string             `json:"title"`
+	Description pgtype.Text        `json:"description"`
+	IsPublic    bool               `json:"is_public"`
+	IsOfficial  bool               `json:"is_official"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 // 5. Crear Baraja
-func (q *Queries) CreateDeck(ctx context.Context, arg CreateDeckParams) (Deck, error) {
+func (q *Queries) CreateDeck(ctx context.Context, arg CreateDeckParams) (CreateDeckRow, error) {
 	row := q.db.QueryRow(ctx, createDeck,
 		arg.IDUser,
 		arg.Title,
@@ -151,7 +174,7 @@ func (q *Queries) CreateDeck(ctx context.Context, arg CreateDeckParams) (Deck, e
 		arg.IsPublic,
 		arg.IsOfficial,
 	)
-	var i Deck
+	var i CreateDeckRow
 	err := row.Scan(
 		&i.IDDeck,
 		&i.IDUser,
@@ -200,10 +223,22 @@ FROM collections c
 WHERE c.id_collection = $1
 `
 
+type GetCollectionByIDRow struct {
+	IDCollection int32              `json:"id_collection"`
+	IDUser       uuid.UUID          `json:"id_user"`
+	Title        string             `json:"title"`
+	Description  pgtype.Text        `json:"description"`
+	IsPublic     bool               `json:"is_public"`
+	IsFeatured   bool               `json:"is_featured"`
+	IsOfficial   bool               `json:"is_official"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
 // 15. Detalle de Colección
-func (q *Queries) GetCollectionByID(ctx context.Context, idCollection int32) (Collection, error) {
+func (q *Queries) GetCollectionByID(ctx context.Context, idCollection int32) (GetCollectionByIDRow, error) {
 	row := q.db.QueryRow(ctx, getCollectionByID, idCollection)
-	var i Collection
+	var i GetCollectionByIDRow
 	err := row.Scan(
 		&i.IDCollection,
 		&i.IDUser,
@@ -493,19 +528,31 @@ WHERE c.is_public = true
 ORDER BY c.created_at DESC
 `
 
+type ListPublicCollectionsRow struct {
+	IDCollection int32              `json:"id_collection"`
+	IDUser       uuid.UUID          `json:"id_user"`
+	Title        string             `json:"title"`
+	Description  pgtype.Text        `json:"description"`
+	IsPublic     bool               `json:"is_public"`
+	IsFeatured   bool               `json:"is_featured"`
+	IsOfficial   bool               `json:"is_official"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
 // ==============================================================================
 // COLECCIONES TEMÁTICAS (CU11)
 // ==============================================================================
 // 13. Listar Colecciones Públicas
-func (q *Queries) ListPublicCollections(ctx context.Context, featuredOnly pgtype.Bool) ([]Collection, error) {
+func (q *Queries) ListPublicCollections(ctx context.Context, featuredOnly pgtype.Bool) ([]ListPublicCollectionsRow, error) {
 	rows, err := q.db.Query(ctx, listPublicCollections, featuredOnly)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Collection{}
+	items := []ListPublicCollectionsRow{}
 	for rows.Next() {
-		var i Collection
+		var i ListPublicCollectionsRow
 		if err := rows.Scan(
 			&i.IDCollection,
 			&i.IDUser,
@@ -793,6 +840,163 @@ func (q *Queries) SaveDeck(ctx context.Context, arg SaveDeckParams) error {
 	return err
 }
 
+const searchCollectionsDropdown = `-- name: SearchCollectionsDropdown :many
+SELECT
+    c.id_collection,
+    c.title,
+    c.description,
+    u.user_name AS owner_user_name,
+    (SELECT count(*)::INT FROM collection_decks cd WHERE cd.id_collection = c.id_collection) AS deck_count,
+    (
+        SELECT count(*)::INT 
+        FROM collection_decks cd 
+        JOIN deck_items di ON di.id_deck = cd.id_deck 
+        WHERE cd.id_collection = c.id_collection
+    ) AS item_count,
+    c.is_official,
+    c.is_featured
+FROM collections c
+JOIN users u ON u.id_user = c.id_user
+WHERE c.is_public = true
+  AND $1::TEXT IS NOT NULL
+  AND length(trim($1::TEXT)) > 0
+  AND (
+      unaccent(lower(c.title)) LIKE unaccent(lower($1::TEXT)) || '%'
+      OR c.search_vector @@ plainto_tsquery('spanish_unaccent', $1::TEXT)
+      OR (c.description IS NOT NULL AND unaccent(lower(c.description)) LIKE '%' || unaccent(lower($1::TEXT)) || '%')
+  )
+ORDER BY
+    (unaccent(lower(c.title)) LIKE unaccent(lower($1::TEXT)) || '%') DESC,
+    ts_rank(c.search_vector, plainto_tsquery('spanish_unaccent', $1::TEXT)) DESC,
+    c.title ASC
+LIMIT $2::INT
+`
+
+type SearchCollectionsDropdownParams struct {
+	SearchQuery string `json:"search_query"`
+	MaxResults  int32  `json:"max_results"`
+}
+
+type SearchCollectionsDropdownRow struct {
+	IDCollection  int32       `json:"id_collection"`
+	Title         string      `json:"title"`
+	Description   pgtype.Text `json:"description"`
+	OwnerUserName string      `json:"owner_user_name"`
+	DeckCount     int32       `json:"deck_count"`
+	ItemCount     int32       `json:"item_count"`
+	IsOfficial    bool        `json:"is_official"`
+	IsFeatured    bool        `json:"is_featured"`
+}
+
+// 26. Búsqueda Rápida de Colecciones para Dropdown / Autocompletado
+func (q *Queries) SearchCollectionsDropdown(ctx context.Context, arg SearchCollectionsDropdownParams) ([]SearchCollectionsDropdownRow, error) {
+	rows, err := q.db.Query(ctx, searchCollectionsDropdown, arg.SearchQuery, arg.MaxResults)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SearchCollectionsDropdownRow{}
+	for rows.Next() {
+		var i SearchCollectionsDropdownRow
+		if err := rows.Scan(
+			&i.IDCollection,
+			&i.Title,
+			&i.Description,
+			&i.OwnerUserName,
+			&i.DeckCount,
+			&i.ItemCount,
+			&i.IsOfficial,
+			&i.IsFeatured,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchDecksDropdown = `-- name: SearchDecksDropdown :many
+SELECT
+    d.id_deck,
+    d.title,
+    d.description,
+    COALESCE((
+        SELECT r.name 
+        FROM deck_items di 
+        JOIN senses s ON s.id_sense = di.id_sense 
+        JOIN regions r ON r.id_region = s.id_region 
+        WHERE di.id_deck = d.id_deck 
+        GROUP BY r.name 
+        ORDER BY count(*) DESC 
+        LIMIT 1
+    ), 'General')::VARCHAR AS region_name,
+    u.user_name AS owner_user_name,
+    (SELECT count(*)::INT FROM deck_items di WHERE di.id_deck = d.id_deck) AS item_count,
+    d.is_official
+FROM decks d
+JOIN users u ON u.id_user = d.id_user
+WHERE d.is_public = true
+  AND $1::TEXT IS NOT NULL
+  AND length(trim($1::TEXT)) > 0
+  AND (
+      unaccent(lower(d.title)) LIKE unaccent(lower($1::TEXT)) || '%'
+      OR d.search_vector @@ plainto_tsquery('spanish_unaccent', $1::TEXT)
+      OR (d.description IS NOT NULL AND unaccent(lower(d.description)) LIKE '%' || unaccent(lower($1::TEXT)) || '%')
+  )
+ORDER BY
+    (unaccent(lower(d.title)) LIKE unaccent(lower($1::TEXT)) || '%') DESC,
+    ts_rank(d.search_vector, plainto_tsquery('spanish_unaccent', $1::TEXT)) DESC,
+    d.title ASC
+LIMIT $2::INT
+`
+
+type SearchDecksDropdownParams struct {
+	SearchQuery string `json:"search_query"`
+	MaxResults  int32  `json:"max_results"`
+}
+
+type SearchDecksDropdownRow struct {
+	IDDeck        int32       `json:"id_deck"`
+	Title         string      `json:"title"`
+	Description   pgtype.Text `json:"description"`
+	RegionName    string      `json:"region_name"`
+	OwnerUserName string      `json:"owner_user_name"`
+	ItemCount     int32       `json:"item_count"`
+	IsOfficial    bool        `json:"is_official"`
+}
+
+// 25. Búsqueda Rápida de Barajas para Dropdown / Autocompletado
+func (q *Queries) SearchDecksDropdown(ctx context.Context, arg SearchDecksDropdownParams) ([]SearchDecksDropdownRow, error) {
+	rows, err := q.db.Query(ctx, searchDecksDropdown, arg.SearchQuery, arg.MaxResults)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SearchDecksDropdownRow{}
+	for rows.Next() {
+		var i SearchDecksDropdownRow
+		if err := rows.Scan(
+			&i.IDDeck,
+			&i.Title,
+			&i.Description,
+			&i.RegionName,
+			&i.OwnerUserName,
+			&i.ItemCount,
+			&i.IsOfficial,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const unsaveCollection = `-- name: UnsaveCollection :exec
 DELETE FROM saved_collections WHERE id_user = $1 AND id_collection = $2
 `
@@ -845,8 +1049,20 @@ type UpdateCollectionParams struct {
 	IsOfficial   bool        `json:"is_official"`
 }
 
+type UpdateCollectionRow struct {
+	IDCollection int32              `json:"id_collection"`
+	IDUser       uuid.UUID          `json:"id_user"`
+	Title        string             `json:"title"`
+	Description  pgtype.Text        `json:"description"`
+	IsPublic     bool               `json:"is_public"`
+	IsFeatured   bool               `json:"is_featured"`
+	IsOfficial   bool               `json:"is_official"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
 // 18. Actualizar Colección
-func (q *Queries) UpdateCollection(ctx context.Context, arg UpdateCollectionParams) (Collection, error) {
+func (q *Queries) UpdateCollection(ctx context.Context, arg UpdateCollectionParams) (UpdateCollectionRow, error) {
 	row := q.db.QueryRow(ctx, updateCollection,
 		arg.IDCollection,
 		arg.Title,
@@ -855,7 +1071,7 @@ func (q *Queries) UpdateCollection(ctx context.Context, arg UpdateCollectionPara
 		arg.IsFeatured,
 		arg.IsOfficial,
 	)
-	var i Collection
+	var i UpdateCollectionRow
 	err := row.Scan(
 		&i.IDCollection,
 		&i.IDUser,
@@ -890,8 +1106,19 @@ type UpdateDeckParams struct {
 	IsOfficial  bool        `json:"is_official"`
 }
 
+type UpdateDeckRow struct {
+	IDDeck      int32              `json:"id_deck"`
+	IDUser      uuid.UUID          `json:"id_user"`
+	Title       string             `json:"title"`
+	Description pgtype.Text        `json:"description"`
+	IsPublic    bool               `json:"is_public"`
+	IsOfficial  bool               `json:"is_official"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 // 6. Actualizar Baraja
-func (q *Queries) UpdateDeck(ctx context.Context, arg UpdateDeckParams) (Deck, error) {
+func (q *Queries) UpdateDeck(ctx context.Context, arg UpdateDeckParams) (UpdateDeckRow, error) {
 	row := q.db.QueryRow(ctx, updateDeck,
 		arg.IDDeck,
 		arg.Title,
@@ -899,7 +1126,7 @@ func (q *Queries) UpdateDeck(ctx context.Context, arg UpdateDeckParams) (Deck, e
 		arg.IsPublic,
 		arg.IsOfficial,
 	)
-	var i Deck
+	var i UpdateDeckRow
 	err := row.Scan(
 		&i.IDDeck,
 		&i.IDUser,

@@ -119,6 +119,12 @@ func TestDictionaryService_SearchAndDetail_PostgresFTS(t *testing.T) {
 	if len(suggestions) == 0 || suggestions[0].Lemma != "popote" {
 		t.Fatalf("se esperaba encontrar 'popote' en el autocompletado, obtenido: %+v", suggestions)
 	}
+	if suggestions[0].PartOfSpeech == "" {
+		t.Errorf("se esperaba PartOfSpeech poblado, obtenido '%s'", suggestions[0].PartOfSpeech)
+	}
+	if suggestions[0].RegionName != "México" && suggestions[0].RegionName != "General" {
+		t.Errorf("se esperaba RegionName válido, obtenido '%s'", suggestions[0].RegionName)
+	}
 
 	// 2. Detalle completo de término (incluyendo ParentZone e hijos anidados)
 	detail, err := dictSvc.GetWordDetail(ctx, 1)

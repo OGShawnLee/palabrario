@@ -407,3 +407,168 @@ func TestMasteryService_StudySessionAndReview_Transaction(t *testing.T) {
 		t.Errorf("se esperaba sense %d en LEARNING, obtenido %d", firstCard.IDSense, items[0].IDSense)
 	}
 }
+
+func TestStudioService_SearchDecks_PostgresFTS(t *testing.T) {
+	testDB := testutil.SetupTestDB(t)
+	if testDB == nil {
+		return
+	}
+
+	studioSvc := service.NewStudioService(testDB)
+	ctx := context.Background()
+
+	adminID := "b1111111-0000-0000-0000-000000000001" // ADMIN
+
+	// Deck 1 ya existe en la semilla: 'Mexicanismos Indispensables' con descripción 'Vocabulario esencial y modismos de México que todo viajero o estudiante debe dominar.'
+	// 1. Búsqueda por prefijo exacto sin acento
+	results, err := studioSvc.SearchDecks(ctx, "mex", 10)
+	if err != nil {
+		t.Fatalf("SearchDecks('mex') falló: %v", err)
+	}
+	if len(results) == 0 {
+		t.Fatalf("se esperaba al menos 1 resultado para 'mex', obtenido: %+v", results)
+	}
+	if results[0].Title != "Mexicanismos Indispensables" {
+		t.Errorf("se esperaba 'Mexicanismos Indispensables', obtenido '%s'", results[0].Title)
+	}
+	if results[0].RegionName != "México" {
+		t.Errorf("se esperaba RegionName 'México', obtenido '%s'", results[0].RegionName)
+	}
+	if results[0].OwnerUserName == "" {
+		t.Errorf("se esperaba owner_user_name poblado, obtenido vacío")
+	}
+
+	// 2. Búsqueda con tildes / accent-insensitive ('méx' vs 'mex')
+	resultsAccented, err := studioSvc.SearchDecks(ctx, "méx", 10)
+	if err != nil {
+		t.Fatalf("SearchDecks('méx') falló: %v", err)
+	}
+	if len(resultsAccented) == 0 || resultsAccented[0].IDDeck != results[0].IDDeck {
+		t.Errorf("búsqueda insensible a acentos falló: %+v", resultsAccented)
+	}
+
+	// 3. Búsqueda FTS dentro de la descripción ('viajero' o 'estudiante')
+	ftsResults, err := studioSvc.SearchDecks(ctx, "viajero", 10)
+	if err != nil {
+		t.Fatalf("SearchDecks('viajero') falló: %v", err)
+	}
+	if len(ftsResults) == 0 || ftsResults[0].IDDeck != 1 {
+		t.Errorf("FTS en descripción de baraja falló: %+v", ftsResults)
+	}
+
+	// 4. Barajas privadas no deben aparecer en la búsqueda pública
+	_, err = studioSvc.CreateDeck(ctx, adminID, models.RoleAdmin, models.CreateDeckRequest{
+		Title:       "Secret Mexican Vault",
+		Description: utils.ToPtr("Baraja secreta para pruebas privadas"),
+		IsPublic:    false,
+	})
+	if err != nil {
+		t.Fatalf("CreateDeck privado falló: %v", err)
+	}
+
+	secretResults, err := studioSvc.SearchDecks(ctx, "Secret", 10)
+	if err != nil {
+		t.Fatalf("SearchDecks('Secret') falló: %v", err)
+	}
+	if len(secretResults) > 0 {
+		t.Errorf("las barajas privadas no deben aparecer en búsqueda pública, obtenido: %+v", secretResults)
+	}
+
+	// 5. Query vacía devuelve slice vacío sin error
+	emptyResults, err := studioSvc.SearchDecks(ctx, "   ", 10)
+	if err != nil {
+		t.Fatalf("SearchDecks('') falló: %v", err)
+	}
+	if len(emptyResults) != 0 {
+		t.Errorf("se esperaba resultado vacío para query en blanco, obtenido: %+v", emptyResults)
+	}
+}
+
+func TestStudioService_SearchCollections_PostgresFTS(t *testing.T) {
+	testDB := testutil.SetupTestDB(t)
+	if testDB == nil {
+		return
+	}
+
+	studioSvc := service.NewStudioService(testDB)
+	ctx := context.Background()
+
+	adminID := "b1111111-0000-0000-0000-000000000001" // ADMIN
+
+	// Creamos una colección pública
+	col, err := studioSvc.CreateCollection(ctx, adminID, models.RoleAdmin, models.CreateCollectionRequest{
+		Title:       "Gastronomía Callejera Panhispánica",
+		Description: utils.ToPtr("Ruta gastronómica de tacos, arepas, empanadas y comida callejera."),
+		IsPublic:    true,
+		IsFeatured:  true,
+		IsOfficial:  true,
+		DeckIDs:     []int{1},
+	})
+	if err != nil {
+		t.Fatalf("CreateCollection falló: %v", err)
+	}
+
+	// 1. Prefijo sin tilde ('gastro' sobre 'Gastronomía')
+	results, err := studioSvc.SearchCollections(ctx, "gastro", 10)
+	if err != nil {
+		t.Fatalf("SearchCollections('gastro') falló: %v", err)
+	}
+	if len(results) == 0 {
+		t.Fatalf("se esperaba al menos 1 resultado para 'gastro', obtenido: %+v", results)
+	}
+	if results[0].IDCollection != col.IDCollection {
+		t.Errorf("se esperaba colección id %d, obtenido %d", col.IDCollection, results[0].IDCollection)
+	}
+	if results[0].OwnerUserName == "" {
+		t.Errorf("se esperaba owner_user_name poblado")
+	}
+	if results[0].DeckCount != 1 {
+		t.Errorf("se esperaba deck_count = 1, obtenido %d", results[0].DeckCount)
+	}
+
+	// 2. Prefijo con tilde ('gastronomía')
+	resultsAccented, err := studioSvc.SearchCollections(ctx, "gastronomía", 10)
+	if err != nil {
+		t.Fatalf("SearchCollections('gastronomía') falló: %v", err)
+	}
+	if len(resultsAccented) == 0 || resultsAccented[0].IDCollection != col.IDCollection {
+		t.Errorf("búsqueda insensible a acentos falló: %+v", resultsAccented)
+	}
+
+	// 3. FTS en descripción ('empanadas' o 'callejera')
+	ftsResults, err := studioSvc.SearchCollections(ctx, "empanadas", 10)
+	if err != nil {
+		t.Fatalf("SearchCollections('empanadas') falló: %v", err)
+	}
+	if len(ftsResults) == 0 || ftsResults[0].IDCollection != col.IDCollection {
+		t.Errorf("FTS en descripción de colección falló: %+v", ftsResults)
+	}
+
+	// 4. Colección privada no debe aparecer
+	_, err = studioSvc.CreateCollection(ctx, adminID, models.RoleAdmin, models.CreateCollectionRequest{
+		Title:       "Colección Oculta Secreta",
+		Description: utils.ToPtr("Descripción privada clasificada"),
+		IsPublic:    false,
+		DeckIDs:     []int{1},
+	})
+	if err != nil {
+		t.Fatalf("CreateCollection privado falló: %v", err)
+	}
+
+	privateResults, err := studioSvc.SearchCollections(ctx, "Oculta", 10)
+	if err != nil {
+		t.Fatalf("SearchCollections('Oculta') falló: %v", err)
+	}
+	if len(privateResults) > 0 {
+		t.Errorf("colección privada no debe aparecer en búsqueda pública: %+v", privateResults)
+	}
+
+	// 5. Query vacía devuelve slice vacío
+	emptyResults, err := studioSvc.SearchCollections(ctx, "   ", 10)
+	if err != nil {
+		t.Fatalf("SearchCollections('') falló: %v", err)
+	}
+	if len(emptyResults) != 0 {
+		t.Errorf("se esperaba slice vacío para query vacía, obtenido: %+v", emptyResults)
+	}
+}

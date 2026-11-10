@@ -14,6 +14,8 @@ const (
 type WordSearchResult struct {
 	IDWord          int     `json:"id_word"`
 	Lemma           string  `json:"lemma"`
+	PartOfSpeech    string  `json:"part_of_speech"`
+	RegionName      string  `json:"region_name"`
 	ShortDefinition string  `json:"short_definition"`
 	FlagEmoji       string  `json:"flag_emoji"`
 	CountryCode     string  `json:"country_code"`

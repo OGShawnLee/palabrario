@@ -309,9 +309,15 @@ CREATE TABLE decks (
   description TEXT,
   is_public BOOLEAN NOT NULL DEFAULT true,
   is_official BOOLEAN NOT NULL DEFAULT false,
+  search_vector tsvector GENERATED ALWAYS AS (
+    setweight(to_tsvector('spanish_unaccent', coalesce(title, '')), 'A') ||
+    setweight(to_tsvector('spanish_unaccent', coalesce(description, '')), 'B')
+  ) STORED,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX idx_decks_search_vector ON decks USING GIN(search_vector);
 
 CREATE TABLE deck_items (
   id_deck INTEGER NOT NULL REFERENCES decks(id_deck) ON DELETE CASCADE,
@@ -336,9 +342,15 @@ CREATE TABLE collections (
   is_public BOOLEAN NOT NULL DEFAULT true,
   is_featured BOOLEAN NOT NULL DEFAULT false,
   is_official BOOLEAN NOT NULL DEFAULT false,
+  search_vector tsvector GENERATED ALWAYS AS (
+    setweight(to_tsvector('spanish_unaccent', coalesce(title, '')), 'A') ||
+    setweight(to_tsvector('spanish_unaccent', coalesce(description, '')), 'B')
+  ) STORED,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX idx_collections_search_vector ON collections USING GIN(search_vector);
 
 CREATE TABLE collection_decks (
   id_collection INTEGER NOT NULL REFERENCES collections(id_collection) ON DELETE CASCADE,

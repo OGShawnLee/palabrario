@@ -218,6 +218,7 @@ func (rt *Router) Setup() http.Handler {
 		// Módulo 5: Barajas de Estudio (CU10)
 		r.Route("/decks", func(r chi.Router) {
 			r.Get("/", studioHandler.ListDecks)
+			r.Get("/search", studioHandler.SearchDecks)
 			r.With(authMiddleware.OptionalAuth).Get("/{id}", studioHandler.GetDeck)
 
 			r.Group(func(r chi.Router) {
@@ -235,6 +236,7 @@ func (rt *Router) Setup() http.Handler {
 		// Módulo 5: Colecciones Temáticas (CU11)
 		r.Route("/collections", func(r chi.Router) {
 			r.Get("/", studioHandler.ListCollections)
+			r.Get("/search", studioHandler.SearchCollections)
 			r.With(authMiddleware.OptionalAuth).Get("/{id}", studioHandler.GetCollection)
 
 			r.Group(func(r chi.Router) {

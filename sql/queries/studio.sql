@@ -300,3 +300,70 @@ DELETE FROM saved_collections WHERE id_user = $1 AND id_collection = $2;
 SELECT EXISTS(
     SELECT 1 FROM saved_collections WHERE id_user = $1 AND id_collection = $2
 );
+
+-- 25. Búsqueda Rápida de Barajas para Dropdown / Autocompletado
+-- name: SearchDecksDropdown :many
+SELECT
+    d.id_deck,
+    d.title,
+    d.description,
+    COALESCE((
+        SELECT r.name 
+        FROM deck_items di 
+        JOIN senses s ON s.id_sense = di.id_sense 
+        JOIN regions r ON r.id_region = s.id_region 
+        WHERE di.id_deck = d.id_deck 
+        GROUP BY r.name 
+        ORDER BY count(*) DESC 
+        LIMIT 1
+    ), 'General')::VARCHAR AS region_name,
+    u.user_name AS owner_user_name,
+    (SELECT count(*)::INT FROM deck_items di WHERE di.id_deck = d.id_deck) AS item_count,
+    d.is_official
+FROM decks d
+JOIN users u ON u.id_user = d.id_user
+WHERE d.is_public = true
+  AND sqlc.arg('search_query')::TEXT IS NOT NULL
+  AND length(trim(sqlc.arg('search_query')::TEXT)) > 0
+  AND (
+      unaccent(lower(d.title)) LIKE unaccent(lower(sqlc.arg('search_query')::TEXT)) || '%'
+      OR d.search_vector @@ plainto_tsquery('spanish_unaccent', sqlc.arg('search_query')::TEXT)
+      OR (d.description IS NOT NULL AND unaccent(lower(d.description)) LIKE '%' || unaccent(lower(sqlc.arg('search_query')::TEXT)) || '%')
+  )
+ORDER BY
+    (unaccent(lower(d.title)) LIKE unaccent(lower(sqlc.arg('search_query')::TEXT)) || '%') DESC,
+    ts_rank(d.search_vector, plainto_tsquery('spanish_unaccent', sqlc.arg('search_query')::TEXT)) DESC,
+    d.title ASC
+LIMIT sqlc.arg('max_results')::INT;
+
+-- 26. Búsqueda Rápida de Colecciones para Dropdown / Autocompletado
+-- name: SearchCollectionsDropdown :many
+SELECT
+    c.id_collection,
+    c.title,
+    c.description,
+    u.user_name AS owner_user_name,
+    (SELECT count(*)::INT FROM collection_decks cd WHERE cd.id_collection = c.id_collection) AS deck_count,
+    (
+        SELECT count(*)::INT 
+        FROM collection_decks cd 
+        JOIN deck_items di ON di.id_deck = cd.id_deck 
+        WHERE cd.id_collection = c.id_collection
+    ) AS item_count,
+    c.is_official,
+    c.is_featured
+FROM collections c
+JOIN users u ON u.id_user = c.id_user
+WHERE c.is_public = true
+  AND sqlc.arg('search_query')::TEXT IS NOT NULL
+  AND length(trim(sqlc.arg('search_query')::TEXT)) > 0
+  AND (
+      unaccent(lower(c.title)) LIKE unaccent(lower(sqlc.arg('search_query')::TEXT)) || '%'
+      OR c.search_vector @@ plainto_tsquery('spanish_unaccent', sqlc.arg('search_query')::TEXT)
+      OR (c.description IS NOT NULL AND unaccent(lower(c.description)) LIKE '%' || unaccent(lower(sqlc.arg('search_query')::TEXT)) || '%')
+  )
+ORDER BY
+    (unaccent(lower(c.title)) LIKE unaccent(lower(sqlc.arg('search_query')::TEXT)) || '%') DESC,
+    ts_rank(c.search_vector, plainto_tsquery('spanish_unaccent', sqlc.arg('search_query')::TEXT)) DESC,
+    c.title ASC
+LIMIT sqlc.arg('max_results')::INT;

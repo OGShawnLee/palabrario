@@ -9,6 +9,7 @@ WITH matched_words AS (
     w.id_word,
     w.lemma,
     w.normalized_lemma,
+    w.part_of_speech,
     similarity(w.normalized_lemma, unaccent(lower(sqlc.arg('search_query')::TEXT))) AS sim
   FROM words w
   WHERE
@@ -30,9 +31,11 @@ distinct_words AS (
     mw.id_word,
     mw.lemma,
     mw.normalized_lemma,
+    mw.part_of_speech,
     coalesce(s.short_definition, 'Sin definición corta') AS short_definition,
     coalesce(r.flag_emoji, '🌐') AS flag_emoji,
     coalesce(r.country_code, '') AS country_code,
+    coalesce(r.name, 'General')::VARCHAR AS region_name,
     mw.sim AS similarity
   FROM matched_words mw
   LEFT JOIN senses s ON s.id_word = mw.id_word AND s.state = 'APPROVED'
@@ -45,6 +48,8 @@ distinct_words AS (
 SELECT
   dw.id_word,
   dw.lemma,
+  dw.part_of_speech,
+  dw.region_name,
   dw.short_definition,
   dw.flag_emoji,
   dw.country_code,

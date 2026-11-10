@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"palabrario/core-service/internal/service"
 	"palabrario/pkg/auth"
@@ -21,6 +22,26 @@ func NewStudioHandler(studioService service.StudioService) *StudioHandler {
 // -----------------------------------------------------------------------------
 // BARAJAS (CU10)
 // -----------------------------------------------------------------------------
+
+// SearchDecks maneja GET /api/v1/decks/search?q={query}&limit={10}
+func (h *StudioHandler) SearchDecks(w http.ResponseWriter, r *http.Request) {
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	if query == "" {
+		response.JSON(w, http.StatusOK, []models.DeckSearchResult{})
+		return
+	}
+
+	limit := queryIntOrDefault(r, "limit", 10, 1, 50)
+
+	results, err := h.studioService.SearchDecks(r.Context(), query, limit)
+	if err != nil {
+		status, msg := service.HTTPStatusAndMessage(err, "Error al buscar barajas")
+		response.Error(w, status, msg)
+		return
+	}
+
+	response.JSON(w, http.StatusOK, results)
+}
 
 // ListDecks maneja GET /api/v1/decks?q=&official_only=false
 func (h *StudioHandler) ListDecks(w http.ResponseWriter, r *http.Request) {
@@ -251,6 +272,26 @@ func (h *StudioHandler) UnsaveDeck(w http.ResponseWriter, r *http.Request) {
 // -----------------------------------------------------------------------------
 // COLECCIONES TEMÁTICAS (CU11)
 // -----------------------------------------------------------------------------
+
+// SearchCollections maneja GET /api/v1/collections/search?q={query}&limit={10}
+func (h *StudioHandler) SearchCollections(w http.ResponseWriter, r *http.Request) {
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	if query == "" {
+		response.JSON(w, http.StatusOK, []models.CollectionSearchResult{})
+		return
+	}
+
+	limit := queryIntOrDefault(r, "limit", 10, 1, 50)
+
+	results, err := h.studioService.SearchCollections(r.Context(), query, limit)
+	if err != nil {
+		status, msg := service.HTTPStatusAndMessage(err, "Error al buscar colecciones")
+		response.Error(w, status, msg)
+		return
+	}
+
+	response.JSON(w, http.StatusOK, results)
+}
 
 // ListCollections maneja GET /api/v1/collections?featured=true
 func (h *StudioHandler) ListCollections(w http.ResponseWriter, r *http.Request) {

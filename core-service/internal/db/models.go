@@ -749,6 +749,7 @@ type Collection struct {
 	IsPublic     bool               `json:"is_public"`
 	IsFeatured   bool               `json:"is_featured"`
 	IsOfficial   bool               `json:"is_official"`
+	SearchVector interface{}        `json:"search_vector"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
@@ -781,14 +782,15 @@ type ContentReport struct {
 }
 
 type Deck struct {
-	IDDeck      int32              `json:"id_deck"`
-	IDUser      uuid.UUID          `json:"id_user"`
-	Title       string             `json:"title"`
-	Description pgtype.Text        `json:"description"`
-	IsPublic    bool               `json:"is_public"`
-	IsOfficial  bool               `json:"is_official"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	IDDeck       int32              `json:"id_deck"`
+	IDUser       uuid.UUID          `json:"id_user"`
+	Title        string             `json:"title"`
+	Description  pgtype.Text        `json:"description"`
+	IsPublic     bool               `json:"is_public"`
+	IsOfficial   bool               `json:"is_official"`
+	SearchVector interface{}        `json:"search_vector"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type DeckItem struct {

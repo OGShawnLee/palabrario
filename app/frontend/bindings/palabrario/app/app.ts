@@ -844,11 +844,29 @@ export function SaveDeck(deckId: number): $CancellablePromise<void> {
 }
 
 /**
+ * SearchCollections ejecuta búsqueda rápida FTS de colecciones públicas.
+ */
+export function SearchCollections(q: string, limit: number): $CancellablePromise<models$0.CollectionSearchResult[]> {
+    return $Call.ByID(1884492082, q, limit).then(($result: any) => {
+        return $$createType60($result);
+    });
+}
+
+/**
+ * SearchDecks ejecuta búsqueda rápida FTS de barajas públicas.
+ */
+export function SearchDecks(q: string, limit: number): $CancellablePromise<models$0.DeckSearchResult[]> {
+    return $Call.ByID(643634629, q, limit).then(($result: any) => {
+        return $$createType62($result);
+    });
+}
+
+/**
  * SearchWords ejecuta búsqueda difusa FTS de palabras.
  */
 export function SearchWords(q: string, dialect: string, limit: number): $CancellablePromise<models$0.WordSearchResult[]> {
     return $Call.ByID(2774597974, q, dialect, limit).then(($result: any) => {
-        return $$createType60($result);
+        return $$createType64($result);
     });
 }
 
@@ -903,7 +921,7 @@ export function SubmitArenaAnswer(roundNumber: number, selectedOption: string): 
  */
 export function SubmitCardReview(req: models$0.SubmitReviewRequest): $CancellablePromise<models$0.CardReviewResult | null> {
     return $Call.ByID(4038425151, req).then(($result: any) => {
-        return $$createType62($result);
+        return $$createType66($result);
     });
 }
 
@@ -921,7 +939,7 @@ export function SubmitProposalReview(senseId: number, req: models$0.SubmitVoteRe
  */
 export function SubmitReview(req: models$0.SubmitReviewRequest): $CancellablePromise<models$0.CardReviewResult | null> {
     return $Call.ByID(2744038041, req).then(($result: any) => {
-        return $$createType62($result);
+        return $$createType66($result);
     });
 }
 
@@ -930,7 +948,7 @@ export function SubmitReview(req: models$0.SubmitReviewRequest): $CancellablePro
  */
 export function SubmitStudyReview(req: models$0.SubmitReviewRequest): $CancellablePromise<models$0.CardReviewResult | null> {
     return $Call.ByID(2942032638, req).then(($result: any) => {
-        return $$createType62($result);
+        return $$createType66($result);
     });
 }
 
@@ -1068,7 +1086,7 @@ export function UpdateWordProposal(id: number, req: models$0.UpdateWordRequest):
  */
 export function UploadImage(category: string, filename: string, fileBytes: string): $CancellablePromise<models$0.ImageUploadResponse | null> {
     return $Call.ByID(3459446289, category, filename, fileBytes).then(($result: any) => {
-        return $$createType64($result);
+        return $$createType68($result);
     });
 }
 
@@ -1132,9 +1150,13 @@ const $$createType55 = $Create.Array($$createType54);
 const $$createType56 = models$0.Region.createFrom;
 const $$createType57 = $Create.Array($$createType56);
 const $$createType58 = $Create.Array($$createType30);
-const $$createType59 = models$0.WordSearchResult.createFrom;
+const $$createType59 = models$0.CollectionSearchResult.createFrom;
 const $$createType60 = $Create.Array($$createType59);
-const $$createType61 = models$0.CardReviewResult.createFrom;
-const $$createType62 = $Create.Nullable($$createType61);
-const $$createType63 = models$0.ImageUploadResponse.createFrom;
-const $$createType64 = $Create.Nullable($$createType63);
+const $$createType61 = models$0.DeckSearchResult.createFrom;
+const $$createType62 = $Create.Array($$createType61);
+const $$createType63 = models$0.WordSearchResult.createFrom;
+const $$createType64 = $Create.Array($$createType63);
+const $$createType65 = models$0.CardReviewResult.createFrom;
+const $$createType66 = $Create.Nullable($$createType65);
+const $$createType67 = models$0.ImageUploadResponse.createFrom;
+const $$createType68 = $Create.Nullable($$createType67);

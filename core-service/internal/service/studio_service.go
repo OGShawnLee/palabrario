@@ -24,6 +24,7 @@ type StudioService interface {
 	RemoveDeckItem(ctx context.Context, userID string, userRole models.AccountRole, deckID int, senseID int) error
 	SaveDeck(ctx context.Context, userID string, userRole models.AccountRole, deckID int) error
 	UnsaveDeck(ctx context.Context, userID string, deckID int) error
+	SearchDecks(ctx context.Context, query string, limit int) ([]models.DeckSearchResult, error)
 
 	// Colecciones (CU11)
 	ListPublicCollections(ctx context.Context, featuredOnly *bool) ([]models.Collection, error)
@@ -34,6 +35,7 @@ type StudioService interface {
 	DeleteCollection(ctx context.Context, userID string, userRole models.AccountRole, collectionID int) error
 	SaveCollection(ctx context.Context, userID string, userRole models.AccountRole, collectionID int) error
 	UnsaveCollection(ctx context.Context, userID string, collectionID int) error
+	SearchCollections(ctx context.Context, query string, limit int) ([]models.CollectionSearchResult, error)
 }
 
 type studioService struct {
@@ -733,3 +735,69 @@ func (s *studioService) UnsaveCollection(ctx context.Context, userID string, col
 		IDCollection: int32(collectionID),
 	})
 }
+
+func (s *studioService) SearchDecks(ctx context.Context, query string, limit int) ([]models.DeckSearchResult, error) {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return []models.DeckSearchResult{}, nil
+	}
+	if limit <= 0 || limit > 50 {
+		limit = 10
+	}
+
+	rows, err := s.queries.SearchDecksDropdown(ctx, db.SearchDecksDropdownParams{
+		SearchQuery: query,
+		MaxResults:  int32(limit),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error al buscar barajas: %w", err)
+	}
+
+	results := make([]models.DeckSearchResult, len(rows))
+	for i, r := range rows {
+		results[i] = models.DeckSearchResult{
+			IDDeck:        int(r.IDDeck),
+			Title:         r.Title,
+			Description:   TextToPtr(r.Description),
+			RegionName:    r.RegionName,
+			OwnerUserName: r.OwnerUserName,
+			ItemCount:     int(r.ItemCount),
+			IsOfficial:    r.IsOfficial,
+		}
+	}
+	return results, nil
+}
+
+func (s *studioService) SearchCollections(ctx context.Context, query string, limit int) ([]models.CollectionSearchResult, error) {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return []models.CollectionSearchResult{}, nil
+	}
+	if limit <= 0 || limit > 50 {
+		limit = 10
+	}
+
+	rows, err := s.queries.SearchCollectionsDropdown(ctx, db.SearchCollectionsDropdownParams{
+		SearchQuery: query,
+		MaxResults:  int32(limit),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error al buscar colecciones: %w", err)
+	}
+
+	results := make([]models.CollectionSearchResult, len(rows))
+	for i, r := range rows {
+		results[i] = models.CollectionSearchResult{
+			IDCollection:  int(r.IDCollection),
+			Title:         r.Title,
+			Description:   TextToPtr(r.Description),
+			OwnerUserName: r.OwnerUserName,
+			DeckCount:     int(r.DeckCount),
+			ItemCount:     int(r.ItemCount),
+			IsOfficial:    r.IsOfficial,
+			IsFeatured:    r.IsFeatured,
+		}
+	}
+	return results, nil
+}
+
