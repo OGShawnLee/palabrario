@@ -22,10 +22,9 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] `.tickets/022-scaffold-api-adapter-architecture/` (`completed`): scaffolded the `src/api/` adapter architecture (pure TypeScript contracts, authentic Spanish mock fixtures, live `WailsAdapter`, and runtime mode switcher) for Auth, Dictionary, and Studio.
 
 ## In progress
-*(None)*
+- [ ] `.tickets/015-integrate-search-modal/` (`in-progress`): frontend integration wiring `SearchModal.vue` and `DictionaryView.vue` to the universal API client (`api.dictionary`, `api.studio`) with debouncing, eliminating all hardcoded mock arrays from views.
 
 ## Draft tickets
-- [ ] `.tickets/015-integrate-search-modal/` (`draft`): frontend integration wiring `SearchModal.vue` and `DictionaryView.vue` to the universal API client (`api.dictionary`, `api.studio`) with debouncing, eliminating all hardcoded mock arrays from views.
 - [ ] `.tickets/010-build-collections-route/` (`draft`): build the `/collections` public catalog backed by `api.studio.listCollections()`, universal `AppBreadcrumb.vue`, and inspection dialog.
 - [ ] `.tickets/021-build-collection-detail-route/` (`draft`): build the `/collections/:id` individual learning path detail view backed by `api.studio.getCollection(id)` and `api.auth.getMe()`.
 - [ ] `.tickets/011-build-decks-route/` (`draft`): build the `/decks` public catalog backed by `api.studio.listDecks()`.
