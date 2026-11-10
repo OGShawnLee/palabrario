@@ -19,6 +19,11 @@ May create or edit:
 - `app/frontend/src/views/ArenaView.vue` (implement lobby view)
 - `app/frontend/src/components/arena/CreateMatchDialog.vue` (room configuration modal)
 - `app/frontend/src/components/arena/PublicRoomsTable.vue` (or subcomponents for rooms list)
+- `app/frontend/src/api/contract/arena.contract.ts` (new: define IArenaAPI)
+- `app/frontend/src/api/contract/index.ts` (mount arena in IPalabrarioAPI)
+- `app/frontend/src/api/live/wails/arena.wails.ts` (implement WailsArenaAdapter)
+- `app/frontend/src/api/live/wails/wails.adapter.ts` (mount arena adapter)
+- `app/frontend/src/api/mock/mock.adapter.ts` (implement MockArenaAPI with in-memory waiting rooms)
 - `.tickets/017-build-arena-route/changelog.md` (create)
 
 Must not touch:
@@ -28,7 +33,9 @@ Must not touch:
 
 ## Inputs
 
-- [.routing/services/arena_service.md](../../.routing/services/arena_service.md): Canonical domain rules (`RN10`, `RN13`), DTO contracts (`CreateMatchRequest`, `MatchSummary`, `MatchStatus`), limits (min 8 approved senses, 8..20 rounds, 10..30s timers, max 8 players), and endpoints.
+- [.routing/API.md](../../.routing/API.md): Architectural rules (Rule 1: Never import `@bindings/.../app` in UI; always import `api` from `@/api`).
+- [app/frontend/src/api/index.ts](../../app/frontend/src/api/index.ts): Universal `api` singleton (`api.arena`, `api.studio`).
+- [.routing/services/arena_service.md](../../.routing/services/arena_service.md): Canonical domain rules (`RN10`, `RN13`), DTO contracts (`CreateMatchRequest`, `MatchSummary`, `MatchStatus`, `PublicMatchItem`, `MatchPackage`), limits (min 8 approved senses, 8..20 rounds, 10..30s timers, max 8 players), and endpoints.
 - [.routing/services/studio_service.md](../../.routing/services/studio_service.md): Deck contracts (`Deck`, `DeckItem`, `StudioDeckSummary`) used when selecting decks for room creation.
 - [.routing/CONTEXT.md](../../.routing/CONTEXT.md): Architecture ground rules (strict prohibition of `flag_emoji` and regional codes; full region names required).
 - [.routing/DESIGN.md](../../.routing/DESIGN.md): Monochrome design tokens (`main`, `side`, `dull`, `light`, `ground`), typography (`Satoshi`), surfaces, and buttons (`button-main`, `button-side`, `button-icon`).
@@ -65,38 +72,77 @@ Must not touch:
    - Create `AppDialogOverlay.vue`:
      - Wrapping Reka UI `DialogOverlay` with `class="dialog-overlay"`.
 
-2. **Section 1: Hero Header & Join Room Bar:**
+2. **API Client Support for Arena (`IArenaAPI`):**
+   - Create `app/frontend/src/api/contract/arena.contract.ts`:
+     - Define `IArenaAPI`:
+       ```ts
+       export interface IArenaAPI {
+         listPublicWaitingMatches(limit?: number): Promise<PublicMatchItem[]>
+         prepareMatch(req: CreateMatchRequest): Promise<MatchPackage>
+         joinMatch(roomCode: string): Promise<MatchPackage>
+       }
+       ```
+     - Import DTOs from `@bindings/palabrario/pkg/models/index.js`.
+   - Update `app/frontend/src/api/contract/index.ts` to include `arena: IArenaAPI` on `IPalabrarioAPI`.
+   - Create `app/frontend/src/api/live/wails/arena.wails.ts`:
+     - Implement `WailsArenaAdapter` delegating to `Wails.ListPublicWaitingMatches(limit)`, `Wails.PrepareMatch(req)`, and `Wails.JoinArenaMatch(roomCode)`.
+   - Update `app/frontend/src/api/live/wails/wails.adapter.ts` to instantiate `WailsArenaAdapter`.
+   - Update `app/frontend/src/api/mock/mock.adapter.ts`:
+     - Implement `MockArenaAPI` maintaining simulated open rooms in memory with authentic Spanish deck titles, and handling room creation / join.
+
+3. **Section 1: Hero Header & Join Room Bar:**
    - **Hero Text:**
      - Title: `Arena de Contienda` (or `Contienda Arena` in English: `Multiplayer Arena`) in `text-3xl sm:text-4xl font-black text-main tracking-tight`.
      - Subtitle blurb: *"Compete in real-time with up to 8 players in definition and image rounds."* in `text-sm sm:text-base text-side mt-1`.
    - **Join PIN Bar & Actions:**
      - On desktop, aligned to the right or below the title; on mobile, stacked cleanly:
      - 6-character uppercase PIN input field (`field font-mono text-center tracking-widest uppercase w-32 sm:w-40`).
-     - `"Enter Room →"` (`button-main`).
-     - Primary `"Create Room"` (`button-side`).
+     - `"Enter Room →"` (`button-main`), calls `api.arena.joinMatch(pin)`.
+     - Primary `"Create Room"` (`button-side`), opens `CreateMatchDialog.vue`.
      - Secondary link: `"Match History →"` navigating to `/arena/history`.
 
-3. **Section 2: Public Open Matches Table:**
-   - Table header includes title *"Open Matches"* and a **Refresh / Reload button** (with Lucide `RotateCw` or `RefreshCw` icon using `button-side` or `button-icon` styling) to manually refetch the waiting public rooms list without real-time socket polling.
+4. **Section 2: Public Open Matches Table (`PublicRoomsTable.vue`):**
+   - **Data Fetching via API Client:**
+     - Import `api` from `@/api`:
+       ```ts
+       import { api } from "@/api"
+       ```
+     - Fetch matches on mount and on Refresh click:
+       ```ts
+       const rooms = ref<PublicMatchItem[]>([])
+       const isLoading = ref(true)
+
+       async function fetchRooms() {
+         isLoading.value = true
+         try {
+           rooms.value = await api.arena.listPublicWaitingMatches(20)
+         } finally {
+           isLoading.value = false
+         }
+       }
+       ```
+     - **Strict Rule:** Never hardcode mock open room arrays in the Vue component. All room data must flow through `api.arena`.
+   - Table header includes title *"Open Matches"* and a **Refresh / Reload button** (with Lucide `RotateCw` or `RefreshCw` icon using `button-side` or `button-icon` styling) to manually call `fetchRooms()`.
    - Responsive table or scannable list showing current open rooms in `WAITING` status.
    - Columns:
      - Room Code (e.g. `#MX8921` in font-mono font-bold).
      - Deck Title (and region if regional deck).
      - Format (e.g. `8 rounds · 15s`).
      - Participants slot indicator (e.g. `3 / 8`).
-     - Action: `"Join"` button.
+     - Action: `"Join"` button (calls `api.arena.joinMatch(room.room_code)`).
    - Empty state when no public rooms exist: clean minimal box with prompt to create a room or enter a private PIN, plus the refresh button.
 
-4. **Section 3: Room Configuration Modal (`CreateMatchDialog.vue`):**
+5. **Section 3: Room Configuration Modal (`CreateMatchDialog.vue`):**
    - Modal title: `"Create Match Room"`.
    - **Deck Selector (Left column on desktop, stacked on mobile):**
-     - Lists study decks. Decks with $< 8$ approved terms are disabled/locked with a padlock icon (`Lock` from `lucide-vue-next`) and helper text `"(minimum 8 terms required)"` per `arena_service.md`.
+     - Fetch candidate decks using `api.studio.listDecks(...)` or `api.studio.searchDecks(...)`. Zero hardcoded decks in the modal.
+     - Decks with $< 8$ approved terms are disabled/locked with a padlock icon (`Lock` from `lucide-vue-next`) and helper text `"(minimum 8 terms required)"` per `arena_service.md`.
      - Active selected deck highlighted with `bg-main text-white` and checkmark.
    - **Game Rules (Right column on desktop):**
      - Total rounds segmented control: `8 | 12 | 16` (enforcing `TotalRounds <= ApprovedSenses`).
      - Time per round segmented control: `10s | 15s | 20s`.
      - Public / Private match toggle.
-     - Action: `"Create Room and Get PIN"` (`button-main w-full`).
+     - Action: `"Create Room and Get PIN"` (`button-main w-full`), calls `api.arena.prepareMatch(payload)` and navigates to the lobby or displays the generated room PIN.
 
 5. **Validation:**
    - Run `cd app && wails3 task check` to verify Vue 3 and TypeScript typecheck.

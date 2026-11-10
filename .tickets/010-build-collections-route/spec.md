@@ -9,7 +9,8 @@ Run by the router before accepting the ticket. All items must pass.
   - Big headline `Study Collections` with proper vertical whitespace.
   - Featured collection spotlight card (`FeaturedCollectionCard.vue`) with 2-column desktop / 1-column mobile layout.
   - Right column lists constituent decks with descriptions and hairline dividers.
-  - "More collections" section with 2-column desktop / 1-column mobile grid (`CollectionGridItem.vue`).
+- [ ] `CollectionsView.vue` consumes collections from `api.studio.listCollections()` via `import { api } from "@/api"`. Zero hardcoded mock arrays or static collections exist inside the Vue view or its child components.
+- [ ] `IStudioAPI` contract and adapters (Wails and Mock) properly support `listCollections(featured?: boolean)`.
 - [ ] Inspection dialog (`CollectionDetailDialog.vue`) opens on "Explore Collection" click and lists path details.
 - [ ] Section labels and badges use natural sentence case (`section-label` / `text-sm font-bold text-dull`) instead of all-caps.
 - [ ] Strictly zero `flag_emoji` and zero dialect codes (`CU`, `CL`, `MX`). Full country names only.

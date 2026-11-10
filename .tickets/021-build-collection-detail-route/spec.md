@@ -4,6 +4,9 @@ Run by the router before accepting the ticket. All items must pass.
 
 - [ ] Route `/collections/:id` is registered under `AppLayout` in `app/frontend/src/router/index.ts`.
 - [ ] Universal breadcrumb displays the path hierarchy (`Home / Collections / ...`).
+- [ ] `CollectionDetailView.vue` consumes collection details and constituent decks from `api.studio.getCollection(id)` via `import { api } from "@/api"`. Zero hardcoded mock collection data in views.
+- [ ] Role-based owner/admin checks dynamically read `api.auth.getMe()` rather than hardcoded boolean flags.
+- [ ] `IStudioAPI` contract and adapters (Wails and Mock) support `getCollection(id: number)`, `saveCollection(id: number)`, and `unsaveCollection(id: number)`.
 - [ ] `CollectionDetailView.vue` implements the approved single-column layout:
   - Header with eyebrow, large title, blurb, metadata row, and primary actions.
   - "Save to Studio" (`button-main`) toggles saved state with Lucide bookmark icon.

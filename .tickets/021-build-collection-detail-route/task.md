@@ -18,6 +18,9 @@ May create or edit:
 - `app/frontend/src/components/collections/CollectionHeader.vue` (headline, blurb, metadata, and primary CTAs)
 - `app/frontend/src/components/collections/CollectionDeckItem.vue` (individual deck card in the sequential path)
 - `app/frontend/src/components/collections/CollectionAdminBar.vue` (role-gated owner/administrator actions bar)
+- `app/frontend/src/api/contract/studio.contract.ts` (ensure getCollection, saveCollection, unsaveCollection exist)
+- `app/frontend/src/api/live/wails/studio.wails.ts` (implement getCollection, saveCollection, unsaveCollection)
+- `app/frontend/src/api/mock/mock.adapter.ts` (implement mock getCollection, saveCollection, unsaveCollection)
 - `app/frontend/src/router/index.ts` (register `/collections/:id` route and breadcrumb resolver)
 - `.tickets/021-build-collection-detail-route/changelog.md` (create)
 
@@ -28,6 +31,8 @@ Must not touch:
 
 ## Inputs
 
+- [.routing/API.md](../../.routing/API.md): Architectural rules (Rule 1: Never import `@bindings/.../app` in UI; always import `api` from `@/api`).
+- [app/frontend/src/api/index.ts](../../app/frontend/src/api/index.ts): Universal `api` singleton (`api.studio`, `api.auth`).
 - [.routing/CONTEXT.md](../../.routing/CONTEXT.md): Architecture ground rules (strict prohibition of `flag_emoji` and regional codes; full textual region names required; English UI strings).
 - [.routing/DESIGN.md](../../.routing/DESIGN.md): Monochrome design tokens (`main`, `side`, `dull`, `light`, `ground`), typography (`Satoshi`), surfaces, sharp geometry (`rounded-none`), buttons (`button-main`, `button-side`), and natural sentence-case section labels (`section-label`).
 - [.routing/services/studio_service.md](../../.routing/services/studio_service.md): Canonical domain rules (`RN03` Ownership, `RN04` Resource Privacy, `RN05` Official Content), DTO contracts (`models.Collection`, `models.Deck`), and endpoints (`GET /api/v1/collections/{id}`).
@@ -50,19 +55,47 @@ Must not touch:
    - Register route `/collections/:id` with name `collection-detail` under `AppLayout`.
    - Set up `meta: { breadcrumb: [{ label: "Home", to: "/" }, { label: "Collections", to: "/collections" }, { label: "Collection Detail" }] }`.
 
-2. **Collection Detail View Container (`CollectionDetailView.vue`):**
+2. **API Client Support for Collections:**
+   - In `app/frontend/src/api/contract/studio.contract.ts`:
+     - Add `getCollection(id: number): Promise<Collection | null>`.
+     - Add `saveCollection(id: number): Promise<void>`.
+     - Add `unsaveCollection(id: number): Promise<void>`.
+   - In `app/frontend/src/api/live/wails/studio.wails.ts`:
+     - Delegate to `Wails.GetCollection(id)`, `Wails.SaveCollection(id)`, `Wails.UnsaveCollection(id)`.
+   - In `app/frontend/src/api/mock/mock.adapter.ts` and `decks.fixture.ts`:
+     - Implement mock `getCollection(id)` returning full collection with constituent decks.
+     - Implement mock `saveCollection(id)` and `unsaveCollection(id)` updating session state.
+
+3. **Collection Detail View Container (`CollectionDetailView.vue`):**
    - Centered container layout (`max-w-4xl mx-auto px-4 py-8 sm:py-12 flex flex-col gap-8`).
-   - Mock state modeling the canonical `models.Collection` contract for *"Del Tianguis al Mercado: Gastronomía y Abasto Popular"*:
-     - `id_collection: 1`
-     - `title: "Del Tianguis al Mercado: Gastronomía y Abasto Popular"`
-     - `description: "Educational journey through the voices, ingredients, and bargaining that bring Mexican popular commerce to life."`
-     - `is_public: true`, `is_featured: true`, `is_official: true`
-     - Metadata: `curator: "Academia Mexicana"`, `updated_at: "2 days ago"`
-     - Contained decks:
-       1. *"El tianguis y sus oficios"* (12 terms, *"Voices of stallholders, vendors, and food makers."*)
-       2. *"De la fonda a la sobremesa"* (14 terms, *"Flavors and expressions shared around the table."*)
-       3. *"Ingredientes y voces del mercado"* (10 terms, *"Names, ingredients, and street cries of popular markets."*)
-     - Toggleable mock state for user role (`isOwner` / `isAdmin` / `isLearner`) to preview both learner view and management bar.
+   - **Data Fetching via API Client:**
+     - Import `api` from `@/api`:
+       ```ts
+       import { api } from "@/api"
+       ```
+     - On mount or when `route.params.id` changes, fetch collection and user session:
+       ```ts
+       const collection = ref<Collection | null>(null)
+       const currentUser = ref<UserProfile | null>(null)
+       const isLoading = ref(true)
+
+       onMounted(async () => {
+         try {
+           const id = Number(route.params.id)
+           const [col, user] = await Promise.all([
+             api.studio.getCollection(id),
+             api.auth.getMe(),
+           ])
+           collection.value = col
+           currentUser.value = user
+         } finally {
+           isLoading.value = false
+         }
+       })
+       ```
+     - Determine management permissions reactively:
+       `isOwnerOrAdmin = computed(() => currentUser.value?.role === AccountRole.RoleAdmin || currentUser.value?.user_name === collection.value?.owner_user_name)`
+     - **Strict Rule:** Never hardcode mock collection data in `CollectionDetailView.vue`. All data must be fetched through `api.studio`. Show loading state when `isLoading` is true.
 
 3. **Collection Header Component (`CollectionHeader.vue`):**
    - Eyebrow tag: *"Featured collection • Official curriculum"* in `section-label` (`text-sm font-bold text-dull mb-2`).

@@ -1,4 +1,4 @@
-﻿ CONTEXT
+ CONTEXT
 
 Central routing directory for all agents. Read this first.
 
@@ -8,6 +8,7 @@ Central routing directory for all agents. Read this first.
 - [DOMAIN.md](DOMAIN.md): domain service dispatcher and index. Directs to the modular `*_service.md` files in [services/](services/).
 - [INFRASTRUCTURE.md](INFRASTRUCTURE.md): deployment, ports, Docker/Vagrant setup, and testing architecture.
 - [ROUTES.md](ROUTES.md): route table, layouts, and access rules. Read only when a ticket touches a route.
+- [API.md](API.md): frontend API layer, adapter contracts, static mock strategy, and runtime switching.
 
 ## Project
 - **Palabrario:** a Spanish vocabulary platform with a curated dictionary, SM-2 spaced repetition study, and real-time multiplayer arenas.

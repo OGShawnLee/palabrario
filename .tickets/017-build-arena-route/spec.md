@@ -11,8 +11,11 @@ Run by the router before accepting the ticket. All items must pass.
 - [ ] `CreateMatchDialog.vue` adheres to `arena_service.md` rules:
   - Decks with $< 8$ terms are disabled/locked with explanation.
   - Round selectors offer valid counts (e.g. 8, 12, 16) and times (10s, 15s, 20s).
+- [ ] `IArenaAPI` contract and adapters (Wails and Mock) properly implemented in `src/api/` and mounted on `IPalabrarioAPI`.
+- [ ] `ArenaView.vue` and `PublicRoomsTable.vue` consume open rooms from `api.arena.listPublicWaitingMatches()` via `import { api } from "@/api"`. Zero hardcoded mock room arrays exist in views.
+- [ ] `CreateMatchDialog.vue` loads candidate decks via `api.studio` and creates matches via `api.arena.prepareMatch()`.
 - [ ] Public open rooms table renders with room PIN, deck, format, participants count (`N/8`), and join action.
-- [ ] Refresh / Reload button is present above the public rooms table to manually refetch waiting rooms.
+- [ ] Refresh / Reload button is present above the public rooms table to manually refetch waiting rooms via `api.arena`.
 - [ ] Match history link/button pointing to `/arena/history` is present.
 - [ ] Strict monochrome design system: no raw colors outside theme tokens (`main`, `side`, `dull`, `light`, `ground`).
 - [ ] Ground rules enforced: zero flag emojis, zero dialect codes (`CU`, `CL`, `MX`); full country/region names only.

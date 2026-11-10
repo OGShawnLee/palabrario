@@ -1,0 +1,16 @@
+import type { IStudioAPI } from "@/api/contract/studio.contract"
+import * as Wails from "@bindings/palabrario/app/app.js"
+import type {
+  CollectionSearchResult,
+  DeckSearchResult,
+} from "@bindings/palabrario/pkg/models/index.js"
+
+export class WailsStudioAdapter implements IStudioAPI {
+  async searchDecks(query: string, limit = 20): Promise<DeckSearchResult[]> {
+    return await Wails.SearchDecks(query, limit)
+  }
+
+  async searchCollections(query: string, limit = 20): Promise<CollectionSearchResult[]> {
+    return await Wails.SearchCollections(query, limit)
+  }
+}
