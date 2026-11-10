@@ -1968,6 +1968,64 @@ export class ParticipantRoundAttempt {
     }
 }
 
+export class PublicMatchItem {
+    "id_match": string;
+    "room_code": string;
+    "id_deck": number;
+    "deck_title": string;
+    "is_deck_official": boolean;
+    "host_user_id"?: string | null;
+    "host_user_name": string;
+    "total_rounds": number;
+    "round_time_sec": number;
+    "created_at": string;
+    "participant_count": number;
+
+    /** Creates a new PublicMatchItem instance. */
+    constructor($$source: Partial<PublicMatchItem> = {}) {
+        if (!("id_match" in $$source)) {
+            this["id_match"] = "";
+        }
+        if (!("room_code" in $$source)) {
+            this["room_code"] = "";
+        }
+        if (!("id_deck" in $$source)) {
+            this["id_deck"] = 0;
+        }
+        if (!("deck_title" in $$source)) {
+            this["deck_title"] = "";
+        }
+        if (!("is_deck_official" in $$source)) {
+            this["is_deck_official"] = false;
+        }
+        if (!("host_user_name" in $$source)) {
+            this["host_user_name"] = "";
+        }
+        if (!("total_rounds" in $$source)) {
+            this["total_rounds"] = 0;
+        }
+        if (!("round_time_sec" in $$source)) {
+            this["round_time_sec"] = 0;
+        }
+        if (!("created_at" in $$source)) {
+            this["created_at"] = "0001-01-01T00:00:00.000Z";
+        }
+        if (!("participant_count" in $$source)) {
+            this["participant_count"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new PublicMatchItem instance from a string or object.
+     */
+    static createFrom($$source: any = {}): PublicMatchItem {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new PublicMatchItem($$parsedSource as Partial<PublicMatchItem>);
+    }
+}
+
 export class PublicUserProfile {
     "id_user": string;
     "name": string;

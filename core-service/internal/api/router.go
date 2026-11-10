@@ -268,20 +268,24 @@ func (rt *Router) Setup() http.Handler {
 		})
 
 		// Módulo 7: Arena Multijugador (CU14, CU15, CU16)
-		r.Route("/arena/matches", func(r chi.Router) {
-			// Rutas protegidas para usuarios humanos
-			r.Group(func(r chi.Router) {
-				r.Use(authMiddleware.RequireAuth)
-				r.Post("/prepare", arenaHandler.PrepareMatch)
-				r.Get("/history", arenaHandler.ListHistory)
-				r.Get("/{matchId}", arenaHandler.GetReplay)
-			})
+		r.Route("/arena", func(r chi.Router) {
+			r.Get("/matches/public", arenaHandler.ListPublicMatches)
 
-			// Rutas S2S exclusivas para servicios internos (realtime-service)
-			r.Group(func(r chi.Router) {
-				r.Use(authMiddleware.RequireInternalService)
-				r.Get("/{roomCode}/package", arenaHandler.GetPackageByRoomCode)
-				r.Post("/consolidate", arenaHandler.ConsolidateMatch)
+			r.Route("/matches", func(r chi.Router) {
+				// Rutas protegidas para usuarios humanos
+				r.Group(func(r chi.Router) {
+					r.Use(authMiddleware.RequireAuth)
+					r.Post("/prepare", arenaHandler.PrepareMatch)
+					r.Get("/history", arenaHandler.ListHistory)
+					r.Get("/{matchId}", arenaHandler.GetReplay)
+				})
+
+				// Rutas S2S exclusivas para servicios internos (realtime-service)
+				r.Group(func(r chi.Router) {
+					r.Use(authMiddleware.RequireInternalService)
+					r.Get("/{roomCode}/package", arenaHandler.GetPackageByRoomCode)
+					r.Post("/consolidate", arenaHandler.ConsolidateMatch)
+				})
 			})
 		})
 	})

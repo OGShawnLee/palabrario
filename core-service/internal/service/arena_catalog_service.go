@@ -35,6 +35,7 @@ type ArenaCatalogService interface {
 	ConsolidateMatch(ctx context.Context, req models.ConsolidateMatchRequest) (*models.MatchSummary, error)
 	ListMatchHistory(ctx context.Context, userID string, limit int) ([]models.MatchSummary, error)
 	GetMatchReplay(ctx context.Context, viewerID string, viewerRole models.AccountRole, matchID string) (*models.MatchReplayDetail, error)
+	ListPublicWaitingMatches(ctx context.Context, limit int) ([]models.PublicMatchItem, error)
 }
 
 type arenaCatalogService struct {
@@ -946,4 +947,45 @@ func (s *arenaCatalogService) GetMatchReplay(ctx context.Context, viewerID strin
 		},
 		Rounds: replayRounds,
 	}, nil
+}
+
+func (s *arenaCatalogService) ListPublicWaitingMatches(ctx context.Context, limit int) ([]models.PublicMatchItem, error) {
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+
+	rows, err := s.queries.ListPublicWaitingMatches(ctx, int32(limit))
+	if err != nil {
+		return nil, MapDBError(err, "Error al listar partidas públicas en espera")
+	}
+
+	items := make([]models.PublicMatchItem, len(rows))
+	for i, r := range rows {
+		var hostUserID *string
+		if r.HostUserID.Valid {
+			h := uuid.UUID(r.HostUserID.Bytes).String()
+			hostUserID = &h
+		}
+
+		createdAt := time.Time{}
+		if r.CreatedAt.Valid {
+			createdAt = r.CreatedAt.Time
+		}
+
+		items[i] = models.PublicMatchItem{
+			IDMatch:          r.IDMatch.String(),
+			RoomCode:         r.RoomCode,
+			IDDeck:           int(r.IDDeck),
+			DeckTitle:        r.DeckTitle,
+			IsDeckOfficial:   r.IsDeckOfficial,
+			HostUserID:       hostUserID,
+			HostUserName:     r.HostUserName,
+			TotalRounds:      int(r.TotalRounds),
+			RoundTimeSec:     int(r.RoundTimeSec),
+			CreatedAt:        createdAt,
+			ParticipantCount: int(r.ParticipantCount),
+		}
+	}
+
+	return items, nil
 }

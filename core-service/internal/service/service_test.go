@@ -549,3 +549,159 @@ func TestDictionaryService_CreateWordProposal_MediaURLValidation_RN12(t *testing
 		t.Errorf("se esperaba ImageURL %s en el sentido aprobado, obtenido: %+v", validSenseURL, adminWord.Senses)
 	}
 }
+
+func TestArenaCatalogService_ListPublicWaitingMatches(t *testing.T) {
+	testDB := testutil.SetupTestDB(t)
+	if testDB == nil {
+		return
+	}
+
+	arenaSvc := service.NewArenaCatalogService(testDB)
+	ctx := context.Background()
+	gaelID := "b1111111-0000-0000-0000-000000000003"
+
+	// 1. Crear una partida pública y en espera válida
+	isPublicTrue := true
+	matchPkg, err := arenaSvc.PrepareMatch(ctx, gaelID, models.RoleLearner, models.CreateMatchRequest{
+		IDDeck:       1,
+		TotalRounds:  8,
+		RoundTimeSec: 15,
+		IsPublic:     &isPublicTrue,
+	})
+	if err != nil {
+		t.Fatalf("PrepareMatch falló: %v", err)
+	}
+
+	// 2. Crear una partida privada (is_public = false)
+	isPublicFalse := false
+	privatePkg, err := arenaSvc.PrepareMatch(ctx, gaelID, models.RoleLearner, models.CreateMatchRequest{
+		IDDeck:       1,
+		TotalRounds:  8,
+		RoundTimeSec: 15,
+		IsPublic:     &isPublicFalse,
+	})
+	if err != nil {
+		t.Fatalf("PrepareMatch (privada) falló: %v", err)
+	}
+
+	// 3. Crear una partida no en espera (status = 'IN_PROGRESS')
+	_, err = testDB.Pool.Exec(ctx, `
+		INSERT INTO matches (id_deck, host_user_id, room_code, status, is_public, total_rounds, round_time_sec)
+		VALUES (1, $1, 'INPROG', 'IN_PROGRESS', true, 8, 15)
+	`, gaelID)
+	if err != nil {
+		t.Fatalf("falló insertar partida IN_PROGRESS: %v", err)
+	}
+
+	// 4. Crear una partida vieja (> 2 horas)
+	_, err = testDB.Pool.Exec(ctx, `
+		INSERT INTO matches (id_deck, host_user_id, room_code, status, is_public, total_rounds, round_time_sec, created_at)
+		VALUES (1, $1, 'OLDROO', 'WAITING', true, 8, 15, now() - INTERVAL '3 hours')
+	`, gaelID)
+	if err != nil {
+		t.Fatalf("falló insertar partida antigua: %v", err)
+	}
+
+	// 5. Crear una partida llena (>= 8 participantes)
+	var fullMatchID string
+	err = testDB.Pool.QueryRow(ctx, `
+		INSERT INTO matches (id_deck, host_user_id, room_code, status, is_public, total_rounds, round_time_sec)
+		VALUES (1, $1, 'FULLRM', 'WAITING', true, 8, 15)
+		RETURNING id_match::text
+	`, gaelID).Scan(&fullMatchID)
+	if err != nil {
+		t.Fatalf("falló insertar partida llena: %v", err)
+	}
+
+	for i := 1; i <= 8; i++ {
+		email := fmt.Sprintf("p%d_%d@test.org", i, time.Now().UnixNano())
+		userName := fmt.Sprintf("p%d_test_%d", i, time.Now().UnixNano())
+		var pUserID string
+		err = testDB.Pool.QueryRow(ctx, `
+			INSERT INTO accounts (email, password_hash, role)
+			VALUES ($1, '$2a$10$f6V4aUFb5FkBdEG21Iz1W.5AONrEdWxEKGRtwSzfPEWIwJVe02Rdu', 'LEARNER')
+			RETURNING id_account::text
+		`, email).Scan(&pUserID)
+		if err != nil {
+			t.Fatalf("falló crear cuenta participante %d: %v", i, err)
+		}
+		_, err = testDB.Pool.Exec(ctx, `
+			INSERT INTO users (id_user, user_name, name, anchor_dialect) VALUES ($1, $2, $2, 'MX')
+		`, pUserID, userName)
+		if err != nil {
+			t.Fatalf("falló crear usuario participante %d: %v", i, err)
+		}
+		_, err = testDB.Pool.Exec(ctx, `
+			INSERT INTO match_participants (id_match, id_user) VALUES ($1, $2)
+		`, fullMatchID, pUserID)
+		if err != nil {
+			t.Fatalf("falló insertar participante %d en partida llena: %v", i, err)
+		}
+	}
+
+	// 6. Consultar ListPublicWaitingMatches
+	matches, err := arenaSvc.ListPublicWaitingMatches(ctx, 20)
+	if err != nil {
+		t.Fatalf("ListPublicWaitingMatches falló: %v", err)
+	}
+
+	// Verificar que la partida válida (matchPkg.IDMatch) está presente
+	foundValid := false
+	for _, m := range matches {
+		if m.IDMatch == matchPkg.IDMatch {
+			foundValid = true
+			if m.RoomCode != matchPkg.RoomCode {
+				t.Errorf("se esperaba RoomCode %s, obtenido %s", matchPkg.RoomCode, m.RoomCode)
+			}
+			if m.IDDeck != 1 {
+				t.Errorf("se esperaba IDDeck 1, obtenido %d", m.IDDeck)
+			}
+			if m.DeckTitle == "" {
+				t.Errorf("se esperaba DeckTitle no vacío")
+			}
+			if m.HostUserID == nil || *m.HostUserID != gaelID {
+				t.Errorf("se esperaba HostUserID %s, obtenido %v", gaelID, m.HostUserID)
+			}
+			if m.HostUserName != "gael_learner" {
+				t.Errorf("se esperaba HostUserName 'gael_learner', obtenido '%s'", m.HostUserName)
+			}
+			if m.TotalRounds != 8 {
+				t.Errorf("se esperaba TotalRounds 8, obtenido %d", m.TotalRounds)
+			}
+			if m.RoundTimeSec != 15 {
+				t.Errorf("se esperaba RoundTimeSec 15, obtenido %d", m.RoundTimeSec)
+			}
+			if m.ParticipantCount != 0 {
+				t.Errorf("se esperaba ParticipantCount 0, obtenido %d", m.ParticipantCount)
+			}
+		}
+
+		// Ninguna de las partidas inválidas debe aparecer
+		if m.IDMatch == privatePkg.IDMatch {
+			t.Errorf("partida privada no debe ser devuelta")
+		}
+		if m.RoomCode == "INPROG" {
+			t.Errorf("partida con status != 'WAITING' no debe ser devuelta")
+		}
+		if m.RoomCode == "OLDROO" {
+			t.Errorf("partida con más de 2 horas no debe ser devuelta")
+		}
+		if m.RoomCode == "FULLRM" {
+			t.Errorf("partida con >= 8 participantes no debe ser devuelta")
+		}
+	}
+
+	if !foundValid {
+		t.Fatalf("la partida válida %s (%s) no fue encontrada en la lista pública", matchPkg.IDMatch, matchPkg.RoomCode)
+	}
+
+	// 7. Verificar límite
+	limitedMatches, err := arenaSvc.ListPublicWaitingMatches(ctx, 1)
+	if err != nil {
+		t.Fatalf("ListPublicWaitingMatches con limit=1 falló: %v", err)
+	}
+	if len(limitedMatches) > 1 {
+		t.Errorf("se esperaba como máximo 1 resultado con limit=1, obtenido %d", len(limitedMatches))
+	}
+}
+

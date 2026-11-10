@@ -15,14 +15,14 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] `.tickets/012-translate-routes-map/` (`completed`): created standalone `.routing/ROUTES.md` canonical route inventory table (9 active/planned routes) and linked from `.routing/CONTEXT.md`.
 - [x] `.tickets/013-build-search-modal/` (`completed`): built responsive floating search combobox modal (`SearchModal.vue`) with Reka UI Dialog, `@vueuse/core` shortcuts, dynamic featured entry sync on keyboard navigation, and `--uno` scoped styles.
 - [x] `.tickets/016-modularize-domain-services/` (`completed`): modularized monolithic `DOMAIN.md` and `INTERFACES.md` into 8 self-contained `*_service.md` files in `.routing/services/`, rewrote root `DOMAIN.md` as the route dispatcher with `TBD` placeholders, deleted `INTERFACES.md`, and updated all project documentation and active ticket references.
+- [x] `.tickets/018-backend-arena-public-rooms/` (`completed`): backend schema, sqlc query, and endpoint `GET /api/v1/arena/matches/public` for listing waiting public matches.
 - [x] `.tickets/020-audit-service-specs-with-backend/` (`completed`): audited and synchronized all 8 `.routing/services/*_service.md` specifications against authoritative Go source code (`pkg/models/`, `core-service/internal/service/`, `core-service/internal/api/`, and `sql/queries/`).
 
 ## In progress
-*(none)*
+*(None)*
 
 ## Draft tickets
 - [ ] `.tickets/017-build-arena-route/` (`draft`): build the `/arena` lobby route, reusable Dialog components (`AppDialog.vue`, `AppDialogOverlay.vue` with customizable width), room configuration modal, and open public matches table.
-- [ ] `.tickets/018-backend-arena-public-rooms/` (`draft`): backend schema, sqlc query, and endpoint `GET /api/v1/arena/matches/public` for listing waiting public matches.
 - [ ] `.tickets/019-build-arena-history-route/` (`draft`): build dedicated `/arena/history` route and 3NF round-by-round replay modal (`MatchReplayDialog.vue`).
 - [ ] `.tickets/009-build-dictionary-route/` (`draft`): build the `/dictionary` route and search/explore view.
 - [ ] `.tickets/010-build-collections-route/` (`draft`): build the `/collections` public catalog.

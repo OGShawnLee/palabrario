@@ -270,3 +270,27 @@ JOIN users u ON u.id_user = qa.id_user
 LEFT JOIN regions r ON r.code = u.anchor_dialect
 WHERE qa.id_match = $1
 ORDER BY qa.round_number ASC, qa.points_earned DESC, qa.time_spent_ms ASC;
+
+-- name: ListPublicWaitingMatches :many
+SELECT 
+    m.id_match,
+    m.room_code,
+    m.id_deck,
+    d.title AS deck_title,
+    d.is_official AS is_deck_official,
+    m.host_user_id,
+    COALESCE(u.user_name, 'Unknown')::VARCHAR AS host_user_name,
+    m.total_rounds,
+    m.round_time_sec,
+    m.created_at,
+    (SELECT count(*)::INT FROM match_participants mp WHERE mp.id_match = m.id_match) AS participant_count
+FROM matches m
+JOIN decks d ON d.id_deck = m.id_deck
+LEFT JOIN users u ON u.id_user = m.host_user_id
+WHERE m.status = 'WAITING' 
+  AND m.is_public = true
+  AND m.created_at >= now() - INTERVAL '2 hours'
+  AND (SELECT count(*)::INT FROM match_participants mp WHERE mp.id_match = m.id_match) < 8
+ORDER BY m.created_at DESC
+LIMIT $1;
+

@@ -574,6 +574,76 @@ func (q *Queries) ListMatchRoundsByMatchID(ctx context.Context, idMatch uuid.UUI
 	return items, nil
 }
 
+const listPublicWaitingMatches = `-- name: ListPublicWaitingMatches :many
+SELECT 
+    m.id_match,
+    m.room_code,
+    m.id_deck,
+    d.title AS deck_title,
+    d.is_official AS is_deck_official,
+    m.host_user_id,
+    COALESCE(u.user_name, 'Unknown')::VARCHAR AS host_user_name,
+    m.total_rounds,
+    m.round_time_sec,
+    m.created_at,
+    (SELECT count(*)::INT FROM match_participants mp WHERE mp.id_match = m.id_match) AS participant_count
+FROM matches m
+JOIN decks d ON d.id_deck = m.id_deck
+LEFT JOIN users u ON u.id_user = m.host_user_id
+WHERE m.status = 'WAITING' 
+  AND m.is_public = true
+  AND m.created_at >= now() - INTERVAL '2 hours'
+  AND (SELECT count(*)::INT FROM match_participants mp WHERE mp.id_match = m.id_match) < 8
+ORDER BY m.created_at DESC
+LIMIT $1
+`
+
+type ListPublicWaitingMatchesRow struct {
+	IDMatch          uuid.UUID          `json:"id_match"`
+	RoomCode         string             `json:"room_code"`
+	IDDeck           int32              `json:"id_deck"`
+	DeckTitle        string             `json:"deck_title"`
+	IsDeckOfficial   bool               `json:"is_deck_official"`
+	HostUserID       pgtype.UUID        `json:"host_user_id"`
+	HostUserName     string             `json:"host_user_name"`
+	TotalRounds      int32              `json:"total_rounds"`
+	RoundTimeSec     int32              `json:"round_time_sec"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	ParticipantCount int32              `json:"participant_count"`
+}
+
+func (q *Queries) ListPublicWaitingMatches(ctx context.Context, limit int32) ([]ListPublicWaitingMatchesRow, error) {
+	rows, err := q.db.Query(ctx, listPublicWaitingMatches, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPublicWaitingMatchesRow{}
+	for rows.Next() {
+		var i ListPublicWaitingMatchesRow
+		if err := rows.Scan(
+			&i.IDMatch,
+			&i.RoomCode,
+			&i.IDDeck,
+			&i.DeckTitle,
+			&i.IsDeckOfficial,
+			&i.HostUserID,
+			&i.HostUserName,
+			&i.TotalRounds,
+			&i.RoundTimeSec,
+			&i.CreatedAt,
+			&i.ParticipantCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUserMatchHistory = `-- name: ListUserMatchHistory :many
 SELECT
   m.id_match,

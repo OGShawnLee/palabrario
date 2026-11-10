@@ -62,6 +62,23 @@ func (a *App) ListMatchHistory(limit int) ([]models.MatchSummary, error) {
 	return list, nil
 }
 
+// ListPublicWaitingMatches lista las partidas públicas en espera.
+func (a *App) ListPublicWaitingMatches(limit int) ([]models.PublicMatchItem, error) {
+	targetURL := a.coreURL + "/api/v1/arena/matches/public"
+	if limit > 0 {
+		targetURL += "?limit=" + strconv.Itoa(limit)
+	}
+	var list []models.PublicMatchItem
+	if err := a.doRequest(a.context(), http.MethodGet, targetURL, nil, &list); err != nil {
+		return nil, err
+	}
+	if list == nil {
+		list = []models.PublicMatchItem{}
+	}
+	return list, nil
+}
+
+
 // GetMatchReplayDetail recupera el replay granular 3NF ronda por ronda.
 func (a *App) GetMatchReplayDetail(matchId string) (*models.MatchReplayDetail, error) {
 	return a.GetMatchReplay(matchId)

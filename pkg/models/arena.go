@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type MatchStatus string
 
 const (
@@ -139,6 +141,20 @@ type MatchSummary struct {
 	RoundTimeSec int                `json:"round_time_sec"`
 	Podium       []ArenaParticipant `json:"podium"`
 	FinishedAt   string             `json:"finished_at"`
+}
+
+type PublicMatchItem struct {
+	IDMatch          string    `json:"id_match"`
+	RoomCode         string    `json:"room_code"`
+	IDDeck           int       `json:"id_deck"`
+	DeckTitle        string    `json:"deck_title"`
+	IsDeckOfficial   bool      `json:"is_deck_official"`
+	HostUserID       *string   `json:"host_user_id,omitempty"`
+	HostUserName     string    `json:"host_user_name"`
+	TotalRounds      int       `json:"total_rounds"`
+	RoundTimeSec     int       `json:"round_time_sec"`
+	CreatedAt        time.Time `json:"created_at"`
+	ParticipantCount int       `json:"participant_count"`
 }
 
 // --- DTOs DE RETROSPECCIÓN Y REPLAY GRANULAR RONDA POR RONDA (CU16 Replay 3NF) ---

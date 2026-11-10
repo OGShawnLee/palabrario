@@ -230,6 +230,20 @@ type MatchSummary struct {
 	FinishedAt   string             `json:"finished_at"`
 }
 
+type PublicMatchItem struct {
+	IDMatch          string    `json:"id_match"`
+	RoomCode         string    `json:"room_code"`
+	IDDeck           int       `json:"id_deck"`
+	DeckTitle        string    `json:"deck_title"`
+	IsDeckOfficial   bool      `json:"is_deck_official"`
+	HostUserID       *string   `json:"host_user_id,omitempty"`
+	HostUserName     string    `json:"host_user_name"`
+	TotalRounds      int       `json:"total_rounds"`
+	RoundTimeSec     int       `json:"round_time_sec"`
+	CreatedAt        time.Time `json:"created_at"`
+	ParticipantCount int       `json:"participant_count"`
+}
+
 // --- RETROSPECTION AND GRANULAR ROUND-BY-ROUND REPLAY DTOs (CU16 Replay 3NF) ---
 
 type ParticipantRoundAnswer struct {
@@ -272,6 +286,7 @@ type ArenaCatalogService interface {
 	ConsolidateMatch(ctx context.Context, req models.ConsolidateMatchRequest) (*models.MatchSummary, error)
 	ListMatchHistory(ctx context.Context, userID string, limit int) ([]models.MatchSummary, error)
 	GetMatchReplay(ctx context.Context, viewerID string, viewerRole models.AccountRole, matchID string) (*models.MatchReplayDetail, error)
+	ListPublicWaitingMatches(ctx context.Context, limit int) ([]models.PublicMatchItem, error)
 }
 ```
 
@@ -298,6 +313,7 @@ In `realtime-service`, response time is measured using the server's monotonic cl
 
 | Service | Method / Protocol | Path | Middleware | Use Case | Description |
 | :---: | :---: | :--- | :---: | :---: | :--- |
+| `core-service (:8000)` | `GET` | `/api/v1/arena/matches/public` | Public | CU14 / CU15 | Lists open public arena rooms currently waiting for players (`status = 'WAITING'`, `is_public = true`, `created_at` within 2 hours, participants < 8). Accepts optional `?limit=20` (1..50). Returns `[]models.PublicMatchItem` with `200 OK`. |
 | `core-service (:8000)` | `POST` | `/api/v1/arena/matches/prepare` | `RequireAuth` | CU14 (RN04/10) | Validates privacy (`RN04`), requires that `Deck` has $\ge 8$ `APPROVED` senses and $\ge \text{TotalRounds}$ (`422` if not), generates unique PIN in `matches` (`WAITING`), persists rounds in `match_rounds` (3NF), and returns `MatchPackage` with `201 Created`. |
 | `core-service (:8000)` | `GET` | `/api/v1/arena/matches/{roomCode}/package` | `RequireInternalService` (JWT S2S) | CU14 / CU15 | Exclusively allows `realtime-service` to load into RAM the `MatchPackage` of a room in `WAITING` state (`200 OK`). A non-S2S token is rejected with `403`; a missing/malformed header with `401`. |
 | `core-service (:8000)` | `POST` | `/api/v1/arena/matches/consolidate` | `RequireInternalService` (JWT S2S) | CU16 (RN09/11)| Executes in a single `pgx.Tx` transaction the closing of `matches` (`FINISHED`), insertion into `match_participants`, breakdown of rounds into `quiz_attempts`, entries in `xp_transactions`, and adjustments in `user_mastery`. Returns `models.MatchSummary` with `200 OK`. |
@@ -321,4 +337,4 @@ In `realtime-service`, response time is measured using the server's monotonic cl
 | Server $\to$ Joining client | `ERROR` | `{"error": "..."}` (e.g. match already in progress, room full); the socket is then closed |
 
 #### 2.7.6. `sqlc` Queries (`sql/queries/arena.sql`)
-`GetApprovedDeckSensesForArena :many`, `GetCuratedQuestionsBySenseIDs :many`, `CreateMatch :one`, `InsertMatchRound :exec`, `GetMatchByRoomCode :one`, `GetMatchByID :one`, `ListMatchRoundsByMatchID :many`, `UpdateMatchStatus :exec`, `MarkMatchFinished :one`, `UpsertMatchParticipant :exec`, `UpsertMatchRoundQuizAttempt :exec`, `ListUserMatchHistory :many`, `ListMatchParticipantsByMatchIDs :many`, `ListMatchQuizAttemptsByMatchID :many`. The service additionally reuses `GetDeckByID` from `studio.sql` (see [`studio_service.md`](studio_service.md)), and `InsertXPTransaction`, `UpsertUserMastery` from `mastery.sql` (see [`mastery_service.md`](mastery_service.md)).
+`GetApprovedDeckSensesForArena :many`, `GetCuratedQuestionsBySenseIDs :many`, `CreateMatch :one`, `InsertMatchRound :exec`, `GetMatchByRoomCode :one`, `GetMatchByID :one`, `ListMatchRoundsByMatchID :many`, `UpdateMatchStatus :exec`, `MarkMatchFinished :one`, `UpsertMatchParticipant :exec`, `UpsertMatchRoundQuizAttempt :exec`, `ListUserMatchHistory :many`, `ListMatchParticipantsByMatchIDs :many`, `ListMatchQuizAttemptsByMatchID :many`, `ListPublicWaitingMatches :many`. The service additionally reuses `GetDeckByID` from `studio.sql` (see [`studio_service.md`](studio_service.md)), and `InsertXPTransaction`, `UpsertUserMastery` from `mastery.sql` (see [`mastery_service.md`](mastery_service.md)).

@@ -124,3 +124,18 @@ func (h *ArenaHandler) ConsolidateMatch(w http.ResponseWriter, r *http.Request) 
 
 	response.JSON(w, http.StatusOK, summary)
 }
+
+// ListPublicMatches maneja GET /api/v1/arena/matches/public
+func (h *ArenaHandler) ListPublicMatches(w http.ResponseWriter, r *http.Request) {
+	limit := queryIntOrDefault(r, "limit", 20, 1, 50)
+
+	matches, err := h.arenaService.ListPublicWaitingMatches(r.Context(), limit)
+	if err != nil {
+		status, msg := service.HTTPStatusAndMessage(err, "Error al listar partidas públicas en espera")
+		response.Error(w, status, msg)
+		return
+	}
+
+	response.JSON(w, http.StatusOK, matches)
+}
+

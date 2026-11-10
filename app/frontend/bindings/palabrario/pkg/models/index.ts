@@ -44,6 +44,7 @@ export {
     ParticipantFinalResult,
     ParticipantRoundAnswer,
     ParticipantRoundAttempt,
+    PublicMatchItem,
     PublicUserProfile,
     RedeemTicketRequest,
     Region,
