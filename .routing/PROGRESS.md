@@ -21,9 +21,10 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] `.tickets/009-build-dictionary-route/` (`completed`): built the `/dictionary` route (`DictionaryView.vue`), singleton `useSearchModal.ts` composable, typed `mockWordOfTheDay.ts`, and responsive `WordOfTheDayCard.vue` with dialectal senses, full region names, and cross-regional heteronym equivalents.
 - [x] `.tickets/022-scaffold-api-adapter-architecture/` (`completed`): scaffolded the `src/api/` adapter architecture (pure TypeScript contracts, authentic Spanish mock fixtures, live `WailsAdapter`, and runtime mode switcher) for Auth, Dictionary, and Studio.
 - [x] `.tickets/015-integrate-search-modal/` (`completed`): frontend integration wiring `SearchModal.vue` and `DictionaryView.vue` to the universal API client (`api.dictionary`, `api.studio`) with debouncing, eliminating all hardcoded mock arrays from views.
+- [x] `.tickets/010-build-collections-route/` (`completed`): built the `/collections` public catalog backed by `api.studio.listCollections()`, universal `AppBreadcrumb.vue` mounted in `AppLayout.vue`, `FeaturedCollectionCard.vue`, `CollectionGridItem.vue`, and inspection dialog.
 
 ## In progress
-- [ ] `.tickets/010-build-collections-route/` (`in-progress`): build the `/collections` public catalog backed by `api.studio.listCollections()`, universal `AppBreadcrumb.vue`, and inspection dialog.
+*(None)*
 
 ## Draft tickets
 - [ ] `.tickets/021-build-collection-detail-route/` (`draft`): build the `/collections/:id` individual learning path detail view backed by `api.studio.getCollection(id)` and `api.auth.getMe()`.

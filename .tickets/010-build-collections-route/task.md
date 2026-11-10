@@ -3,7 +3,7 @@
 | Field | Value |
 | :--- | :--- |
 | **ID** | 010 |
-| **Status** | in-progress |
+| **Status** | completed |
 | **Model** | Claude Sonnet 5.5, `effort: medium` (`claude-sonnet-5-5`) |
 | **Role** | Frontend Implementer |
 | **Spec** | [spec.md](spec.md) |

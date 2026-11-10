@@ -12,6 +12,12 @@ const router = createRouter({
       children: [
         { path: "", name: "home", component: HomeView },
         { path: "dictionary", name: "dictionary", component: () => import("@/views/DictionaryView.vue") },
+        {
+          path: "collections",
+          name: "collections",
+          component: () => import("@/views/CollectionsView.vue"),
+          meta: { breadcrumb: [{ label: "Home", to: "/" }, { label: "Collections" }] },
+        },
         { path: "arena", name: "arena", component: () => import("@/views/ArenaView.vue") },
         { path: "studio", name: "studio", component: () => import("@/views/StudioView.vue") },
         { path: "settings", name: "settings", component: () => import("@/views/SettingsView.vue") },

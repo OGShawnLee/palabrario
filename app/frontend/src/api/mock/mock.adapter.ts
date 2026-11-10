@@ -7,6 +7,7 @@ import type {
 import {
   AccountRole,
   AuthResponse,
+  type Collection,
   type CollectionSearchResult,
   type DeckSearchResult,
   type Region,
@@ -16,7 +17,7 @@ import {
   type WordDetail,
   WordSearchResult,
 } from "@bindings/palabrario/pkg/models/index.js"
-import { mockCollections, mockDecks } from "./fixtures/decks.fixture"
+import { mockCollectionDetails, mockCollections, mockDecks } from "./fixtures/decks.fixture"
 import { mockRegions, mockWords } from "./fixtures/words.fixture"
 import { mockUsers } from "./fixtures/user.fixture"
 
@@ -189,6 +190,15 @@ class MockDictionaryAPI implements IDictionaryAPI {
 }
 
 class MockStudioAPI implements IStudioAPI {
+  async listCollections(featured = false): Promise<Collection[]> {
+    await delay()
+    return clone(
+      mockCollectionDetails.filter(
+        (collection) => collection.is_public && (!featured || collection.is_featured),
+      ),
+    )
+  }
+
   async searchDecks(query: string, limit = 20): Promise<DeckSearchResult[]> {
     await delay()
     const needle = normalize(query)

@@ -22,7 +22,7 @@ function signOut() {
 </script>
 
 <template>
-  <header class="h-20 border-b border-solid border-light bg-ground/50 backdrop-filter backdrop-blur-sm sticky top-10 z-40">
+  <header class="h-20 mb-4 border-b border-solid border-light bg-ground/50 backdrop-filter backdrop-blur-sm sticky top-10 z-40">
     <div class="max-w-6xl h-full w-full mx-auto px-4 grid grid-cols-12 items-center gap-4">
       <div class="col-span-6 md:col-span-4 flex items-center">
         <RouterLink to="/" class="text-2xl font-black tracking-tight text-main">Palabrario</RouterLink>
