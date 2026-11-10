@@ -3,8 +3,8 @@
 | Field | Value |
 | :--- | :--- |
 | **ID** | 014 |
-| **Status** | draft |
-| **Model** | Sonnet 5.5 (`claude-sonnet-5-5`, Antigravity provider) |
+| **Status** | completed |
+| **Model** | Gemini 3.8 Flash (High) (`gemini-3.8-flash`, Antigravity provider) |
 | **Role** | Backend Implementer |
 | **Spec** | [spec.md](spec.md) |
 

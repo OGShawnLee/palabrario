@@ -16,6 +16,7 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] `.tickets/013-build-search-modal/` (`completed`): built responsive floating search combobox modal (`SearchModal.vue`) with Reka UI Dialog, `@vueuse/core` shortcuts, dynamic featured entry sync on keyboard navigation, and `--uno` scoped styles.
 - [x] `.tickets/016-modularize-domain-services/` (`completed`): modularized monolithic `DOMAIN.md` and `INTERFACES.md` into 8 self-contained `*_service.md` files in `.routing/services/`, rewrote root `DOMAIN.md` as the route dispatcher with `TBD` placeholders, deleted `INTERFACES.md`, and updated all project documentation and active ticket references.
 - [x] `.tickets/018-backend-arena-public-rooms/` (`completed`): backend schema, sqlc query, and endpoint `GET /api/v1/arena/matches/public` for listing waiting public matches.
+- [x] `.tickets/014-backend-search-fts/` (`completed`): backend schema & sqlc FTS for decks & collections, plus expanded `WordSearchResult` (`part_of_speech`, `region_name`).
 - [x] `.tickets/020-audit-service-specs-with-backend/` (`completed`): audited and synchronized all 8 `.routing/services/*_service.md` specifications against authoritative Go source code (`pkg/models/`, `core-service/internal/service/`, `core-service/internal/api/`, and `sql/queries/`).
 
 ## In progress
@@ -28,7 +29,6 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [ ] `.tickets/010-build-collections-route/` (`draft`): build the `/collections` public catalog.
 - [ ] `.tickets/021-build-collection-detail-route/` (`draft`): build the `/collections/:id` individual learning path detail view.
 - [ ] `.tickets/011-build-decks-route/` (`draft`): build the `/decks` public catalog.
-- [ ] `.tickets/014-backend-search-fts/` (`draft`): backend schema & sqlc FTS for decks & collections, plus expanded `WordSearchResult` (`part_of_speech`, `region_name`).
 - [ ] `.tickets/015-integrate-search-modal/` (`draft`): frontend integration wiring `SearchModal.vue` to live Wails bindings from ticket 014 with debouncing.
 
 ## Next steps
