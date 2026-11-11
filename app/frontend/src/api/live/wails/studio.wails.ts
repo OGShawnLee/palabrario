@@ -24,6 +24,14 @@ export class WailsStudioAdapter implements IStudioAPI {
     await Wails.UnsaveCollection(id)
   }
 
+  async saveDeck(id: number): Promise<void> {
+    await Wails.SaveDeck(id)
+  }
+
+  async unsaveDeck(id: number): Promise<void> {
+    await Wails.UnsaveDeck(id)
+  }
+
   async listDecks(q?: string, officialOnly?: boolean): Promise<Deck[]> {
     return await Wails.ListDecks(q ?? "", officialOnly ?? false)
   }

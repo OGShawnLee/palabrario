@@ -13,11 +13,17 @@ Because Figma AI generators degrade when asked to render 8 different screens and
 
 ## 1. Core Principles
 
-1. **Contract-First Data Grounding (Zero Hallucinated Fields):**
+1. **Contract-First Data Grounding & Summary Boundaries (Zero Hallucinated Fields):**
    - Always inspect the root master dispatcher [`.routing/DOMAIN.md`](../../../.routing/DOMAIN.md), the relevant service contract in [`.routing/services/`](../../../.routing/services/) (`identity_service.md`, `governance_service.md`, `dictionary_service.md`, `curation_service.md`, `studio_service.md`, `mastery_service.md`, `arena_service.md`, `media_service.md`), canonical routes in [`.routing/ROUTES.md`](../../../.routing/ROUTES.md), root database schema [`SCHEMA_FINAL.sql`](../../../SCHEMA_FINAL.sql), and Go structs in [`pkg/models/`](../../../pkg/models/) before drafting.
    - Reference **only** real DTO attributes, query contracts, and business rules (`RN01`–`RN13`). Never invent ratings, follower counts, popularity stars, or fields that do not exist in the backend.
+   - **Summary vs. Detail Boundary:** In catalog lists and dashboard showcases (e.g. `ListCollections`, `ListDecks`), ground the prompt strictly in summary-level fields. Never prompt for deep nested child data that would require client-side N+1 hydration (e.g. attempting to calculate regional country tags by downloading all constituent senses in a collection). If a cross-cutting aggregation is desired, it must belong to the database engine/sqlc query, not ad-hoc client loops.
 
-2. **One Copy-Pasteable Prompt Per Variation (Figma AI Ergonomics):**
+2. **Guardrails vs. Cages (Inspiring Creativity without Breaking Physics):**
+   - Avoid over-scripting every padding, column percentage, and layout grid. Rigid micro-specs turn the AI into a compiler producing generic boxed cards.
+   - **Lock down the Physics:** Palette (`#FAFAFA` ground, `#FFFFFF` elevated, `#000000` text, sharp `rounded-none`), typography (`Satoshi`), real DTO fields, full regional names, and zero emojis.
+   - **Open the Composition:** Use evocative editorial metaphors (e.g., *"Swiss broadsheet cultural supplement"*, *"curated museum placard"*, *"typographic broadsheet"*, *"literary index"*). Challenge the AI to use dramatic typographic scale, asymmetrical breathing room, and spatial contrast rather than default boxed cards.
+
+3. **One Copy-Pasteable Prompt Per Variation (Figma AI Ergonomics):**
    - Do **not** stuff 4 desktop variations + 4 mobile variations into a single prompt block for Figma AI.
    - Instead, provide **4 self-contained, copy-pasteable prompt blocks** (`Variation 1` through `Variation 4`) under the character limit (~800–1,200 chars each) so the user can paste any variation directly into Figma First Draft / Make without token truncation or canvas confusion.
 

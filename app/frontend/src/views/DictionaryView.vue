@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue"
 import WordOfTheDayCard from "@/components/dictionary/WordOfTheDayCard.vue"
+import DictionaryCollectionsSection from "@/components/dictionary/DictionaryCollectionsSection.vue"
 import { Search } from "lucide-vue-next"
 import { useSearchModal } from "@/composables/useSearchModal"
 import { api } from "@/api"
@@ -64,5 +65,10 @@ onMounted(async () => {
         No word of the day is available right now.
       </div>
     </section>
+
+    <!-- Collections Section -->
+    <div class="w-full max-w-5xl mx-auto px-4 pb-20">
+      <DictionaryCollectionsSection />
+    </div>
   </main>
 </template>

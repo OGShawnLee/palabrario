@@ -192,6 +192,17 @@ class MockDictionaryAPI implements IDictionaryAPI {
 
 class MockStudioAPI implements IStudioAPI {
   private savedCollectionIds = new Set<number>()
+  private savedDeckIds = new Set<number>()
+
+  async saveDeck(id: number): Promise<void> {
+    await delay()
+    this.savedDeckIds.add(id)
+  }
+
+  async unsaveDeck(id: number): Promise<void> {
+    await delay()
+    this.savedDeckIds.delete(id)
+  }
 
   async getCollection(id: number): Promise<Collection | null> {
     await delay()
