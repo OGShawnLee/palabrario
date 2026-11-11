@@ -28,9 +28,12 @@ $excludePatterns = @(
     '\.git\',
     'node_modules\',
     'wailsjs\',
+    'bindings\',
     'dist\',
     '\.vscode\',
     'build\bin\',
+    'app\bin\',
+    'local-app\bin\',
     '\.tmp\',
     '\.work',
     '\.sum',
@@ -63,7 +66,7 @@ foreach ($cat in $categoryMap.Keys) {
 $goBreakdown = [ordered]@{
     'Backend SOA (Core/Realtime/Image/Pkg)' = [PSCustomObject]@{ Files = 0; Lines = 0 }
     'Suites de Pruebas Go (*_test.go)'      = [PSCustomObject]@{ Files = 0; Lines = 0 }
-    'Puente Wails Go (local-app/app.go)'     = [PSCustomObject]@{ Files = 0; Lines = 0 }
+    'Puente Wails Go (app/*.go)'            = [PSCustomObject]@{ Files = 0; Lines = 0 }
 }
 
 $totalLines = 0
@@ -102,9 +105,9 @@ foreach ($file in $files) {
         if ($fileName -like '*_test.go') {
             $goBreakdown['Suites de Pruebas Go (*_test.go)'].Files++
             $goBreakdown['Suites de Pruebas Go (*_test.go)'].Lines += $lineCount
-        } elseif ($relPath -like 'local-app*') {
-            $goBreakdown['Puente Wails Go (local-app/app.go)'].Files++
-            $goBreakdown['Puente Wails Go (local-app/app.go)'].Lines += $lineCount
+        } elseif ($relPath -like 'app\*' -or $relPath -like 'app/*') {
+            $goBreakdown['Puente Wails Go (app/*.go)'].Files++
+            $goBreakdown['Puente Wails Go (app/*.go)'].Lines += $lineCount
         } else {
             $goBreakdown['Backend SOA (Core/Realtime/Image/Pkg)'].Files++
             $goBreakdown['Backend SOA (Core/Realtime/Image/Pkg)'].Lines += $lineCount
