@@ -3,6 +3,7 @@ import * as Wails from "@bindings/palabrario/app/app.js"
 import type {
   Collection,
   CollectionSearchResult,
+  Deck,
   DeckSearchResult,
 } from "@bindings/palabrario/pkg/models/index.js"
 
@@ -21,6 +22,10 @@ export class WailsStudioAdapter implements IStudioAPI {
 
   async unsaveCollection(id: number): Promise<void> {
     await Wails.UnsaveCollection(id)
+  }
+
+  async listDecks(q?: string, officialOnly?: boolean): Promise<Deck[]> {
+    return await Wails.ListDecks(q ?? "", officialOnly ?? false)
   }
 
   async searchDecks(query: string, limit = 20): Promise<DeckSearchResult[]> {

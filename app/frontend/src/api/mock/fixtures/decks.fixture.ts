@@ -2,8 +2,10 @@ import {
   Collection,
   CollectionSearchResult,
   Deck,
+  DeckItem,
   DeckSearchResult,
 } from "@bindings/palabrario/pkg/models/index.js"
+import { mockWords } from "./words.fixture"
 
 export const mockDecks: DeckSearchResult[] = [
   new DeckSearchResult({
@@ -125,6 +127,33 @@ function deckOf(id: number, owner: string): Deck {
     updated_at: "2026-03-02T10:00:00.000Z",
   })
 }
+
+/** Sense ids (from words.fixture) used as term previews, per deck id. */
+const DECK_SENSE_IDS: Record<number, number[]> = {
+  1: [211, 201, 221, 231],
+  2: [231, 241, 222],
+  3: [221, 232, 202],
+  4: [201, 211, 241],
+  5: [241, 222, 231],
+  6: [211, 221, 232, 201],
+}
+
+function itemsOf(idDeck: number): DeckItem[] {
+  const senses = mockWords.flatMap((word) => word.senses)
+  return (DECK_SENSE_IDS[idDeck] ?? []).flatMap((idSense, index) => {
+    const sense = senses.find((candidate) => candidate.id_sense === idSense)
+    return sense
+      ? [new DeckItem({ id_deck: idDeck, id_sense: idSense, sort_order: index, sense })]
+      : []
+  })
+}
+
+/** Public decks with populated items, for the decks catalog. */
+export const mockDeckDetails: Deck[] = mockDecks.map((source) => {
+  const deck = deckOf(source.id_deck, source.owner_user_name)
+  deck.items = itemsOf(source.id_deck)
+  return deck
+})
 
 export const mockCollectionDetails: Collection[] = [
   new Collection({

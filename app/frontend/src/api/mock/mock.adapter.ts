@@ -9,6 +9,7 @@ import {
   AuthResponse,
   type Collection,
   type CollectionSearchResult,
+  type Deck,
   type DeckSearchResult,
   type Region,
   type SignInRequest,
@@ -17,7 +18,7 @@ import {
   type WordDetail,
   WordSearchResult,
 } from "@bindings/palabrario/pkg/models/index.js"
-import { mockCollectionDetails, mockCollections, mockDecks } from "./fixtures/decks.fixture"
+import { mockCollectionDetails, mockCollections, mockDeckDetails, mockDecks } from "./fixtures/decks.fixture"
 import { mockRegions, mockWords } from "./fixtures/words.fixture"
 import { mockUsers } from "./fixtures/user.fixture"
 
@@ -213,6 +214,19 @@ class MockStudioAPI implements IStudioAPI {
     return clone(
       mockCollectionDetails.filter(
         (collection) => collection.is_public && (!featured || collection.is_featured),
+      ),
+    )
+  }
+
+  async listDecks(q?: string, officialOnly?: boolean): Promise<Deck[]> {
+    await delay()
+    const needle = normalize(q ?? "")
+    return clone(
+      mockDeckDetails.filter(
+        (deck) =>
+          deck.is_public &&
+          (!officialOnly || deck.is_official) &&
+          (!needle || normalize(`${deck.title} ${deck.description ?? ""}`).includes(needle)),
       ),
     )
   }

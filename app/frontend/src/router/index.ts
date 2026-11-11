@@ -30,6 +30,12 @@ const router = createRouter({
             ],
           },
         },
+        {
+          path: "decks",
+          name: "decks",
+          component: () => import("@/views/DecksView.vue"),
+          meta: { breadcrumb: [{ label: "Home", to: "/" }, { label: "Decks" }] },
+        },
         { path: "arena", name: "arena", component: () => import("@/views/ArenaView.vue") },
         { path: "studio", name: "studio", component: () => import("@/views/StudioView.vue") },
         { path: "settings", name: "settings", component: () => import("@/views/SettingsView.vue") },
