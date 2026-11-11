@@ -24,6 +24,7 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] `.tickets/010-build-collections-route/` (`completed`): built the `/collections` public catalog backed by `api.studio.listCollections()`, universal `AppBreadcrumb.vue` mounted in `AppLayout.vue`, `FeaturedCollectionCard.vue`, `CollectionGridItem.vue`, and inspection dialog.
 - [x] `.tickets/021-build-collection-detail-route/` (`completed`): built the `/collections/:id` individual learning path detail view backed by `api.studio.getCollection(id)` and `api.auth.getMe()`, dynamic leaf breadcrumb, and retired the temporary dialog.
 - [x] `.tickets/011-build-decks-route/` (`completed`): built the `/decks` public catalog backed by `api.studio.listDecks()`, universal breadcrumb `Home / Decks`, `FeaturedDeckCard.vue` with term previews, and `DeckGridItem.vue`.
+- [x] `.tickets/023-add-collections-section-to-dictionary/` (`completed`): built broadsheet cultural editorial discovery section (`DictionaryCollectionsSection.vue`) in `DictionaryView.vue`, wired `saveDeck` / `unsaveDeck` across API adapters, and updated `$figma-prompt-craft` skill.
 
 ## In progress
 *(None)*
@@ -31,7 +32,7 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 ## Draft tickets
 - [ ] `.tickets/017-build-arena-route/` (`draft`): define `IArenaAPI` in `src/api/` and build the `/arena` lobby route, reusable Dialog components (`AppDialog.vue`, `AppDialogOverlay.vue`), room configuration modal, and open public matches table backed by `api.arena`.
 - [ ] `.tickets/019-build-arena-history-route/` (`draft`): expand `IArenaAPI` and build dedicated `/arena/history` route and 3NF round-by-round replay modal (`MatchReplayDialog.vue`) backed by `api.arena`.
-- [ ] `.tickets/023-add-collections-section-to-dictionary/` (`draft`): add curated collections discovery section to `DictionaryView.vue` with links to `/collections` and `/collections/:id`.
+- [ ] `.tickets/024-backend-dynamic-region-detection/` (`draft`): implement dynamic top 1-3 dialect region detection in PostgreSQL / sqlc for Collections and Decks (`region_names text[]`).
 
 ## Next steps
 - [ ] Implement live WebSocket match room (`ConnectArenaRoom`) and interactive in-game multiplayer match screen after `/arena` lobby route is built.
