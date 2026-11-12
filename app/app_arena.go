@@ -41,6 +41,26 @@ func (a *App) JoinArenaMatch(roomCode string) (*models.MatchPackage, error) {
 	return &models.MatchPackage{RoomCode: roomCode}, nil
 }
 
+// FindMatchRoom consulta una partida en espera por su código PIN.
+// Retorna (nil, nil) si no existe para que TypeScript lo reciba como `null`.
+func (a *App) FindMatchRoom(roomCode string) (*models.PublicMatchItem, error) {
+	roomCode = strings.TrimSpace(strings.ToUpper(strings.TrimPrefix(strings.TrimSpace(roomCode), "#")))
+	if roomCode == "" {
+		return nil, nil
+	}
+
+	targetURL := a.coreURL + "/api/v1/arena/matches/code/" + url.PathEscape(roomCode)
+	var item models.PublicMatchItem
+	if err := a.doRequest(a.context(), http.MethodGet, targetURL, nil, &item); err != nil {
+		msg := strings.ToLower(err.Error())
+		if strings.Contains(msg, "not found") || strings.Contains(msg, "no encontrada") {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &item, nil
+}
+
 // GetMyMatchHistory consulta el historial de partidas del usuario.
 func (a *App) GetMyMatchHistory(limit int) ([]models.MatchSummary, error) {
 	return a.ListMatchHistory(limit)

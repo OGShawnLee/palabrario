@@ -299,6 +299,61 @@ func (q *Queries) GetMatchByRoomCode(ctx context.Context, upper interface{}) (Ge
 	return i, err
 }
 
+const getWaitingMatchByRoomCode = `-- name: GetWaitingMatchByRoomCode :one
+SELECT 
+    m.id_match,
+    m.room_code,
+    m.id_deck,
+    d.title AS deck_title,
+    d.is_official AS is_deck_official,
+    m.host_user_id,
+    COALESCE(u.user_name, 'Unknown')::VARCHAR AS host_user_name,
+    m.total_rounds,
+    m.round_time_sec,
+    m.created_at,
+    (SELECT count(*)::INT FROM match_participants mp WHERE mp.id_match = m.id_match) AS participant_count
+FROM matches m
+JOIN decks d ON d.id_deck = m.id_deck
+LEFT JOIN users u ON u.id_user = m.host_user_id
+WHERE UPPER(m.room_code) = UPPER($1)
+  AND m.status = 'WAITING'
+  AND m.created_at >= now() - INTERVAL '2 hours'
+LIMIT 1
+`
+
+type GetWaitingMatchByRoomCodeRow struct {
+	IDMatch          uuid.UUID          `json:"id_match"`
+	RoomCode         string             `json:"room_code"`
+	IDDeck           int32              `json:"id_deck"`
+	DeckTitle        string             `json:"deck_title"`
+	IsDeckOfficial   bool               `json:"is_deck_official"`
+	HostUserID       pgtype.UUID        `json:"host_user_id"`
+	HostUserName     string             `json:"host_user_name"`
+	TotalRounds      int32              `json:"total_rounds"`
+	RoundTimeSec     int32              `json:"round_time_sec"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	ParticipantCount int32              `json:"participant_count"`
+}
+
+func (q *Queries) GetWaitingMatchByRoomCode(ctx context.Context, upper interface{}) (GetWaitingMatchByRoomCodeRow, error) {
+	row := q.db.QueryRow(ctx, getWaitingMatchByRoomCode, upper)
+	var i GetWaitingMatchByRoomCodeRow
+	err := row.Scan(
+		&i.IDMatch,
+		&i.RoomCode,
+		&i.IDDeck,
+		&i.DeckTitle,
+		&i.IsDeckOfficial,
+		&i.HostUserID,
+		&i.HostUserName,
+		&i.TotalRounds,
+		&i.RoundTimeSec,
+		&i.CreatedAt,
+		&i.ParticipantCount,
+	)
+	return i, err
+}
+
 const insertMatchRound = `-- name: InsertMatchRound :exec
 INSERT INTO match_rounds (
   id_match,

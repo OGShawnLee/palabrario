@@ -1,4 +1,5 @@
 import type {
+  IArenaAPI,
   IAuthAPI,
   IDictionaryAPI,
   IPalabrarioAPI,
@@ -9,8 +10,11 @@ import {
   AuthResponse,
   type Collection,
   type CollectionSearchResult,
+  type CreateMatchRequest,
   type Deck,
   type DeckSearchResult,
+  MatchPackage,
+  PublicMatchItem,
   type Region,
   type SignInRequest,
   type SignUpRequest,
@@ -19,6 +23,7 @@ import {
   WordSearchResult,
 } from "@bindings/palabrario/pkg/models/index.js"
 import { mockCollectionDetails, mockCollections, mockDeckDetails, mockDecks } from "./fixtures/decks.fixture"
+import { mockPublicWaitingMatches } from "./fixtures/arena.fixture"
 import { mockRegions, mockWords } from "./fixtures/words.fixture"
 import { mockUsers } from "./fixtures/user.fixture"
 
@@ -269,7 +274,132 @@ class MockStudioAPI implements IStudioAPI {
   }
 }
 
+const ROOM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+const MAX_PARTICIPANTS = 8
+
+function generateRoomCode(): string {
+  let code = ""
+  for (let i = 0; i < 6; i++) {
+    code += ROOM_CODE_CHARS[Math.floor(Math.random() * ROOM_CODE_CHARS.length)]
+  }
+  return code
+}
+
+function mockHostName(): string {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY)
+    return raw ? (JSON.parse(raw).user_name ?? "you") : "you"
+  } catch {
+    return "you"
+  }
+}
+
+class MockArenaAPI implements IArenaAPI {
+  private rooms: PublicMatchItem[] = clone(mockPublicWaitingMatches)
+  private privateRooms = new Map<string, MatchPackage>()
+
+  private toPackage(room: PublicMatchItem): MatchPackage {
+    return new MatchPackage({
+      id_match: room.id_match,
+      room_code: room.room_code,
+      host_user_id: room.host_user_id ?? "",
+      id_deck: room.id_deck,
+      deck_title: room.deck_title,
+      is_public: true,
+      total_rounds: room.total_rounds,
+      round_time_sec: room.round_time_sec,
+      questions: [],
+    })
+  }
+
+  async listPublicWaitingMatches(limit = 20): Promise<PublicMatchItem[]> {
+    await delay()
+    return clone(this.rooms.filter((room) => room.participant_count < MAX_PARTICIPANTS).slice(0, limit))
+  }
+
+  async prepareMatch(req: CreateMatchRequest): Promise<MatchPackage> {
+    await delay()
+    const deck = mockDeckDetails.find((candidate) => candidate.id_deck === req.id_deck)
+    if (!deck) throw new Error("Deck not found")
+    if (deck.item_count < 8 || deck.item_count < req.total_rounds) {
+      throw new Error("The deck does not have enough approved terms")
+    }
+
+    const isPublic = req.is_public ?? true
+    const roomCode = generateRoomCode()
+    const idMatch = crypto.randomUUID()
+
+    if (isPublic) {
+      this.rooms.unshift(
+        new PublicMatchItem({
+          id_match: idMatch,
+          room_code: roomCode,
+          id_deck: deck.id_deck,
+          deck_title: deck.title,
+          is_deck_official: deck.is_official,
+          host_user_name: mockHostName(),
+          total_rounds: req.total_rounds,
+          round_time_sec: req.round_time_sec,
+          created_at: new Date().toISOString(),
+          participant_count: 1,
+        }),
+      )
+    }
+
+    const pkg = new MatchPackage({
+      id_match: idMatch,
+      room_code: roomCode,
+      host_user_id: "mock-host",
+      id_deck: deck.id_deck,
+      deck_title: deck.title,
+      is_public: isPublic,
+      total_rounds: req.total_rounds,
+      round_time_sec: req.round_time_sec,
+      questions: [],
+    })
+    if (!isPublic) this.privateRooms.set(roomCode, pkg)
+    return clone(pkg)
+  }
+
+  async findMatchRoom(roomCode: string): Promise<PublicMatchItem | null> {
+    await delay()
+    const code = roomCode.trim().replace(/^#/, "").toUpperCase()
+    const room =
+      this.rooms.find((candidate) => candidate.room_code === code) ??
+      mockPublicWaitingMatches.find((candidate) => candidate.room_code === code)
+    if (room) return clone(room)
+    const privateRoom = this.privateRooms.get(code)
+    if (!privateRoom) return null
+    return new PublicMatchItem({
+      id_match: privateRoom.id_match,
+      room_code: privateRoom.room_code,
+      id_deck: privateRoom.id_deck,
+      deck_title: privateRoom.deck_title,
+      host_user_name: mockHostName(),
+      total_rounds: privateRoom.total_rounds,
+      round_time_sec: privateRoom.round_time_sec,
+      created_at: new Date().toISOString(),
+      participant_count: 1,
+    })
+  }
+
+  async joinMatch(roomCode: string): Promise<MatchPackage> {
+    await delay()
+    const code = roomCode.trim().replace(/^#/, "").toUpperCase()
+    const room = this.rooms.find((candidate) => candidate.room_code === code)
+    if (room) {
+      if (room.participant_count >= MAX_PARTICIPANTS) throw new Error("The room is full")
+      room.participant_count += 1
+      return this.toPackage(room)
+    }
+    const privateRoom = this.privateRooms.get(code)
+    if (privateRoom) return clone(privateRoom)
+    throw new Error("Room not found")
+  }
+}
+
 export class MockAdapter implements IPalabrarioAPI {
+  readonly arena = new MockArenaAPI()
   readonly auth = new MockAuthAPI()
   readonly dictionary = new MockDictionaryAPI()
   readonly studio = new MockStudioAPI()

@@ -139,3 +139,15 @@ func (h *ArenaHandler) ListPublicMatches(w http.ResponseWriter, r *http.Request)
 	response.JSON(w, http.StatusOK, matches)
 }
 
+
+// GetMatchByRoomCode maneja GET /api/v1/arena/matches/code/{roomCode}
+func (h *ArenaHandler) GetMatchByRoomCode(w http.ResponseWriter, r *http.Request) {
+	roomCode := chi.URLParam(r, "roomCode")
+	match, err := h.arenaService.GetWaitingMatchByRoomCode(r.Context(), roomCode)
+	if err != nil {
+		status, msg := service.HTTPStatusAndMessage(err, "Partida no encontrada")
+		response.Error(w, status, msg)
+		return
+	}
+	response.JSON(w, http.StatusOK, match)
+}

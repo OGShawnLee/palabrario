@@ -9,11 +9,12 @@ Canonical inventory of active and planned routes in app/. Read this file only wh
 | `/` | `home` | `views/HomeView.vue` | `app` | public | built | 004 |
 | `/auth/sign-in` | `sign-in` | `views/auth/SignInView.vue` | `auth` | guest only | built (static) | 005 |
 | `/auth/sign-up` | `sign-up` | `views/auth/SignUpView.vue` | `auth` | guest only | built (static) | 005 |
-| `/dictionary` | `dictionary` | `views/DictionaryView.vue` | `app` | public | placeholder | 007 (impl: 009) |
-| `/collections` | `collections` | TBD | `app` | public | planned | 010 |
-| `/collections/:id` | `collection-detail` | TBD | `app` | public | planned | 021 |
-| `/decks` | `decks` | TBD | `app` | public | planned | 011 |
-| `/arena` | `arena` | `views/ArenaView.vue` | `app` | public | placeholder | 007 |
+| `/dictionary` | `dictionary` | `views/DictionaryView.vue` | `app` | public | built | 009, 015, 023 |
+| `/collections` | `collections` | `views/CollectionsView.vue` | `app` | public | built | 010 |
+| `/collections/:id` | `collection-detail` | `views/CollectionDetailView.vue` | `app` | public | built | 021 |
+| `/decks` | `decks` | `views/DecksView.vue` | `app` | public | built | 011 |
+| `/arena` | `arena` | `views/ArenaView.vue` | `app` | public | built | 017 |
+| `/arena/history` | `arena-history` | `views/ArenaView.vue` | `app` | public | placeholder | 017 (impl: 019) |
 | `/studio` | `studio` | `views/StudioView.vue` | `app` | requireAuth | placeholder | 007 |
 | `/settings` | `settings` | `views/SettingsView.vue` | `app` | requireAuth | placeholder | 007 |
 

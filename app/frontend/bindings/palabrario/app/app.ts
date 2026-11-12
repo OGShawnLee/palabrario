@@ -278,6 +278,16 @@ export function ExploreWords(filter: models$0.WordExploreFilter): $CancellablePr
 }
 
 /**
+ * FindMatchRoom consulta una partida en espera por su código PIN.
+ * Retorna (nil, nil) si no existe para que TypeScript lo reciba como `null`.
+ */
+export function FindMatchRoom(roomCode: string): $CancellablePromise<models$0.PublicMatchItem | null> {
+    return $Call.ByID(1616722388, roomCode).then(($result: any) => {
+        return $$createType27($result);
+    });
+}
+
+/**
  * GenerateInvitationTickets alias para emisión de boletos institucionales.
  */
 export function GenerateInvitationTickets(req: models$0.CreateTicketRequest): $CancellablePromise<models$0.InvitationTicket | null> {
@@ -327,7 +337,7 @@ export function GetDeckDetail(id: number): $CancellablePromise<models$0.Deck | n
  */
 export function GetMasteryDashboard(): $CancellablePromise<models$0.MasteryDashboard | null> {
     return $Call.ByID(3957313720).then(($result: any) => {
-        return $$createType27($result);
+        return $$createType29($result);
     });
 }
 
@@ -336,7 +346,7 @@ export function GetMasteryDashboard(): $CancellablePromise<models$0.MasteryDashb
  */
 export function GetMasterySummary(): $CancellablePromise<models$0.MasteryDashboard | null> {
     return $Call.ByID(2237691820).then(($result: any) => {
-        return $$createType27($result);
+        return $$createType29($result);
     });
 }
 
@@ -345,7 +355,7 @@ export function GetMasterySummary(): $CancellablePromise<models$0.MasteryDashboa
  */
 export function GetMatchReplay(matchId: string): $CancellablePromise<models$0.MatchReplayDetail | null> {
     return $Call.ByID(1681044087, matchId).then(($result: any) => {
-        return $$createType29($result);
+        return $$createType31($result);
     });
 }
 
@@ -354,7 +364,7 @@ export function GetMatchReplay(matchId: string): $CancellablePromise<models$0.Ma
  */
 export function GetMatchReplayDetail(matchId: string): $CancellablePromise<models$0.MatchReplayDetail | null> {
     return $Call.ByID(743635606, matchId).then(($result: any) => {
-        return $$createType29($result);
+        return $$createType31($result);
     });
 }
 
@@ -363,7 +373,7 @@ export function GetMatchReplayDetail(matchId: string): $CancellablePromise<model
  */
 export function GetMe(): $CancellablePromise<models$0.UserProfile | null> {
     return $Call.ByID(112581593).then(($result: any) => {
-        return $$createType31($result);
+        return $$createType33($result);
     });
 }
 
@@ -372,7 +382,7 @@ export function GetMe(): $CancellablePromise<models$0.UserProfile | null> {
  */
 export function GetMyAchievements(): $CancellablePromise<models$0.AchievementStatus[]> {
     return $Call.ByID(2064353785).then(($result: any) => {
-        return $$createType33($result);
+        return $$createType35($result);
     });
 }
 
@@ -381,7 +391,7 @@ export function GetMyAchievements(): $CancellablePromise<models$0.AchievementSta
  */
 export function GetMyMatchHistory(limit: number): $CancellablePromise<models$0.MatchSummary[]> {
     return $Call.ByID(2804552998, limit).then(($result: any) => {
-        return $$createType35($result);
+        return $$createType37($result);
     });
 }
 
@@ -390,7 +400,7 @@ export function GetMyMatchHistory(limit: number): $CancellablePromise<models$0.M
  */
 export function GetMyProfile(): $CancellablePromise<models$0.UserProfile | null> {
     return $Call.ByID(3724904022).then(($result: any) => {
-        return $$createType31($result);
+        return $$createType33($result);
     });
 }
 
@@ -399,7 +409,7 @@ export function GetMyProfile(): $CancellablePromise<models$0.UserProfile | null>
  */
 export function GetMyXPTransactions(limit: number): $CancellablePromise<models$0.XPTransactionItem[]> {
     return $Call.ByID(1260939480, limit).then(($result: any) => {
-        return $$createType37($result);
+        return $$createType39($result);
     });
 }
 
@@ -408,7 +418,7 @@ export function GetMyXPTransactions(limit: number): $CancellablePromise<models$0
  */
 export function GetProposalDetail(senseId: number): $CancellablePromise<models$0.SenseQuorumDetail | null> {
     return $Call.ByID(3728764144, senseId).then(($result: any) => {
-        return $$createType39($result);
+        return $$createType41($result);
     });
 }
 
@@ -417,7 +427,7 @@ export function GetProposalDetail(senseId: number): $CancellablePromise<models$0
  */
 export function GetPublicProfileByUsername(username: string): $CancellablePromise<models$0.PublicUserProfile | null> {
     return $Call.ByID(3852000726, username).then(($result: any) => {
-        return $$createType41($result);
+        return $$createType43($result);
     });
 }
 
@@ -426,7 +436,7 @@ export function GetPublicProfileByUsername(username: string): $CancellablePromis
  */
 export function GetStudySession(deckId: number, limit: number): $CancellablePromise<models$0.StudySessionPayload | null> {
     return $Call.ByID(3119551908, deckId, limit).then(($result: any) => {
-        return $$createType43($result);
+        return $$createType45($result);
     });
 }
 
@@ -435,7 +445,7 @@ export function GetStudySession(deckId: number, limit: number): $CancellableProm
  */
 export function GetStudySessionQueue(deckId: number, limit: number): $CancellablePromise<models$0.StudySessionPayload | null> {
     return $Call.ByID(3020564523, deckId, limit).then(($result: any) => {
-        return $$createType43($result);
+        return $$createType45($result);
     });
 }
 
@@ -524,7 +534,7 @@ export function ListCollections(featured: boolean): $CancellablePromise<models$0
  */
 export function ListCommunityReports(status: string): $CancellablePromise<models$0.ContentReport[]> {
     return $Call.ByID(4220102217, status).then(($result: any) => {
-        return $$createType44($result);
+        return $$createType46($result);
     });
 }
 
@@ -533,7 +543,7 @@ export function ListCommunityReports(status: string): $CancellablePromise<models
  */
 export function ListConcepts(q: string): $CancellablePromise<models$0.SemanticConcept[]> {
     return $Call.ByID(1964254628, q).then(($result: any) => {
-        return $$createType45($result);
+        return $$createType47($result);
     });
 }
 
@@ -551,7 +561,7 @@ export function ListDecks(q: string, officialOnly: boolean): $CancellablePromise
  */
 export function ListEditorRequests(status: string): $CancellablePromise<models$0.EditorRequest[]> {
     return $Call.ByID(4109768162, status).then(($result: any) => {
-        return $$createType46($result);
+        return $$createType48($result);
     });
 }
 
@@ -560,7 +570,7 @@ export function ListEditorRequests(status: string): $CancellablePromise<models$0
  */
 export function ListInvitationTickets(activeOnly: boolean): $CancellablePromise<models$0.InvitationTicket[]> {
     return $Call.ByID(341078095, activeOnly).then(($result: any) => {
-        return $$createType47($result);
+        return $$createType49($result);
     });
 }
 
@@ -569,7 +579,7 @@ export function ListInvitationTickets(activeOnly: boolean): $CancellablePromise<
  */
 export function ListMasteryItems(stage: string): $CancellablePromise<models$0.UserMastery[]> {
     return $Call.ByID(4216516558, stage).then(($result: any) => {
-        return $$createType49($result);
+        return $$createType51($result);
     });
 }
 
@@ -578,7 +588,7 @@ export function ListMasteryItems(stage: string): $CancellablePromise<models$0.Us
  */
 export function ListMatchHistory(limit: number): $CancellablePromise<models$0.MatchSummary[]> {
     return $Call.ByID(709060914, limit).then(($result: any) => {
-        return $$createType35($result);
+        return $$createType37($result);
     });
 }
 
@@ -596,7 +606,7 @@ export function ListMyCollections(): $CancellablePromise<models$0.Collection[]> 
  */
 export function ListMyDecks(): $CancellablePromise<models$0.StudioDeckSummary[]> {
     return $Call.ByID(1677503539).then(($result: any) => {
-        return $$createType51($result);
+        return $$createType53($result);
     });
 }
 
@@ -605,7 +615,7 @@ export function ListMyDecks(): $CancellablePromise<models$0.StudioDeckSummary[]>
  */
 export function ListMyEditorRequests(): $CancellablePromise<models$0.EditorRequest[]> {
     return $Call.ByID(472052084).then(($result: any) => {
-        return $$createType46($result);
+        return $$createType48($result);
     });
 }
 
@@ -614,7 +624,7 @@ export function ListMyEditorRequests(): $CancellablePromise<models$0.EditorReque
  */
 export function ListMyLexicalProposals(state: string): $CancellablePromise<models$0.SenseQuorumItem[]> {
     return $Call.ByID(822549440, state).then(($result: any) => {
-        return $$createType53($result);
+        return $$createType55($result);
     });
 }
 
@@ -623,7 +633,7 @@ export function ListMyLexicalProposals(state: string): $CancellablePromise<model
  */
 export function ListMyProposals(state: string): $CancellablePromise<models$0.SenseQuorumItem[]> {
     return $Call.ByID(1859392246, state).then(($result: any) => {
-        return $$createType53($result);
+        return $$createType55($result);
     });
 }
 
@@ -632,7 +642,7 @@ export function ListMyProposals(state: string): $CancellablePromise<models$0.Sen
  */
 export function ListPendingEditorRequests(): $CancellablePromise<models$0.EditorRequest[]> {
     return $Call.ByID(889390487).then(($result: any) => {
-        return $$createType46($result);
+        return $$createType48($result);
     });
 }
 
@@ -641,7 +651,7 @@ export function ListPendingEditorRequests(): $CancellablePromise<models$0.Editor
  */
 export function ListPendingQueue(region: string): $CancellablePromise<models$0.SenseQuorumItem[]> {
     return $Call.ByID(3280447471, region).then(($result: any) => {
-        return $$createType53($result);
+        return $$createType55($result);
     });
 }
 
@@ -650,7 +660,7 @@ export function ListPendingQueue(region: string): $CancellablePromise<models$0.S
  */
 export function ListPendingQuorumQueue(region: string): $CancellablePromise<models$0.SenseQuorumItem[]> {
     return $Call.ByID(2808677252, region).then(($result: any) => {
-        return $$createType53($result);
+        return $$createType55($result);
     });
 }
 
@@ -659,7 +669,7 @@ export function ListPendingQuorumQueue(region: string): $CancellablePromise<mode
  */
 export function ListPublicWaitingMatches(limit: number): $CancellablePromise<models$0.PublicMatchItem[]> {
     return $Call.ByID(977114792, limit).then(($result: any) => {
-        return $$createType55($result);
+        return $$createType56($result);
     });
 }
 
@@ -668,7 +678,7 @@ export function ListPublicWaitingMatches(limit: number): $CancellablePromise<mod
  */
 export function ListRegions(): $CancellablePromise<models$0.Region[]> {
     return $Call.ByID(1083580006).then(($result: any) => {
-        return $$createType57($result);
+        return $$createType58($result);
     });
 }
 
@@ -677,7 +687,7 @@ export function ListRegions(): $CancellablePromise<models$0.Region[]> {
  */
 export function ListReports(status: string): $CancellablePromise<models$0.ContentReport[]> {
     return $Call.ByID(3820054524, status).then(($result: any) => {
-        return $$createType44($result);
+        return $$createType46($result);
     });
 }
 
@@ -686,7 +696,7 @@ export function ListReports(status: string): $CancellablePromise<models$0.Conten
  */
 export function ListSemanticConcepts(q: string): $CancellablePromise<models$0.SemanticConcept[]> {
     return $Call.ByID(4017288480, q).then(($result: any) => {
-        return $$createType45($result);
+        return $$createType47($result);
     });
 }
 
@@ -704,7 +714,7 @@ export function ListStudioCollections(): $CancellablePromise<models$0.Collection
  */
 export function ListStudioDecks(): $CancellablePromise<models$0.StudioDeckSummary[]> {
     return $Call.ByID(4251693499).then(($result: any) => {
-        return $$createType51($result);
+        return $$createType53($result);
     });
 }
 
@@ -713,7 +723,7 @@ export function ListStudioDecks(): $CancellablePromise<models$0.StudioDeckSummar
  */
 export function ListUsers(q: string, role: string, limit: number, offset: number): $CancellablePromise<models$0.UserProfile[]> {
     return $Call.ByID(2023140511, q, role, limit, offset).then(($result: any) => {
-        return $$createType58($result);
+        return $$createType59($result);
     });
 }
 
@@ -722,7 +732,7 @@ export function ListUsers(q: string, role: string, limit: number, offset: number
  */
 export function ListUsersForGovernance(q: string, role: string, limit: number, offset: number): $CancellablePromise<models$0.UserProfile[]> {
     return $Call.ByID(2019103858, q, role, limit, offset).then(($result: any) => {
-        return $$createType58($result);
+        return $$createType59($result);
     });
 }
 
@@ -731,7 +741,7 @@ export function ListUsersForGovernance(q: string, role: string, limit: number, o
  */
 export function ListXPLedger(limit: number): $CancellablePromise<models$0.XPTransactionItem[]> {
     return $Call.ByID(1789567416, limit).then(($result: any) => {
-        return $$createType37($result);
+        return $$createType39($result);
     });
 }
 
@@ -768,7 +778,7 @@ export function PrepareMatch(req: models$0.CreateMatchRequest): $CancellableProm
  */
 export function RedeemInvitationTicket(req: models$0.RedeemTicketRequest): $CancellablePromise<models$0.UserProfile | null> {
     return $Call.ByID(3976356034, req).then(($result: any) => {
-        return $$createType31($result);
+        return $$createType33($result);
     });
 }
 
@@ -848,7 +858,7 @@ export function SaveDeck(deckId: number): $CancellablePromise<void> {
  */
 export function SearchCollections(q: string, limit: number): $CancellablePromise<models$0.CollectionSearchResult[]> {
     return $Call.ByID(1884492082, q, limit).then(($result: any) => {
-        return $$createType60($result);
+        return $$createType61($result);
     });
 }
 
@@ -857,7 +867,7 @@ export function SearchCollections(q: string, limit: number): $CancellablePromise
  */
 export function SearchDecks(q: string, limit: number): $CancellablePromise<models$0.DeckSearchResult[]> {
     return $Call.ByID(643634629, q, limit).then(($result: any) => {
-        return $$createType62($result);
+        return $$createType63($result);
     });
 }
 
@@ -866,7 +876,7 @@ export function SearchDecks(q: string, limit: number): $CancellablePromise<model
  */
 export function SearchWords(q: string, dialect: string, limit: number): $CancellablePromise<models$0.WordSearchResult[]> {
     return $Call.ByID(2774597974, q, dialect, limit).then(($result: any) => {
-        return $$createType64($result);
+        return $$createType65($result);
     });
 }
 
@@ -882,7 +892,7 @@ export function SetContext(): $CancellablePromise<void> {
  */
 export function SignIn(req: models$0.SignInRequest): $CancellablePromise<models$0.UserProfile | null> {
     return $Call.ByID(749131203, req).then(($result: any) => {
-        return $$createType31($result);
+        return $$createType33($result);
     });
 }
 
@@ -898,7 +908,7 @@ export function SignOut(): $CancellablePromise<void> {
  */
 export function SignUp(req: models$0.SignUpRequest): $CancellablePromise<models$0.UserProfile | null> {
     return $Call.ByID(584606417, req).then(($result: any) => {
-        return $$createType31($result);
+        return $$createType33($result);
     });
 }
 
@@ -921,7 +931,7 @@ export function SubmitArenaAnswer(roundNumber: number, selectedOption: string): 
  */
 export function SubmitCardReview(req: models$0.SubmitReviewRequest): $CancellablePromise<models$0.CardReviewResult | null> {
     return $Call.ByID(4038425151, req).then(($result: any) => {
-        return $$createType66($result);
+        return $$createType67($result);
     });
 }
 
@@ -930,7 +940,7 @@ export function SubmitCardReview(req: models$0.SubmitReviewRequest): $Cancellabl
  */
 export function SubmitProposalReview(senseId: number, req: models$0.SubmitVoteRequest): $CancellablePromise<models$0.SenseQuorumDetail | null> {
     return $Call.ByID(1297159215, senseId, req).then(($result: any) => {
-        return $$createType39($result);
+        return $$createType41($result);
     });
 }
 
@@ -939,7 +949,7 @@ export function SubmitProposalReview(senseId: number, req: models$0.SubmitVoteRe
  */
 export function SubmitReview(req: models$0.SubmitReviewRequest): $CancellablePromise<models$0.CardReviewResult | null> {
     return $Call.ByID(2744038041, req).then(($result: any) => {
-        return $$createType66($result);
+        return $$createType67($result);
     });
 }
 
@@ -948,7 +958,7 @@ export function SubmitReview(req: models$0.SubmitReviewRequest): $CancellablePro
  */
 export function SubmitStudyReview(req: models$0.SubmitReviewRequest): $CancellablePromise<models$0.CardReviewResult | null> {
     return $Call.ByID(2942032638, req).then(($result: any) => {
-        return $$createType66($result);
+        return $$createType67($result);
     });
 }
 
@@ -957,7 +967,7 @@ export function SubmitStudyReview(req: models$0.SubmitReviewRequest): $Cancellab
  */
 export function SubmitVote(senseId: number, req: models$0.SubmitVoteRequest): $CancellablePromise<models$0.SenseQuorumDetail | null> {
     return $Call.ByID(4195659821, senseId, req).then(($result: any) => {
-        return $$createType39($result);
+        return $$createType41($result);
     });
 }
 
@@ -1014,7 +1024,7 @@ export function UpdateExample(exampleId: number, req: models$0.CreateExampleInpu
  */
 export function UpdateProfile(req: models$0.UpdateProfileRequest): $CancellablePromise<models$0.UserProfile | null> {
     return $Call.ByID(2148787977, req).then(($result: any) => {
-        return $$createType31($result);
+        return $$createType33($result);
     });
 }
 
@@ -1041,7 +1051,7 @@ export function UpdateSenseProposal(senseId: number, req: models$0.UpdateSenseRe
  */
 export function UpdateUserRole(id: string, role: models$0.AccountRole): $CancellablePromise<models$0.UserProfile | null> {
     return $Call.ByID(582809067, id, role).then(($result: any) => {
-        return $$createType31($result);
+        return $$createType33($result);
     });
 }
 
@@ -1050,7 +1060,7 @@ export function UpdateUserRole(id: string, role: models$0.AccountRole): $Cancell
  */
 export function UpdateUserRoleOrStatus(id: string, req: models$0.UpdateUserRoleOrStatusRequest): $CancellablePromise<models$0.UserProfile | null> {
     return $Call.ByID(212502404, id, req).then(($result: any) => {
-        return $$createType31($result);
+        return $$createType33($result);
     });
 }
 
@@ -1059,7 +1069,7 @@ export function UpdateUserRoleOrStatus(id: string, req: models$0.UpdateUserRoleO
  */
 export function UpdateUserStatus(id: string, isActive: boolean): $CancellablePromise<models$0.UserProfile | null> {
     return $Call.ByID(4164097513, id, isActive).then(($result: any) => {
-        return $$createType31($result);
+        return $$createType33($result);
     });
 }
 
@@ -1086,7 +1096,7 @@ export function UpdateWordProposal(id: number, req: models$0.UpdateWordRequest):
  */
 export function UploadImage(category: string, filename: string, fileBytes: string): $CancellablePromise<models$0.ImageUploadResponse | null> {
     return $Call.ByID(3459446289, category, filename, fileBytes).then(($result: any) => {
-        return $$createType68($result);
+        return $$createType69($result);
     });
 }
 
@@ -1117,46 +1127,47 @@ const $$createType22 = $Create.Array($$createType2);
 const $$createType23 = $Create.Array($$createType14);
 const $$createType24 = models$0.PaginatedWords.createFrom;
 const $$createType25 = $Create.Nullable($$createType24);
-const $$createType26 = models$0.MasteryDashboard.createFrom;
+const $$createType26 = models$0.PublicMatchItem.createFrom;
 const $$createType27 = $Create.Nullable($$createType26);
-const $$createType28 = models$0.MatchReplayDetail.createFrom;
+const $$createType28 = models$0.MasteryDashboard.createFrom;
 const $$createType29 = $Create.Nullable($$createType28);
-const $$createType30 = models$0.UserProfile.createFrom;
+const $$createType30 = models$0.MatchReplayDetail.createFrom;
 const $$createType31 = $Create.Nullable($$createType30);
-const $$createType32 = models$0.AchievementStatus.createFrom;
-const $$createType33 = $Create.Array($$createType32);
-const $$createType34 = models$0.MatchSummary.createFrom;
+const $$createType32 = models$0.UserProfile.createFrom;
+const $$createType33 = $Create.Nullable($$createType32);
+const $$createType34 = models$0.AchievementStatus.createFrom;
 const $$createType35 = $Create.Array($$createType34);
-const $$createType36 = models$0.XPTransactionItem.createFrom;
+const $$createType36 = models$0.MatchSummary.createFrom;
 const $$createType37 = $Create.Array($$createType36);
-const $$createType38 = models$0.SenseQuorumDetail.createFrom;
-const $$createType39 = $Create.Nullable($$createType38);
-const $$createType40 = models$0.PublicUserProfile.createFrom;
+const $$createType38 = models$0.XPTransactionItem.createFrom;
+const $$createType39 = $Create.Array($$createType38);
+const $$createType40 = models$0.SenseQuorumDetail.createFrom;
 const $$createType41 = $Create.Nullable($$createType40);
-const $$createType42 = models$0.StudySessionPayload.createFrom;
+const $$createType42 = models$0.PublicUserProfile.createFrom;
 const $$createType43 = $Create.Nullable($$createType42);
-const $$createType44 = $Create.Array($$createType10);
-const $$createType45 = $Create.Array($$createType12);
-const $$createType46 = $Create.Array($$createType16);
-const $$createType47 = $Create.Array($$createType18);
-const $$createType48 = models$0.UserMastery.createFrom;
-const $$createType49 = $Create.Array($$createType48);
-const $$createType50 = models$0.StudioDeckSummary.createFrom;
+const $$createType44 = models$0.StudySessionPayload.createFrom;
+const $$createType45 = $Create.Nullable($$createType44);
+const $$createType46 = $Create.Array($$createType10);
+const $$createType47 = $Create.Array($$createType12);
+const $$createType48 = $Create.Array($$createType16);
+const $$createType49 = $Create.Array($$createType18);
+const $$createType50 = models$0.UserMastery.createFrom;
 const $$createType51 = $Create.Array($$createType50);
-const $$createType52 = models$0.SenseQuorumItem.createFrom;
+const $$createType52 = models$0.StudioDeckSummary.createFrom;
 const $$createType53 = $Create.Array($$createType52);
-const $$createType54 = models$0.PublicMatchItem.createFrom;
+const $$createType54 = models$0.SenseQuorumItem.createFrom;
 const $$createType55 = $Create.Array($$createType54);
-const $$createType56 = models$0.Region.createFrom;
-const $$createType57 = $Create.Array($$createType56);
-const $$createType58 = $Create.Array($$createType30);
-const $$createType59 = models$0.CollectionSearchResult.createFrom;
-const $$createType60 = $Create.Array($$createType59);
-const $$createType61 = models$0.DeckSearchResult.createFrom;
-const $$createType62 = $Create.Array($$createType61);
-const $$createType63 = models$0.WordSearchResult.createFrom;
-const $$createType64 = $Create.Array($$createType63);
-const $$createType65 = models$0.CardReviewResult.createFrom;
-const $$createType66 = $Create.Nullable($$createType65);
-const $$createType67 = models$0.ImageUploadResponse.createFrom;
-const $$createType68 = $Create.Nullable($$createType67);
+const $$createType56 = $Create.Array($$createType26);
+const $$createType57 = models$0.Region.createFrom;
+const $$createType58 = $Create.Array($$createType57);
+const $$createType59 = $Create.Array($$createType32);
+const $$createType60 = models$0.CollectionSearchResult.createFrom;
+const $$createType61 = $Create.Array($$createType60);
+const $$createType62 = models$0.DeckSearchResult.createFrom;
+const $$createType63 = $Create.Array($$createType62);
+const $$createType64 = models$0.WordSearchResult.createFrom;
+const $$createType65 = $Create.Array($$createType64);
+const $$createType66 = models$0.CardReviewResult.createFrom;
+const $$createType67 = $Create.Nullable($$createType66);
+const $$createType68 = models$0.ImageUploadResponse.createFrom;
+const $$createType69 = $Create.Nullable($$createType68);

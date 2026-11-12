@@ -36,7 +36,24 @@ const router = createRouter({
           component: () => import("@/views/DecksView.vue"),
           meta: { breadcrumb: [{ label: "Home", to: "/" }, { label: "Decks" }] },
         },
-        { path: "arena", name: "arena", component: () => import("@/views/ArenaView.vue") },
+        {
+          path: "arena",
+          name: "arena",
+          component: () => import("@/views/ArenaView.vue"),
+          meta: { breadcrumb: [{ label: "Home", to: "/" }, { label: "Arena" }] },
+        },
+        {
+          path: "arena/history",
+          name: "arena-history",
+          component: () => import("@/views/ArenaView.vue"),
+          meta: {
+            breadcrumb: [
+              { label: "Home", to: "/" },
+              { label: "Arena", to: "/arena" },
+              { label: "Match History" },
+            ],
+          },
+        },
         { path: "studio", name: "studio", component: () => import("@/views/StudioView.vue") },
         { path: "settings", name: "settings", component: () => import("@/views/SettingsView.vue") },
       ],

@@ -272,6 +272,7 @@ func (rt *Router) Setup() http.Handler {
 		// Módulo 7: Arena Multijugador (CU14, CU15, CU16)
 		r.Route("/arena", func(r chi.Router) {
 			r.Get("/matches/public", arenaHandler.ListPublicMatches)
+			r.Get("/matches/code/{roomCode}", arenaHandler.GetMatchByRoomCode)
 
 			r.Route("/matches", func(r chi.Router) {
 				// Rutas protegidas para usuarios humanos

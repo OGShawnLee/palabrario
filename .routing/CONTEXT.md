@@ -1,4 +1,4 @@
- CONTEXT
+# CONTEXT
 
 Central routing directory for all agents. Read this first.
 
@@ -45,5 +45,3 @@ Central routing directory for all agents. Read this first.
 - Workers must not modify files outside their ticket's scope.
 - Workers do not edit [uno.config.ts](../app/frontend/uno.config.ts) directly. They log proposed shortcuts or tokens for the router to approve.
 - The router accepts a ticket only after its spec checks pass, not on the worker's self-report.
-
-

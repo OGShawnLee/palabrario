@@ -294,3 +294,24 @@ WHERE m.status = 'WAITING'
 ORDER BY m.created_at DESC
 LIMIT $1;
 
+
+-- name: GetWaitingMatchByRoomCode :one
+SELECT 
+    m.id_match,
+    m.room_code,
+    m.id_deck,
+    d.title AS deck_title,
+    d.is_official AS is_deck_official,
+    m.host_user_id,
+    COALESCE(u.user_name, 'Unknown')::VARCHAR AS host_user_name,
+    m.total_rounds,
+    m.round_time_sec,
+    m.created_at,
+    (SELECT count(*)::INT FROM match_participants mp WHERE mp.id_match = m.id_match) AS participant_count
+FROM matches m
+JOIN decks d ON d.id_deck = m.id_deck
+LEFT JOIN users u ON u.id_user = m.host_user_id
+WHERE UPPER(m.room_code) = UPPER($1)
+  AND m.status = 'WAITING'
+  AND m.created_at >= now() - INTERVAL '2 hours'
+LIMIT 1;

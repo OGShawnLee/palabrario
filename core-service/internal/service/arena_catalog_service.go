@@ -36,6 +36,7 @@ type ArenaCatalogService interface {
 	ListMatchHistory(ctx context.Context, userID string, limit int) ([]models.MatchSummary, error)
 	GetMatchReplay(ctx context.Context, viewerID string, viewerRole models.AccountRole, matchID string) (*models.MatchReplayDetail, error)
 	ListPublicWaitingMatches(ctx context.Context, limit int) ([]models.PublicMatchItem, error)
+	GetWaitingMatchByRoomCode(ctx context.Context, roomCode string) (*models.PublicMatchItem, error)
 }
 
 type arenaCatalogService struct {
@@ -988,4 +989,40 @@ func (s *arenaCatalogService) ListPublicWaitingMatches(ctx context.Context, limi
 	}
 
 	return items, nil
+}
+
+// GetWaitingMatchByRoomCode busca una partida en espera por su código PIN.
+func (s *arenaCatalogService) GetWaitingMatchByRoomCode(ctx context.Context, rawRoomCode string) (*models.PublicMatchItem, error) {
+	roomCode := strings.TrimSpace(strings.ToUpper(strings.TrimPrefix(strings.TrimSpace(rawRoomCode), "#")))
+
+	r, err := s.queries.GetWaitingMatchByRoomCode(ctx, roomCode)
+	if err != nil {
+		return nil, MapDBError(err, "Partida no encontrada")
+	}
+
+	var hostUserID *string
+	if r.HostUserID.Valid {
+		h := uuid.UUID(r.HostUserID.Bytes).String()
+		hostUserID = &h
+	}
+
+	createdAt := time.Time{}
+	if r.CreatedAt.Valid {
+		createdAt = r.CreatedAt.Time
+	}
+
+	item := models.PublicMatchItem{
+		IDMatch:          r.IDMatch.String(),
+		RoomCode:         r.RoomCode,
+		IDDeck:           int(r.IDDeck),
+		DeckTitle:        r.DeckTitle,
+		IsDeckOfficial:   r.IsDeckOfficial,
+		HostUserID:       hostUserID,
+		HostUserName:     r.HostUserName,
+		TotalRounds:      int(r.TotalRounds),
+		RoundTimeSec:     int(r.RoundTimeSec),
+		CreatedAt:        createdAt,
+		ParticipantCount: int(r.ParticipantCount),
+	}
+	return &item, nil
 }
