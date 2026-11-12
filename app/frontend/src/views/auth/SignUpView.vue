@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from "vue"
-import { RouterLink } from "vue-router"
+import { RouterLink, useRouter } from "vue-router"
 import AuthHeader from "@/components/AuthHeader.vue"
 import FormField from "@/components/FormField.vue"
+import { useAuth } from "@/composables/useAuth"
 import { REGIONS } from "@/data/regions"
+
+const router = useRouter()
+const { signUp, isAuthLoading } = useAuth()
 
 const currentStep = ref<1 | 2>(1)
 const showFullName = ref(false)
+const errorMessage = ref<string | null>(null)
 const form = reactive({
   user_name: "",
   name: "",
@@ -23,6 +28,35 @@ function removeFullName() {
   showFullName.value = false
   form.name = ""
 }
+
+function goToStep(step: 1 | 2) {
+  errorMessage.value = null
+  currentStep.value = step
+}
+
+async function onSubmit() {
+  if (currentStep.value === 1) {
+    if (isStep1Valid.value) {
+      goToStep(2)
+    }
+    return
+  }
+  if (!isStep1Valid.value || isAuthLoading.value) return
+  errorMessage.value = null
+  const displayName = form.name.trim() || form.user_name.trim()
+  try {
+    await signUp({
+      email: form.email.trim(),
+      password: form.password,
+      name: displayName,
+      user_name: form.user_name.trim(),
+      anchor_dialect: form.anchor_dialect,
+    })
+    await router.push("/dictionary")
+  } catch (err) {
+    errorMessage.value = err instanceof Error ? err.message : "Unable to create account."
+  }
+}
 </script>
 
 <template>
@@ -31,7 +65,7 @@ function removeFullName() {
       <li :class="currentStep === 1 ? 'text-main font-bold' : 'text-dull'">1. Credentials</li>
       <li :class="currentStep === 2 ? 'text-main font-bold' : 'text-dull'">2. Regional Variant</li>
     </ol>
-    <form class="flex flex-col gap-8" @submit.prevent>
+    <form class="flex flex-col gap-8" @submit.prevent="onSubmit">
       <template v-if="currentStep === 1">
         <AuthHeader title="Create your account" subtitle="Join in a few minutes." />
         <div class="flex flex-col gap-4">
@@ -54,7 +88,7 @@ function removeFullName() {
             <input id="password" v-model="form.password" type="password" required minlength="8" autocomplete="new-password" class="field w-full" />
           </FormField>
         </div>
-        <button type="button" class="button-main w-full" :disabled="!isStep1Valid" @click="currentStep = 2">Continue to Region</button>
+        <button type="button" class="button-main w-full" :disabled="!isStep1Valid" @click="goToStep(2)">Continue to Region</button>
         <p class="text-sm text-side">
           Already have an account?
           <RouterLink to="/auth/sign-in" class="font-bold text-main underline">Sign In</RouterLink>
@@ -72,9 +106,12 @@ function removeFullName() {
             @click="form.anchor_dialect = region.code"
           >{{ region.name }}</button>
         </div>
+        <div v-if="errorMessage" role="alert" class="border border-main bg-white px-4 py-3 text-sm font-medium text-main">{{ errorMessage }}</div>
         <div class="flex flex-col gap-3">
-          <button type="submit" class="button-main w-full">Create Account</button>
-          <button type="button" class="button-side w-full" @click="currentStep = 1">Back to Credentials</button>
+          <button type="submit" class="button-main w-full" :disabled="isAuthLoading">
+            {{ isAuthLoading ? "Creating account..." : "Create Account" }}
+          </button>
+          <button type="button" class="button-side w-full" :disabled="isAuthLoading" @click="goToStep(1)">Back to Credentials</button>
         </div>
       </template>
     </form>

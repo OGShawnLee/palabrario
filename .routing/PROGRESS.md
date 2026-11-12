@@ -28,9 +28,10 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] `.tickets/017-build-arena-route/` (`completed`): built `/arena` lobby route, reusable Dialog components (`AppDialog.vue`, `AppDialogOverlay.vue`), `CreateMatchDialog.vue` (with subtitles), `JoinMatchDialog.vue` (dedicated private room PIN lookup & preview), `PublicRoomsTable.vue`, and end-to-end backend lookup query/endpoint (`GetWaitingMatchByRoomCode` / `GET /api/v1/arena/matches/code/{roomCode}`) with Wails bridge `FindMatchRoom`.
 - [x] `.tickets/025-build-word-detail-route/` (`completed`): built `/dictionary/word/:id` (`WordDetailView.vue`) with invalid-id guard, dynamic leaf breadcrumb, parameterized `WordOfTheDayCard.vue` (`eyebrow`, `headingTag`, `footerLink`, softened `Report Word` button), and updated `SearchModal.vue` dictionary navigation.
 - [x] `.tickets/026-build-profile-route/` (`completed`): built `/u/:username` (`ProfileView.vue`) in editorial Swiss-broadsheet style, wired `IAuthAPI.getPublicProfileByUsername` across Wails and Mock adapters, rendered unlocked-only achievements with temporary monochrome tier badges, added bottom owner-only strip, and added `"Profile"` links to TopBar menus.
+- [x] `.tickets/027-wire-auth-session-and-topbar/` (`completed`): created `useAuth()` singleton composable (`hasActiveSession()` before `getMe()`, deduplicated `init()`), upgraded `MockAuthAPI` with `palabrario_mock_users` persistence, wired `SignInView.vue` and `SignUpView.vue` with `role="alert"` error banners and loading states, and replaced the hardcoded `eponiatowska` placeholder in `TopBar.vue`.
 
 ## In progress
-*(None)*
+- None.
 
 ## Draft tickets
 - [ ] `.tickets/019-build-arena-history-route/` (`draft`): expand `IArenaAPI` and build dedicated `/arena/history` route and 3NF round-by-round replay modal (`MatchReplayDialog.vue`) backed by `api.arena`.
@@ -38,7 +39,7 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 
 ## Next steps
 - [ ] Implement live WebSocket match room (`ConnectArenaRoom`) and interactive in-game multiplayer match screen after `/arena` lobby route is built.
-- [ ] Wire backend authentication (`useAuth` / Wails bindings) and error banner to `SignInView.vue` and `SignUpView.vue`, or decide the next route in scope.
+- [ ] Add router navigation guards (`guestOnly`, `requireAuth`) or build `/settings` / `/studio` next.
 - [ ] Decide what happens to the Capacitor adapter (`capacitor.adapter.ts`) during the frontend rebuild.
 
 ## Agent workflow

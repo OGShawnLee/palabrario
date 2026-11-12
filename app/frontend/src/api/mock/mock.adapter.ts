@@ -34,6 +34,7 @@ import {
 } from "./fixtures/user.fixture"
 
 const SESSION_KEY = "palabrario_mock_session"
+const MOCK_USERS_KEY = "palabrario_mock_users"
 const MOCK_TOKEN = "mock-session-token"
 
 function delay(): Promise<void> {
@@ -72,8 +73,29 @@ function writeStorage(profile: UserProfile | null): void {
   }
 }
 
+function readUsersStorage(): UserProfile[] {
+  try {
+    const raw = localStorage.getItem(MOCK_USERS_KEY)
+    if (!raw) return clone(mockUsers)
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return clone(mockUsers)
+    return parsed.map((item) => UserProfile.createFrom(item))
+  } catch {
+    return clone(mockUsers)
+  }
+}
+
+function writeUsersStorage(users: UserProfile[]): void {
+  try {
+    localStorage.setItem(MOCK_USERS_KEY, JSON.stringify(users))
+  } catch {
+    // Storage unavailable: in-memory state is still authoritative.
+  }
+}
+
 class MockAuthAPI implements IAuthAPI {
   private session: UserProfile | null = readStorage()
+  private users: UserProfile[] = readUsersStorage()
 
   private persist(profile: UserProfile | null): void {
     this.session = profile
@@ -88,7 +110,7 @@ class MockAuthAPI implements IAuthAPI {
   async signIn(req: SignInRequest): Promise<AuthResponse | null> {
     await delay()
     const email = req.email.trim().toLowerCase()
-    const user = mockUsers.find((candidate) => candidate.email === email)
+    const user = this.users.find((candidate) => candidate.email.toLowerCase() === email)
     if (!user || req.password.length === 0) return null
     this.persist(clone(user))
     return new AuthResponse({ token: MOCK_TOKEN, user: clone(user) })
@@ -96,15 +118,31 @@ class MockAuthAPI implements IAuthAPI {
 
   async signUp(req: SignUpRequest): Promise<AuthResponse | null> {
     await delay()
-    if (!req.email.trim() || !req.password || !req.user_name.trim()) return null
+    const email = req.email.trim().toLowerCase()
+    const userName = req.user_name.trim().replace(/^@/, "").toLowerCase()
+    const name = req.name.trim() || userName
+    const anchorDialect = req.anchor_dialect.trim().toUpperCase() || "MX"
+
+    if (!email || !req.password || !userName) {
+      throw new Error("Email, username, and password are required.")
+    }
+
+    const exists = this.users.some(
+      (candidate) =>
+        candidate.email.toLowerCase() === email || candidate.user_name.toLowerCase() === userName,
+    )
+    if (exists) {
+      throw new Error("An account with that email or username already exists.")
+    }
+
     const now = new Date().toISOString()
     const user = new UserProfile({
       id_user: crypto.randomUUID(),
-      email: req.email.trim().toLowerCase(),
-      name: req.name.trim(),
-      user_name: req.user_name.trim(),
+      email,
+      name,
+      user_name: userName,
       avatar_url: null,
-      anchor_dialect: req.anchor_dialect,
+      anchor_dialect: anchorDialect,
       total_xp: 0,
       current_level: 1,
       current_streak: 0,
@@ -113,7 +151,10 @@ class MockAuthAPI implements IAuthAPI {
       created_at: now,
       updated_at: now,
     })
-    this.persist(user)
+
+    this.users.push(clone(user))
+    writeUsersStorage(this.users)
+    this.persist(clone(user))
     return new AuthResponse({ token: MOCK_TOKEN, user: clone(user) })
   }
 
@@ -131,7 +172,7 @@ class MockAuthAPI implements IAuthAPI {
     await delay()
     const normalized = username.trim().replace(/^@/, "").toLowerCase()
     if (!normalized) return null
-    const user = mockUsers.find((candidate) => candidate.user_name.toLowerCase() === normalized)
+    const user = this.users.find((candidate) => candidate.user_name.toLowerCase() === normalized)
     if (!user) return null
 
     const isOwner = this.session?.id_user === user.id_user

@@ -7,8 +7,8 @@ Canonical inventory of active and planned routes in app/. Read this file only wh
 | Path | Name | View | Layout | Access | Status | Ticket |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `/` | `home` | `views/HomeView.vue` | `app` | public | built | 004 |
-| `/auth/sign-in` | `sign-in` | `views/auth/SignInView.vue` | `auth` | guest only | built (static) | 005 |
-| `/auth/sign-up` | `sign-up` | `views/auth/SignUpView.vue` | `auth` | guest only | built (static) | 005 |
+| `/auth/sign-in` | `sign-in` | `views/auth/SignInView.vue` | `auth` | guest only | built | 005, 027 |
+| `/auth/sign-up` | `sign-up` | `views/auth/SignUpView.vue` | `auth` | guest only | built | 005, 027 |
 | `/dictionary` | `dictionary` | `views/DictionaryView.vue` | `app` | public | built | 009, 015, 023 |
 | `/dictionary/word/:id` | `word-detail` | `views/WordDetailView.vue` | `app` | public | built | 025 |
 | `/collections` | `collections` | `views/CollectionsView.vue` | `app` | public | built | 010 |

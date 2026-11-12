@@ -1,23 +1,35 @@
 <script setup lang="ts">
-import { ref } from "vue"
-import { RouterLink } from "vue-router"
+import { computed, onMounted } from "vue"
+import { RouterLink, useRoute, useRouter } from "vue-router"
 import { Search } from "lucide-vue-next"
 import TopBarDesktopStatus from "@/components/TopBarDesktopStatus.vue"
 import TopBarMobileMenu from "@/components/TopBarMobileMenu.vue"
+import { useAuth } from "@/composables/useAuth"
 import type { AuthState, TopBarUser } from "@/types/user"
 
 const emit = defineEmits<{ "open-search": [] }>()
 
-const authState = ref<AuthState>("logged-in")
+const route = useRoute()
+const router = useRouter()
+const { currentUser, init, signOut } = useAuth()
 
-const user: TopBarUser = {
-  name: "Elena Poniatowska",
-  user_name: "eponiatowska",
-  avatar_url: "",
-}
+onMounted(() => {
+  void init()
+})
 
-function signOut() {
-  authState.value = "anonymous"
+const authState = computed<AuthState>(() => (currentUser.value ? "logged-in" : "anonymous"))
+
+const topBarUser = computed<TopBarUser>(() => ({
+  name: currentUser.value?.name || currentUser.value?.user_name || "",
+  user_name: currentUser.value?.user_name || "",
+  avatar_url: currentUser.value?.avatar_url || "",
+}))
+
+async function handleSignOut() {
+  await signOut()
+  if (route.path.startsWith("/studio") || route.path.startsWith("/settings")) {
+    await router.push("/")
+  }
 }
 </script>
 
@@ -43,8 +55,8 @@ function signOut() {
         >
           <Search class="w-5 h-5" />
         </button>
-        <TopBarMobileMenu :auth-state="authState" :user="user" @sign-out="signOut" />
-        <TopBarDesktopStatus :auth-state="authState" :user="user" @sign-out="signOut" />
+        <TopBarMobileMenu :auth-state="authState" :user="topBarUser" @sign-out="handleSignOut" />
+        <TopBarDesktopStatus :auth-state="authState" :user="topBarUser" @sign-out="handleSignOut" />
       </div>
     </div>
   </header>
