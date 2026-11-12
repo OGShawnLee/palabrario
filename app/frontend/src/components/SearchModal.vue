@@ -190,7 +190,7 @@ function clearQuery() {
 
 function selectDictionaryResult(item: WordSearchResult) {
   open.value = false
-  router.push({ path: "/dictionary", query: { q: item.lemma } })
+  router.push(`/dictionary/word/${item.id_word}`)
 }
 
 function selectDeckResult(_deck: DeckSearchResult) {

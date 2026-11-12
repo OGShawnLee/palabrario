@@ -10,6 +10,7 @@ Canonical inventory of active and planned routes in app/. Read this file only wh
 | `/auth/sign-in` | `sign-in` | `views/auth/SignInView.vue` | `auth` | guest only | built (static) | 005 |
 | `/auth/sign-up` | `sign-up` | `views/auth/SignUpView.vue` | `auth` | guest only | built (static) | 005 |
 | `/dictionary` | `dictionary` | `views/DictionaryView.vue` | `app` | public | built | 009, 015, 023 |
+| `/dictionary/word/:id` | `word-detail` | `views/WordDetailView.vue` | `app` | public | built | 025 |
 | `/collections` | `collections` | `views/CollectionsView.vue` | `app` | public | built | 010 |
 | `/collections/:id` | `collection-detail` | `views/CollectionDetailView.vue` | `app` | public | built | 021 |
 | `/decks` | `decks` | `views/DecksView.vue` | `app` | public | built | 011 |

@@ -8,10 +8,20 @@ export interface HeteronymGroup {
   items: HeteronymItem[]
 }
 
-const props = defineProps<{
-  word: WordDetail
-  heteronymGroups?: HeteronymGroup[]
-}>()
+const props = withDefaults(
+  defineProps<{
+    word: WordDetail
+    heteronymGroups?: HeteronymGroup[]
+    eyebrow?: string
+    headingTag?: "h1" | "h2"
+    footerLink?: "entry" | "dictionary"
+  }>(),
+  {
+    eyebrow: "Word of the Day",
+    headingTag: "h2",
+    footerLink: "entry",
+  },
+)
 
 const groups = computed<HeteronymGroup[]>(() => {
   if (props.heteronymGroups && props.heteronymGroups.length > 0) {
@@ -42,13 +52,13 @@ function formatFrequency(frequency: string, regionCode?: string): string {
   <div class="w-full bg-ground border border-light p-6 sm:p-10">
     <!-- Header & Title -->
     <div class="flex items-center justify-between section-label">
-      <span>Word of the Day</span>
+      <span>{{ eyebrow }}</span>
       <span>Regional Lexicon</span>
     </div>
 
-    <h2 class="text-5xl sm:text-6xl md:text-7xl font-black text-main leading-none mt-2">
+    <component :is="headingTag" class="text-5xl sm:text-6xl md:text-7xl font-black text-main leading-none mt-2">
       {{ word.lemma }}
-    </h2>
+    </component>
 
     <div class="text-sm text-dull mt-1 mb-9">
       {{ word.part_of_speech }}
@@ -141,10 +151,19 @@ function formatFrequency(frequency: string, regionCode?: string): string {
 
     <!-- Action Footer -->
     <div class="flex flex-wrap items-center gap-4 pt-6 border-t border-light">
-      <button type="button" class="button-main">
+      <button type="button" class="button-side">
         Report Word
       </button>
       <RouterLink
+        v-if="footerLink === 'dictionary'"
+        to="/dictionary"
+        class="text-sm font-semibold text-main inline-flex items-center gap-1 hover:underline sm:ml-auto"
+      >
+        <span>←</span>
+        <span>Back to Dictionary</span>
+      </RouterLink>
+      <RouterLink
+        v-else
         :to="`/dictionary/word/${word.id_word}`"
         class="text-sm font-semibold text-main inline-flex items-center gap-1 hover:underline sm:ml-auto"
       >

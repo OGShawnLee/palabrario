@@ -26,6 +26,7 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] `.tickets/011-build-decks-route/` (`completed`): built the `/decks` public catalog backed by `api.studio.listDecks()`, universal breadcrumb `Home / Decks`, `FeaturedDeckCard.vue` with term previews, and `DeckGridItem.vue`.
 - [x] `.tickets/023-add-collections-section-to-dictionary/` (`completed`): built broadsheet cultural editorial discovery section (`DictionaryCollectionsSection.vue`) in `DictionaryView.vue`, wired `saveDeck` / `unsaveDeck` across API adapters, and updated `$figma-prompt-craft` skill.
 - [x] `.tickets/017-build-arena-route/` (`completed`): built `/arena` lobby route, reusable Dialog components (`AppDialog.vue`, `AppDialogOverlay.vue`), `CreateMatchDialog.vue` (with subtitles), `JoinMatchDialog.vue` (dedicated private room PIN lookup & preview), `PublicRoomsTable.vue`, and end-to-end backend lookup query/endpoint (`GetWaitingMatchByRoomCode` / `GET /api/v1/arena/matches/code/{roomCode}`) with Wails bridge `FindMatchRoom`.
+- [x] `.tickets/025-build-word-detail-route/` (`completed`): built `/dictionary/word/:id` (`WordDetailView.vue`) with invalid-id guard, dynamic leaf breadcrumb, parameterized `WordOfTheDayCard.vue` (`eyebrow`, `headingTag`, `footerLink`, softened `Report Word` button), and updated `SearchModal.vue` dictionary navigation.
 
 ## In progress
 *(None)*

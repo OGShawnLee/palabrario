@@ -13,6 +13,18 @@ const router = createRouter({
         { path: "", name: "home", component: HomeView },
         { path: "dictionary", name: "dictionary", component: () => import("@/views/DictionaryView.vue") },
         {
+          path: "dictionary/word/:id",
+          name: "word-detail",
+          component: () => import("@/views/WordDetailView.vue"),
+          meta: {
+            breadcrumb: [
+              { label: "Home", to: "/" },
+              { label: "Dictionary", to: "/dictionary" },
+              { label: "Word Detail" },
+            ],
+          },
+        },
+        {
           path: "collections",
           name: "collections",
           component: () => import("@/views/CollectionsView.vue"),

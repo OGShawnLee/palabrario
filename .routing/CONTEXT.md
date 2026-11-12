@@ -27,6 +27,7 @@ Central routing directory for all agents. Read this first.
 - Forbidden to render `flag_emoji` or dialect codes (e.g. `CU`, `CL`, `MX`) anywhere in the app. Always render the full textual name of the region (e.g. `Cuba`, `Chile`, `Mexico`).
 - Routes in scope: landing page, `auth/sign-in`, `auth/sign-up`. Others are decided as we move.
 - Mobile-first design: write base styles for mobile viewports first and scale up with responsive breakpoints (`sm:`, `md:`, `lg:`).
+- No route aliases: every route in `app/frontend/src/router/index.ts` has a single canonical path (do not use `alias`).
 - The UI is written in English from scratch. Existing Spanish UI strings are replaced by the rework, not translated.
 - The rework is route by route, one commit per route, merged to `main` when complete.
 - Commits: English, Conventional Commits, with a detailed body describing what changed.
