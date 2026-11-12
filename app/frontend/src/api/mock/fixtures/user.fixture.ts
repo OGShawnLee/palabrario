@@ -1,4 +1,4 @@
-import { AccountRole, UserProfile } from "@bindings/palabrario/pkg/models/index.js"
+import { AccountRole, AchievementStatus, UserProfile } from "@bindings/palabrario/pkg/models/index.js"
 
 export const MOCK_LEARNER_EMAIL = "aprendiz@palabrario.app"
 export const MOCK_EDITOR_EMAIL = "editora@palabrario.app"
@@ -36,3 +36,65 @@ export const mockEditorProfile: UserProfile = new UserProfile({
 })
 
 export const mockUsers: UserProfile[] = [mockLearnerProfile, mockEditorProfile]
+
+export const mockAchievements: AchievementStatus[] = [
+  new AchievementStatus({
+    id_achievement: "a0000000-0000-4000-8000-000000000001",
+    code: "FIRST_WIN",
+    name: "Primera victoria",
+    description: "Win your first Arena match.",
+    category: "ARENA",
+    tier: "BRONZE",
+    icon_name: "trophy",
+    xp_reward: 50,
+    is_unlocked: true,
+    unlocked_at: "2026-01-20T19:00:00.000Z",
+  }),
+  new AchievementStatus({
+    id_achievement: "a0000000-0000-4000-8000-000000000002",
+    code: "PURE_CONSISTENCY",
+    name: "Constancia pura",
+    description: "Keep a 14-day study streak.",
+    category: "STREAK",
+    tier: "SILVER",
+    icon_name: "flame",
+    xp_reward: 150,
+    is_unlocked: true,
+    unlocked_at: "2026-02-14T08:30:00.000Z",
+  }),
+  new AchievementStatus({
+    id_achievement: "a0000000-0000-4000-8000-000000000003",
+    code: "COMMUNITY_VOICE",
+    name: "Voz de la comunidad",
+    description: "Publish a public deck that others study.",
+    category: "COMMUNITY",
+    tier: "GOLD",
+    icon_name: "award",
+    xp_reward: 300,
+    is_unlocked: true,
+    unlocked_at: "2026-02-28T16:45:00.000Z",
+  }),
+  new AchievementStatus({
+    id_achievement: "a0000000-0000-4000-8000-000000000004",
+    code: "DIAMOND_MIND",
+    name: "Mente de diamante",
+    description: "Reach a 100-day study streak.",
+    category: "STREAK",
+    tier: "DIAMOND",
+    icon_name: "flame",
+    xp_reward: 1000,
+    is_unlocked: false,
+    unlocked_at: null,
+  }),
+]
+
+/** Achievement codes unlocked per user_name. */
+export const mockUnlockedCodesByUser: Record<string, string[]> = {
+  camila_rojas: ["FIRST_WIN", "PURE_CONSISTENCY"],
+  valentina_ospina: ["FIRST_WIN", "PURE_CONSISTENCY", "COMMUNITY_VOICE"],
+}
+
+export const mockArenaStatsByUser: Record<string, { matches_won: number; podium_count: number }> = {
+  camila_rojas: { matches_won: 3, podium_count: 7 },
+  valentina_ospina: { matches_won: 24, podium_count: 41 },
+}

@@ -18,6 +18,7 @@ Canonical inventory of active and planned routes in app/. Read this file only wh
 | `/arena/history` | `arena-history` | `views/ArenaView.vue` | `app` | public | placeholder | 017 (impl: 019) |
 | `/studio` | `studio` | `views/StudioView.vue` | `app` | requireAuth | placeholder | 007 |
 | `/settings` | `settings` | `views/SettingsView.vue` | `app` | requireAuth | placeholder | 007 |
+| `/u/:username` | `profile` | `views/ProfileView.vue` | `app` | public | built | 026 |
 
 ## Layouts
 

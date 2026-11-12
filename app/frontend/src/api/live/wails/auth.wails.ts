@@ -2,6 +2,7 @@ import type { IAuthAPI } from "@/api/contract/auth.contract"
 import * as Wails from "@bindings/palabrario/app/app.js"
 import {
   AuthResponse,
+  type PublicUserProfile,
   type SignInRequest,
   type SignUpRequest,
   type UserProfile,
@@ -32,5 +33,9 @@ export class WailsAuthAdapter implements IAuthAPI {
 
   async getMe(): Promise<UserProfile | null> {
     return await Wails.GetMe()
+  }
+
+  async getPublicProfileByUsername(username: string): Promise<PublicUserProfile | null> {
+    return await Wails.GetPublicProfileByUsername(username)
   }
 }

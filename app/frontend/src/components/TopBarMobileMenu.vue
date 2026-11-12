@@ -40,6 +40,7 @@ function signOut() {
               <RouterLink to="/dictionary" class="text-base font-medium text-side" active-class="font-bold text-main" @click="open = false">Dictionary</RouterLink>
               <RouterLink to="/arena" class="text-base font-medium text-side" active-class="font-bold text-main" @click="open = false">Arena</RouterLink>
               <RouterLink to="/studio" class="text-base font-medium text-side" active-class="font-bold text-main" @click="open = false">Studio</RouterLink>
+              <RouterLink :to="`/u/${user.user_name}`" class="text-base font-medium text-side" active-class="font-bold text-main" @click="open = false">Profile</RouterLink>
               <RouterLink to="/settings" class="text-base font-medium text-side" active-class="font-bold text-main" @click="open = false">Settings</RouterLink>
             </nav>
             <div class="flex items-center gap-3 pt-4 border-t border-solid border-light">

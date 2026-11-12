@@ -66,6 +66,18 @@ const router = createRouter({
             ],
           },
         },
+        {
+          path: "u/:username",
+          name: "profile",
+          component: () => import("@/views/ProfileView.vue"),
+          meta: {
+            breadcrumb: [
+              { label: "Home", to: "/" },
+              { label: "Profile" },
+              { label: "User" },
+            ],
+          },
+        },
         { path: "studio", name: "studio", component: () => import("@/views/StudioView.vue") },
         { path: "settings", name: "settings", component: () => import("@/views/SettingsView.vue") },
       ],

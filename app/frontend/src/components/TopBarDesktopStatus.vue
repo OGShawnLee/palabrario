@@ -35,6 +35,7 @@ function signOut() {
             <span class="text-xs text-dull">@{{ user.user_name }}</span>
           </div>
           <div class="border-t border-solid border-light" />
+          <RouterLink :to="`/u/${user.user_name}`" class="text-sm font-medium text-side" active-class="font-bold text-main" @click="open = false">Profile</RouterLink>
           <RouterLink to="/settings" class="text-sm font-medium text-side" active-class="font-bold text-main" @click="open = false">Settings</RouterLink>
           <button type="button" class="bg-transparent text-left text-sm font-medium text-side" @click="signOut">Sign Out</button>
         </PopoverContent>

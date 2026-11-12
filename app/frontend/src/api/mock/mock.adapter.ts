@@ -15,6 +15,7 @@ import {
   type DeckSearchResult,
   MatchPackage,
   PublicMatchItem,
+  PublicUserProfile,
   type Region,
   type SignInRequest,
   type SignUpRequest,
@@ -25,7 +26,12 @@ import {
 import { mockCollectionDetails, mockCollections, mockDeckDetails, mockDecks } from "./fixtures/decks.fixture"
 import { mockPublicWaitingMatches } from "./fixtures/arena.fixture"
 import { mockRegions, mockWords } from "./fixtures/words.fixture"
-import { mockUsers } from "./fixtures/user.fixture"
+import {
+  mockAchievements,
+  mockArenaStatsByUser,
+  mockUnlockedCodesByUser,
+  mockUsers,
+} from "./fixtures/user.fixture"
 
 const SESSION_KEY = "palabrario_mock_session"
 const MOCK_TOKEN = "mock-session-token"
@@ -119,6 +125,53 @@ class MockAuthAPI implements IAuthAPI {
   async getMe(): Promise<UserProfile | null> {
     await delay()
     return this.session ? clone(this.session) : null
+  }
+
+  async getPublicProfileByUsername(username: string): Promise<PublicUserProfile | null> {
+    await delay()
+    const normalized = username.trim().replace(/^@/, "").toLowerCase()
+    if (!normalized) return null
+    const user = mockUsers.find((candidate) => candidate.user_name.toLowerCase() === normalized)
+    if (!user) return null
+
+    const isOwner = this.session?.id_user === user.id_user
+    const unlockedCodes = mockUnlockedCodesByUser[user.user_name] ?? []
+    const stats = mockArenaStatsByUser[user.user_name] ?? { matches_won: 0, podium_count: 0 }
+
+    return new PublicUserProfile({
+      id_user: user.id_user,
+      name: user.name,
+      user_name: user.user_name,
+      avatar_url: user.avatar_url,
+      anchor_dialect: user.anchor_dialect,
+      role: user.role,
+      total_xp: user.total_xp,
+      current_level: user.current_level,
+      current_streak: user.current_streak,
+      longest_streak: user.longest_streak,
+      unlocked_badges: clone(
+        mockAchievements.map((achievement) => ({
+          ...achievement,
+          is_unlocked: unlockedCodes.includes(achievement.code),
+          unlocked_at: unlockedCodes.includes(achievement.code) ? achievement.unlocked_at : null,
+        })),
+      ),
+      public_decks: clone(
+        mockDeckDetails.filter((deck) => deck.is_public && deck.id_user === user.id_user),
+      ),
+      public_collections: clone(
+        mockCollectionDetails.filter(
+          (collection) => collection.is_public && collection.id_user === user.id_user,
+        ),
+      ),
+      matches_won: stats.matches_won,
+      podium_count: stats.podium_count,
+      is_owner: isOwner,
+      email: isOwner ? user.email : null,
+      private_decks_count: isOwner ? 2 : null,
+      due_reviews_today: isOwner ? 12 : null,
+      created_at: user.created_at,
+    })
   }
 }
 

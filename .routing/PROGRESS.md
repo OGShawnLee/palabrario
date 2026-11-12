@@ -27,6 +27,7 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] `.tickets/023-add-collections-section-to-dictionary/` (`completed`): built broadsheet cultural editorial discovery section (`DictionaryCollectionsSection.vue`) in `DictionaryView.vue`, wired `saveDeck` / `unsaveDeck` across API adapters, and updated `$figma-prompt-craft` skill.
 - [x] `.tickets/017-build-arena-route/` (`completed`): built `/arena` lobby route, reusable Dialog components (`AppDialog.vue`, `AppDialogOverlay.vue`), `CreateMatchDialog.vue` (with subtitles), `JoinMatchDialog.vue` (dedicated private room PIN lookup & preview), `PublicRoomsTable.vue`, and end-to-end backend lookup query/endpoint (`GetWaitingMatchByRoomCode` / `GET /api/v1/arena/matches/code/{roomCode}`) with Wails bridge `FindMatchRoom`.
 - [x] `.tickets/025-build-word-detail-route/` (`completed`): built `/dictionary/word/:id` (`WordDetailView.vue`) with invalid-id guard, dynamic leaf breadcrumb, parameterized `WordOfTheDayCard.vue` (`eyebrow`, `headingTag`, `footerLink`, softened `Report Word` button), and updated `SearchModal.vue` dictionary navigation.
+- [x] `.tickets/026-build-profile-route/` (`completed`): built `/u/:username` (`ProfileView.vue`) in editorial Swiss-broadsheet style, wired `IAuthAPI.getPublicProfileByUsername` across Wails and Mock adapters, rendered unlocked-only achievements with temporary monochrome tier badges, added bottom owner-only strip, and added `"Profile"` links to TopBar menus.
 
 ## In progress
 *(None)*
@@ -91,5 +92,5 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [ ] Arena round timer needs a visible countdown state.
 
 ## Medal coloring
-- [ ] Medal tiers (Bronze, Silver, Gold, Platinum, Diamond) currently depend on color. In monochrome, differentiate them by label, weight, or shape.
-- [ ] Decide the medal representation before the achievements route is rebuilt.
+- [ ] Medal tiers (Bronze, Silver, Gold, Platinum, Diamond) currently depend on color. In monochrome, differentiate them by label, weight, or shape (currently rendered as temporary monochrome `badge-side` labels on `/u/:username`).
+- [ ] Decide the permanent monochrome medal tier visual treatment (weight, border, or iconography) before the achievements route is rebuilt.

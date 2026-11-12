@@ -1,5 +1,6 @@
 import type {
   AuthResponse,
+  PublicUserProfile,
   SignInRequest,
   SignUpRequest,
   UserProfile,
@@ -11,4 +12,5 @@ export interface IAuthAPI {
   signUp(req: SignUpRequest): Promise<AuthResponse | null>
   signOut(): Promise<void>
   getMe(): Promise<UserProfile | null>
+  getPublicProfileByUsername(username: string): Promise<PublicUserProfile | null>
 }
