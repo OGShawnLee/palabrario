@@ -34,12 +34,13 @@ Use exactly this structure:
 1. **Title:** `# <id> — <short outcome>`
 2. **Metadata table** with these rows: ID, Status, Model, Role, Spec (a link to `spec.md`).
 3. **Scope**
-   - "May create or edit": exact file paths.
-   - "Must not touch": exact paths or folders. Always include the Go backend and any file the worker should not modify.
+   - "May create or edit": exact file paths (or report-only output path for Investigation tickets).
+   - "Must not touch": exact paths or folders. Always include files outside the ticket's scope, `uno.config.ts` (unless explicitly approved), and the Go backend (unless it is an explicit backend/full-stack ticket).
+   - Explicitly state: **"No role (Router, Investigator, Implementer, Translator, or Reviewer) may commit, push, or merge without explicit user authorization."**
 4. **Inputs:** a link to each file the worker must read, using relative paths. List only what is needed. Name the exact section if only part of a file applies.
 5. **Task:** numbered steps in the order to do them.
 6. **Verification:** one line pointing to `spec.md`. The checks live there, not in `task.md`.
-7. **Change log:** where the worker writes `changelog.md` and exactly what it must record.
+7. **Change log:** where the worker writes `changelog.md` (or `report.md` for investigation tickets) and exactly what it must record.
 
 ## `spec.md`
 
@@ -47,7 +48,7 @@ Use exactly this structure:
 - Each check names a file, a number, or a command and the expected result.
 - Prefer checks that can be run: a file exists, a count matches, a command exits with 0, a search returns nothing.
 - Include a check that changes stay inside the ticket's scope.
-- Include a check for the commit when one is made: docs-only or code-only as required, English, Conventional Commits, with a detailed body.
+- Include a check confirming no unauthorized git commit/push was made, and (when commit is later authorized) that it uses English, Conventional Commits, and a detailed body.
 
 ## Writing rules for the worker's sake
 
@@ -55,6 +56,7 @@ Use exactly this structure:
 - Use exact paths, exact names, exact numbers. Never "the relevant files" or "a few".
 - Write steps as commands: "Create", "Translate", "Run". One action per step.
 - Say what **not** to do. Weaker agents tend to add or summarize on their own.
+- Always state that the worker must **not** run `git commit`, `git push`, or `git merge` (commit authority belongs solely to user authorization).
 - Do not use vague words: "appropriate", "clean", "nice", "as needed", "etc.", "if possible".
 - Give a concrete example when a rule is not obvious.
 - Give the expected output for any command.
@@ -65,11 +67,13 @@ Use exactly this structure:
 ## Model for the ticket
 
 Set the Model row from the roles in CONTEXT.md:
-- Implementation: Claude Sonnet 5.5.
+- Investigation (`research`): Gemini 4 Hydrogen, `thinking_level: high` (`gemini-4-hydrogen`).
+- Implementation (`implementation`): Gemini 4 Hydrogen, `thinking_level: medium` (`gemini-4-hydrogen`) by default.
 - Documentation translation: Gemini 3.8 Flash, high thinking.
+- Review (`review`): Gemini 4 Hydrogen, `thinking_level: high` (`gemini-4-hydrogen`) or Claude Sonnet 5.5.
 
 ## After writing
 
 1. Re-read the ticket once as if you were a weak agent. If you would have to guess anything, fix it or ask the user.
 2. Tell the user the ticket path and any open point.
-3. Do not hand out the ticket. The router does that after the user confirms.
+3. Do not hand out the ticket or commit anything. The router hands out the ticket only after the user confirms.

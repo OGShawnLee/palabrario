@@ -33,16 +33,18 @@ Central routing directory for all agents. Read this first.
 - Commits: English, Conventional Commits, with a detailed body describing what changed.
 - Documentation translation commits contain documentation changes only, with no code changes.
 - The academic spec ([1-PROJECT-SPECIFICATION.md](../.context/academic/1-PROJECT-SPECIFICATION.md)) stays in Spanish and is not translated.
-- The Go backend is not modified.
+- The Go backend is not modified during standard frontend routes, except when the user approves a dedicated full-stack or backend ticket (e.g., auth hardening, schema/query extensions).
+- **No role (Router, Investigator, Implementer, Translator, or Reviewer) may commit, push, or merge without explicit user authorization.**
 - [packages/ui](../packages/ui) is ignored by the rebuild. Deleting it is deferred.
 - No frontend tests exist, and none are planned yet.
 - Toolchain: Go, Bun, and Wails 3 are installed and the app runs.
 
 ## Agent roles
-- **Router:** Claude Opus 5.5 (`claude-opus-5-5`) or Gemini 4 Argon (`gemini-4-argon`), to be chosen. Tracks progress, acts as the domain expert, creates tickets, and hands them out. Its instructions are in the [router skill](../.claude/skills/router/SKILL.md). Tickets are created with the [ticket skill](../.claude/skills/ticket/SKILL.md).
-- **Workers:** Claude Sonnet 5.5 (`claude-sonnet-5-5`), one ticket at a time, no reviewer for now.
-- **Translators:** Gemini 3.8 Flash (`gemini-3.8-flash`) through the Antigravity provider, for documentation translation.
-- **Reviewer:** the user. The user reads the code and may spawn an agent.
+- **Router:** Coordinates the project, tracks progress, maintains `.routing/`, creates tickets, dispatches subagents, and runs final `spec.md` acceptance checks. Does not write app code and never commits without explicit user authorization. Instructions live in the [router skill](../.claude/skills/router/SKILL.md); tickets use the [ticket skill](../.claude/skills/ticket/SKILL.md).
+- **Investigator (`research`):** Audits cross-layer codebases, database schemas, contracts, and edge cases before complex or cross-layer tickets are written. Produces a structured findings report; does not edit source code and never commits.
+- **Implementer (`implementation`):** Default: Gemini 4 Hydrogen, `thinking_level: medium` (`gemini-4-hydrogen`). Executes one ticket at a time strictly within its declared `Scope`. Logs proposals/changes in `changelog.md` and never commits without explicit user authorization.
+- **Translator (`implementation`, docs-only):** Gemini 3.8 Flash (`gemini-3.8-flash`) through the Antigravity provider, for documentation translation only. Never commits without explicit user authorization.
+- **Reviewer (`review`):** Inspects completed diffs against `spec.md`, security boundaries, error paths, race conditions, and ground rules before Router acceptance (with the user holding final sign-off). Does not modify source code and never commits.
 - Workers must not modify files outside their ticket's scope.
 - Workers do not edit [uno.config.ts](../app/frontend/uno.config.ts) directly. They log proposed shortcuts or tokens for the router to approve.
-- The router accepts a ticket only after its spec checks pass, not on the worker's self-report.
+- The router accepts a ticket only after its spec checks (and any Reviewer audit) pass, not on the worker's self-report.
