@@ -7,18 +7,18 @@ Canonical inventory of active and planned routes in app/. Read this file only wh
 | Path | Name | View | Layout | Access | Status | Ticket |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `/` | `home` | `views/HomeView.vue` | `app` | public | built | 004 |
-| `/auth/sign-in` | `sign-in` | `views/auth/SignInView.vue` | `auth` | guest only | built | 005, 027 |
-| `/auth/sign-up` | `sign-up` | `views/auth/SignUpView.vue` | `auth` | guest only | built | 005, 027 |
+| `/auth/sign-in` | `sign-in` | `views/auth/SignInView.vue` | `auth` | guest only | built | 005, 027, 033 |
+| `/auth/sign-up` | `sign-up` | `views/auth/SignUpView.vue` | `auth` | guest only | built | 005, 027, 033 |
 | `/dictionary` | `dictionary` | `views/DictionaryView.vue` | `app` | public | built | 009, 015, 023 |
 | `/dictionary/word/:id` | `word-detail` | `views/WordDetailView.vue` | `app` | public | built | 025 |
 | `/collections` | `collections` | `views/CollectionsView.vue` | `app` | public | built | 010 |
 | `/collections/:id` | `collection-detail` | `views/CollectionDetailView.vue` | `app` | public | built | 021 |
 | `/decks` | `decks` | `views/DecksView.vue` | `app` | public | built | 011 |
-| `/arena` | `arena` | `views/ArenaView.vue` | `app` | public | built | 017 |
-| `/arena/history` | `arena-history` | `views/ArenaView.vue` | `app` | public | placeholder | 017 (impl: 019) |
-| `/studio` | `studio` | `views/StudioView.vue` | `app` | requireAuth | placeholder | 007 |
-| `/settings` | `settings` | `views/SettingsView.vue` | `app` | requireAuth | placeholder | 007 |
-| `/u/:username` | `profile` | `views/ProfileView.vue` | `app` | public | built | 026 |
+| `/arena` | `arena` | `views/ArenaView.vue` | `app` | public | built | 017, 033 |
+| `/arena/history` | `arena-history` | `views/ArenaView.vue` | `app` | requireAuth | placeholder | 017, 033 (impl: 019) |
+| `/studio` | `studio` | `views/StudioView.vue` | `app` | requireAuth | placeholder | 007, 033 |
+| `/settings` | `settings` | `views/SettingsView.vue` | `app` | requireAuth | placeholder | 007, 033 |
+| `/u/:username` | `profile` | `views/ProfileView.vue` | `app` | public | built | 026, 033 |
 
 ## Layouts
 
@@ -27,7 +27,7 @@ Canonical inventory of active and planned routes in app/. Read this file only wh
 
 ## Guards
 
-No navigation guards are currently active in code (`app/frontend/src/router/index.ts` is open hash routing), and guard logic (`guestOnly`, `requireAuth`) will be wired alongside backend session state.
+`app/frontend/src/router/index.ts` runs `await init()` inside `router.beforeEach` on every navigation (including `/auth/*`), redirects unauthenticated users away from `meta.requiresAuth` routes (`/studio`, `/settings`, `/arena/history`) to `/auth/sign-in?redirect=...`, redirects authenticated users away from `meta.guestOnly` routes (`/auth/sign-in`, `/auth/sign-up`) to `/dictionary`, and redirects protected routes to `/auth/sign-in` on live `auth:expired` eviction.
 
 ## Ownership Rules
 

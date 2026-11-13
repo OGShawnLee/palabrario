@@ -37,17 +37,18 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 
 - [x] `.tickets/033-align-frontend-auth-and-guards/` (`completed`): removed `AuthResponse`/`hasActiveSession()` from `IAuthAPI`, aligned `MockAuthAPI` (passwords, suspended fixture/checks, `core-service` validation) & `WailsAuthAdapter` (`"auth:expired"` Events.On, 404 null mapping), wired `onSessionExpired` + `sessionNotice` in `useAuth()`, added `router.beforeEach` session hydration + `requiresAuth`/`guestOnly` guards, tightened `SignUpView`/`ProfileView`/`ArenaView` auth UX, updated `.routing/API.md`, and verified `wails3 task check` exit code `0`.
 
+- [x] `.tickets/034-verify-and-review-auth-refactor/` (`completed`): read-only Reviewer gate `APPROVED` in `review.md`; verified all `DB-*`, `CORE-*`, `SIB-*`, `BFF-*`, and `FE-*` findings against `028/report.md` and confirmed `-race` suites (`pkg`, `realtime-service`, `image-service`, `core-service` on `:5433`, `app`) plus `wails3 task check` all exit `0`.
+
 ## In progress
 - None.
 
 ## Draft tickets
 - [ ] `.tickets/019-build-arena-history-route/` (`draft`): expand `IArenaAPI` and build dedicated `/arena/history` route and 3NF round-by-round replay modal (`MatchReplayDialog.vue`) backed by `api.arena`.
 - [ ] `.tickets/024-backend-dynamic-region-detection/` (`ready`): implement dynamic top 1-3 dialect region detection in PostgreSQL / sqlc for Collections and Decks (`region_names text[]`).
-- [ ] `.tickets/034-verify-and-review-auth-refactor/` (`draft`): read-only Reviewer gate and full Go/Postgres/Wails test verification across Tickets `029`–`033`.
 
 ## Next steps
-- [ ] Commit Ticket `033` once user authorizes, then hand out Reviewer Ticket `034` (remember to double-check `task:test:up` / Postgres test DB readiness).
-- [ ] Implement live WebSocket match room (`ConnectArenaRoom`) and interactive in-game multiplayer match screen after `/arena` lobby route and auth hardening are complete.
+- [ ] Hand out ready backend ticket `.tickets/024-backend-dynamic-region-detection/` or continue the Arena route (`/arena/history` in `.tickets/019-build-arena-history-route/` or live WebSocket match room `ConnectArenaRoom`).
+- [ ] Implement remaining protected routes (`/studio`, `/settings`) now that `router.beforeEach` (`requiresAuth`), Option B middleware, and Wails dual-token refresh are in place.
 - [ ] Decide what happens to the Capacitor adapter (`live/http/`) during the frontend rebuild (prepared cleanly by `IAuthAPI` changes in Ticket `033`).
 
 ## Agent workflow
