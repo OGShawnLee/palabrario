@@ -218,7 +218,21 @@ SELECT
     c.is_featured,
     c.is_official,
     c.created_at,
-    c.updated_at
+    c.updated_at,
+    COALESCE((
+        SELECT array_agg(sub.name)
+        FROM (
+            SELECT r.name
+            FROM collection_decks cd
+            JOIN deck_items di ON di.id_deck = cd.id_deck
+            JOIN senses s ON s.id_sense = di.id_sense
+            JOIN regions r ON r.id_region = s.id_region
+            WHERE cd.id_collection = c.id_collection
+            GROUP BY r.id_region, r.name
+            ORDER BY count(*) DESC, r.name ASC
+            LIMIT 3
+        ) sub
+    ), '{}'::TEXT[])::TEXT[] AS region_names
 FROM collections c
 WHERE c.id_collection = $1
 `
@@ -233,6 +247,7 @@ type GetCollectionByIDRow struct {
 	IsOfficial   bool               `json:"is_official"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	RegionNames  []string           `json:"region_names"`
 }
 
 // 15. Detalle de Colección
@@ -249,6 +264,7 @@ func (q *Queries) GetCollectionByID(ctx context.Context, idCollection int32) (Ge
 		&i.IsOfficial,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RegionNames,
 	)
 	return i, err
 }
@@ -263,7 +279,20 @@ SELECT
     d.is_official,
     d.created_at,
     d.updated_at,
-    (SELECT count(*)::INT FROM deck_items di WHERE di.id_deck = d.id_deck) AS item_count
+    (SELECT count(*)::INT FROM deck_items di WHERE di.id_deck = d.id_deck) AS item_count,
+    COALESCE((
+        SELECT array_agg(sub.name)
+        FROM (
+            SELECT r.name
+            FROM deck_items di
+            JOIN senses s ON s.id_sense = di.id_sense
+            JOIN regions r ON r.id_region = s.id_region
+            WHERE di.id_deck = d.id_deck
+            GROUP BY r.id_region, r.name
+            ORDER BY count(*) DESC, r.name ASC
+            LIMIT 3
+        ) sub
+    ), '{}'::TEXT[])::TEXT[] AS region_names
 FROM decks d
 WHERE d.id_deck = $1
 `
@@ -278,6 +307,7 @@ type GetDeckByIDRow struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 	ItemCount   int32              `json:"item_count"`
+	RegionNames []string           `json:"region_names"`
 }
 
 // 3. Detalle de Baraja
@@ -294,6 +324,7 @@ func (q *Queries) GetDeckByID(ctx context.Context, idDeck int32) (GetDeckByIDRow
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ItemCount,
+		&i.RegionNames,
 	)
 	return i, err
 }
@@ -348,7 +379,20 @@ SELECT
     d.is_official,
     d.created_at,
     d.updated_at,
-    (SELECT count(*)::INT FROM deck_items di WHERE di.id_deck = d.id_deck) AS item_count
+    (SELECT count(*)::INT FROM deck_items di WHERE di.id_deck = d.id_deck) AS item_count,
+    COALESCE((
+        SELECT array_agg(sub.name)
+        FROM (
+            SELECT r.name
+            FROM deck_items di
+            JOIN senses s ON s.id_sense = di.id_sense
+            JOIN regions r ON r.id_region = s.id_region
+            WHERE di.id_deck = d.id_deck
+            GROUP BY r.id_region, r.name
+            ORDER BY count(*) DESC, r.name ASC
+            LIMIT 3
+        ) sub
+    ), '{}'::TEXT[])::TEXT[] AS region_names
 FROM collection_decks cd
 JOIN decks d ON d.id_deck = cd.id_deck
 WHERE cd.id_collection = $1
@@ -367,6 +411,7 @@ type ListCollectionDecksRow struct {
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	ItemCount    int32              `json:"item_count"`
+	RegionNames  []string           `json:"region_names"`
 }
 
 // 16. Listar Barajas de una Colección
@@ -391,6 +436,7 @@ func (q *Queries) ListCollectionDecks(ctx context.Context, idCollection int32) (
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ItemCount,
+			&i.RegionNames,
 		); err != nil {
 			return nil, err
 		}
@@ -521,7 +567,21 @@ SELECT
     c.is_featured,
     c.is_official,
     c.created_at,
-    c.updated_at
+    c.updated_at,
+    COALESCE((
+        SELECT array_agg(sub.name)
+        FROM (
+            SELECT r.name
+            FROM collection_decks cd
+            JOIN deck_items di ON di.id_deck = cd.id_deck
+            JOIN senses s ON s.id_sense = di.id_sense
+            JOIN regions r ON r.id_region = s.id_region
+            WHERE cd.id_collection = c.id_collection
+            GROUP BY r.id_region, r.name
+            ORDER BY count(*) DESC, r.name ASC
+            LIMIT 3
+        ) sub
+    ), '{}'::TEXT[])::TEXT[] AS region_names
 FROM collections c
 WHERE c.is_public = true
   AND ($1::BOOLEAN IS NULL OR $1::BOOLEAN = false OR c.is_featured = true)
@@ -538,6 +598,7 @@ type ListPublicCollectionsRow struct {
 	IsOfficial   bool               `json:"is_official"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	RegionNames  []string           `json:"region_names"`
 }
 
 // ==============================================================================
@@ -563,6 +624,7 @@ func (q *Queries) ListPublicCollections(ctx context.Context, featuredOnly pgtype
 			&i.IsOfficial,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RegionNames,
 		); err != nil {
 			return nil, err
 		}
@@ -585,7 +647,20 @@ SELECT
     d.is_official,
     d.created_at,
     d.updated_at,
-    (SELECT count(*)::INT FROM deck_items di WHERE di.id_deck = d.id_deck) AS item_count
+    (SELECT count(*)::INT FROM deck_items di WHERE di.id_deck = d.id_deck) AS item_count,
+    COALESCE((
+        SELECT array_agg(sub.name)
+        FROM (
+            SELECT r.name
+            FROM deck_items di
+            JOIN senses s ON s.id_sense = di.id_sense
+            JOIN regions r ON r.id_region = s.id_region
+            WHERE di.id_deck = d.id_deck
+            GROUP BY r.id_region, r.name
+            ORDER BY count(*) DESC, r.name ASC
+            LIMIT 3
+        ) sub
+    ), '{}'::TEXT[])::TEXT[] AS region_names
 FROM decks d
 WHERE d.is_public = true
   AND ($1::VARCHAR IS NULL OR $1::VARCHAR = '' OR d.title ILIKE '%' || $1::VARCHAR || '%' OR coalesce(d.description, '') ILIKE '%' || $1::VARCHAR || '%')
@@ -608,6 +683,7 @@ type ListPublicDecksRow struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 	ItemCount   int32              `json:"item_count"`
+	RegionNames []string           `json:"region_names"`
 }
 
 // ==============================================================================
@@ -633,6 +709,7 @@ func (q *Queries) ListPublicDecks(ctx context.Context, arg ListPublicDecksParams
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ItemCount,
+			&i.RegionNames,
 		); err != nil {
 			return nil, err
 		}
@@ -655,7 +732,21 @@ SELECT
     c.is_official,
     c.created_at,
     c.updated_at,
-    (c.id_user != $1)::BOOLEAN AS is_saved_from_community
+    (c.id_user != $1)::BOOLEAN AS is_saved_from_community,
+    COALESCE((
+        SELECT array_agg(sub.name)
+        FROM (
+            SELECT r.name
+            FROM collection_decks cd
+            JOIN deck_items di ON di.id_deck = cd.id_deck
+            JOIN senses s ON s.id_sense = di.id_sense
+            JOIN regions r ON r.id_region = s.id_region
+            WHERE cd.id_collection = c.id_collection
+            GROUP BY r.id_region, r.name
+            ORDER BY count(*) DESC, r.name ASC
+            LIMIT 3
+        ) sub
+    ), '{}'::TEXT[])::TEXT[] AS region_names
 FROM collections c
 WHERE c.id_user = $1 
    OR (c.is_public = true AND EXISTS (SELECT 1 FROM saved_collections sc WHERE sc.id_collection = c.id_collection AND sc.id_user = $1))
@@ -673,6 +764,7 @@ type ListStudioCollectionsRow struct {
 	CreatedAt            pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 	IsSavedFromCommunity bool               `json:"is_saved_from_community"`
+	RegionNames          []string           `json:"region_names"`
 }
 
 // 14. Listar Colecciones del Studio Personal
@@ -696,6 +788,7 @@ func (q *Queries) ListStudioCollections(ctx context.Context, userID uuid.UUID) (
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.IsSavedFromCommunity,
+			&i.RegionNames,
 		); err != nil {
 			return nil, err
 		}
@@ -720,6 +813,19 @@ SELECT
     u.user_name AS owner_user_name,
     (d.id_user != $1)::BOOLEAN AS is_saved_from_community,
     (SELECT count(*)::INT FROM deck_items di WHERE di.id_deck = d.id_deck) AS item_count,
+    COALESCE((
+        SELECT array_agg(sub.name)
+        FROM (
+            SELECT r.name
+            FROM deck_items di
+            JOIN senses s ON s.id_sense = di.id_sense
+            JOIN regions r ON r.id_region = s.id_region
+            WHERE di.id_deck = d.id_deck
+            GROUP BY r.id_region, r.name
+            ORDER BY count(*) DESC, r.name ASC
+            LIMIT 3
+        ) sub
+    ), '{}'::TEXT[])::TEXT[] AS region_names,
     (
         SELECT count(*)::INT 
         FROM deck_items di
@@ -752,6 +858,7 @@ type ListStudioDecksRow struct {
 	OwnerUserName        string             `json:"owner_user_name"`
 	IsSavedFromCommunity bool               `json:"is_saved_from_community"`
 	ItemCount            int32              `json:"item_count"`
+	RegionNames          []string           `json:"region_names"`
 	DueCardsToday        int32              `json:"due_cards_today"`
 	RetentionPercent     float32            `json:"retention_percent"`
 }
@@ -778,6 +885,7 @@ func (q *Queries) ListStudioDecks(ctx context.Context, userID uuid.UUID) ([]List
 			&i.OwnerUserName,
 			&i.IsSavedFromCommunity,
 			&i.ItemCount,
+			&i.RegionNames,
 			&i.DueCardsToday,
 			&i.RetentionPercent,
 		); err != nil {

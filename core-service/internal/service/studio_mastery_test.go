@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"reflect"
 	"testing"
 	"time"
 
@@ -572,3 +573,222 @@ func TestStudioService_SearchCollections_PostgresFTS(t *testing.T) {
 		t.Errorf("se esperaba slice vacío para query vacía, obtenido: %+v", emptyResults)
 	}
 }
+
+func TestStudioService_DynamicRegionDetection(t *testing.T) {
+	testDB := testutil.SetupTestDB(t)
+	if testDB == nil {
+		return
+	}
+
+	studioSvc := service.NewStudioService(testDB)
+	ctx := context.Background()
+
+	adminID := "b1111111-0000-0000-0000-000000000001" // ADMIN
+	gaelID := "b1111111-0000-0000-0000-000000000003"  // LEARNER
+
+	// 1. Seeded Deck 1 ('Mexicanismos Indispensables') contains only México senses.
+	seededDeck, err := studioSvc.GetDeckDetail(ctx, &gaelID, utils.ToPtr(models.RoleLearner), 1)
+	if err != nil {
+		t.Fatalf("GetDeckDetail(1) failed: %v", err)
+	}
+	if !reflect.DeepEqual(seededDeck.RegionNames, []string{"México"}) {
+		t.Errorf("expected seeded deck RegionNames [México], got %#v", seededDeck.RegionNames)
+	}
+
+	// 2. Empty deck guarantees non-nil []string{} across Create, Update, Get, ListPublic, ListStudio.
+	emptyDeck, err := studioSvc.CreateDeck(ctx, gaelID, models.RoleLearner, models.CreateDeckRequest{
+		Title:    "Baraja Vacía Sin Regiones",
+		IsPublic: true,
+	})
+	if err != nil {
+		t.Fatalf("CreateDeck empty failed: %v", err)
+	}
+	if emptyDeck.RegionNames == nil || len(emptyDeck.RegionNames) != 0 {
+		t.Errorf("expected non-nil empty RegionNames on CreateDeck, got %#v", emptyDeck.RegionNames)
+	}
+
+	updatedEmptyDeck, err := studioSvc.UpdateDeck(ctx, gaelID, models.RoleLearner, emptyDeck.IDDeck, models.UpdateDeckRequest{
+		Title:    "Baraja Vacía Actualizada",
+		IsPublic: true,
+	})
+	if err != nil {
+		t.Fatalf("UpdateDeck empty failed: %v", err)
+	}
+	if updatedEmptyDeck.RegionNames == nil || len(updatedEmptyDeck.RegionNames) != 0 {
+		t.Errorf("expected non-nil empty RegionNames on UpdateDeck, got %#v", updatedEmptyDeck.RegionNames)
+	}
+
+	emptyDeckDetail, err := studioSvc.GetDeckDetail(ctx, &gaelID, utils.ToPtr(models.RoleLearner), emptyDeck.IDDeck)
+	if err != nil {
+		t.Fatalf("GetDeckDetail empty failed: %v", err)
+	}
+	if emptyDeckDetail.RegionNames == nil || len(emptyDeckDetail.RegionNames) != 0 {
+		t.Errorf("expected non-nil empty RegionNames on GetDeckDetail, got %#v", emptyDeckDetail.RegionNames)
+	}
+
+	// 3. Populated multi-region deck (>3 regions) verifies count DESC, name ASC, LIMIT 3:
+	// Senses: 101(MX), 102(MX), 103(CU), 104(CL), 106(ES) => MX:2, CL:1, CU:1, ES:1 -> top 3: [México, Chile, Cuba]
+	multiDeck, err := studioSvc.CreateDeck(ctx, adminID, models.RoleAdmin, models.CreateDeckRequest{
+		Title:    "Baraja Multirregional",
+		IsPublic: true,
+		SenseIDs: []int{101, 102, 103, 104, 106},
+	})
+	if err != nil {
+		t.Fatalf("CreateDeck multi failed: %v", err)
+	}
+
+	// Secondary deck: 104(CL), 106(ES) => [Chile, España]
+	secondaryDeck, err := studioSvc.CreateDeck(ctx, adminID, models.RoleAdmin, models.CreateDeckRequest{
+		Title:    "Baraja Chile y España",
+		IsPublic: true,
+		SenseIDs: []int{104, 106},
+	})
+	if err != nil {
+		t.Fatalf("CreateDeck secondary failed: %v", err)
+	}
+
+	expectedMulti := []string{"México", "Chile", "Cuba"}
+	multiDetail, err := studioSvc.GetDeckDetail(ctx, &adminID, utils.ToPtr(models.RoleAdmin), multiDeck.IDDeck)
+	if err != nil {
+		t.Fatalf("GetDeckDetail multi failed: %v", err)
+	}
+	if !reflect.DeepEqual(multiDetail.RegionNames, expectedMulti) {
+		t.Errorf("expected GetDeckDetail RegionNames %v, got %#v", expectedMulti, multiDetail.RegionNames)
+	}
+
+	publicDecks, err := studioSvc.ListPublicDecks(ctx, nil, nil)
+	if err != nil {
+		t.Fatalf("ListPublicDecks failed: %v", err)
+	}
+	foundMultiPublic := false
+	foundEmptyPublic := false
+	for _, d := range publicDecks {
+		if d.IDDeck == multiDeck.IDDeck {
+			foundMultiPublic = true
+			if !reflect.DeepEqual(d.RegionNames, expectedMulti) {
+				t.Errorf("ListPublicDecks multi RegionNames = %#v, want %v", d.RegionNames, expectedMulti)
+			}
+		}
+		if d.IDDeck == emptyDeck.IDDeck {
+			foundEmptyPublic = true
+			if d.RegionNames == nil || len(d.RegionNames) != 0 {
+				t.Errorf("ListPublicDecks empty RegionNames = %#v, want []string{}", d.RegionNames)
+			}
+		}
+	}
+	if !foundMultiPublic || !foundEmptyPublic {
+		t.Fatalf("expected both multi (%v) and empty (%v) decks in ListPublicDecks", foundMultiPublic, foundEmptyPublic)
+	}
+
+	studioDecks, err := studioSvc.ListStudioDecks(ctx, adminID)
+	if err != nil {
+		t.Fatalf("ListStudioDecks failed: %v", err)
+	}
+	foundMultiStudio := false
+	for _, sd := range studioDecks {
+		if sd.IDDeck == multiDeck.IDDeck {
+			foundMultiStudio = true
+			if !reflect.DeepEqual(sd.RegionNames, expectedMulti) {
+				t.Errorf("ListStudioDecks multi RegionNames = %#v, want %v", sd.RegionNames, expectedMulti)
+			}
+		}
+	}
+	if !foundMultiStudio {
+		t.Fatalf("expected multiDeck in ListStudioDecks for admin")
+	}
+
+	// 4. Empty collection guarantees non-nil []string{} across Create, Update, Get, ListPublic, ListStudio.
+	emptyCol, err := studioSvc.CreateCollection(ctx, gaelID, models.RoleLearner, models.CreateCollectionRequest{
+		Title:    "Colección Vacía",
+		IsPublic: true,
+	})
+	if err != nil {
+		t.Fatalf("CreateCollection empty failed: %v", err)
+	}
+	if emptyCol.RegionNames == nil || len(emptyCol.RegionNames) != 0 {
+		t.Errorf("expected non-nil empty RegionNames on CreateCollection, got %#v", emptyCol.RegionNames)
+	}
+
+	updatedEmptyCol, err := studioSvc.UpdateCollection(ctx, gaelID, models.RoleLearner, emptyCol.IDCollection, models.UpdateCollectionRequest{
+		Title:    "Colección Vacía Editada",
+		IsPublic: true,
+	})
+	if err != nil {
+		t.Fatalf("UpdateCollection empty failed: %v", err)
+	}
+	if updatedEmptyCol.RegionNames == nil || len(updatedEmptyCol.RegionNames) != 0 {
+		t.Errorf("expected non-nil empty RegionNames on UpdateCollection, got %#v", updatedEmptyCol.RegionNames)
+	}
+
+	// 5. Populated collection aggregating multiDeck (MX:2, CL:1, CU:1, ES:1) + secondaryDeck (CL:1, ES:1)
+	// Aggregated counts: Chile:2, España:2, México:2, Cuba:1 -> alphabetical tiebreak LIMIT 3: [Chile, España, México]
+	popCol, err := studioSvc.CreateCollection(ctx, adminID, models.RoleAdmin, models.CreateCollectionRequest{
+		Title:      "Ruta Dialectal Variada",
+		IsPublic:   true,
+		IsOfficial: true,
+		DeckIDs:    []int{multiDeck.IDDeck, secondaryDeck.IDDeck},
+	})
+	if err != nil {
+		t.Fatalf("CreateCollection populated failed: %v", err)
+	}
+
+	expectedColRegions := []string{"Chile", "España", "México"}
+	colDetail, err := studioSvc.GetCollectionDetail(ctx, &adminID, utils.ToPtr(models.RoleAdmin), popCol.IDCollection)
+	if err != nil {
+		t.Fatalf("GetCollectionDetail populated failed: %v", err)
+	}
+	if !reflect.DeepEqual(colDetail.RegionNames, expectedColRegions) {
+		t.Errorf("GetCollectionDetail RegionNames = %#v, want %v", colDetail.RegionNames, expectedColRegions)
+	}
+	if len(colDetail.Decks) != 2 {
+		t.Fatalf("expected 2 nested decks, got %d", len(colDetail.Decks))
+	}
+	if !reflect.DeepEqual(colDetail.Decks[0].RegionNames, expectedMulti) {
+		t.Errorf("nested deck[0] RegionNames = %#v, want %v", colDetail.Decks[0].RegionNames, expectedMulti)
+	}
+	if !reflect.DeepEqual(colDetail.Decks[1].RegionNames, []string{"Chile", "España"}) {
+		t.Errorf("nested deck[1] RegionNames = %#v, want [Chile España]", colDetail.Decks[1].RegionNames)
+	}
+
+	publicCols, err := studioSvc.ListPublicCollections(ctx, nil)
+	if err != nil {
+		t.Fatalf("ListPublicCollections failed: %v", err)
+	}
+	foundPopPublic := false
+	foundEmptyColPublic := false
+	for _, c := range publicCols {
+		if c.IDCollection == popCol.IDCollection {
+			foundPopPublic = true
+			if !reflect.DeepEqual(c.RegionNames, expectedColRegions) {
+				t.Errorf("ListPublicCollections pop RegionNames = %#v, want %v", c.RegionNames, expectedColRegions)
+			}
+		}
+		if c.IDCollection == emptyCol.IDCollection {
+			foundEmptyColPublic = true
+			if c.RegionNames == nil || len(c.RegionNames) != 0 {
+				t.Errorf("ListPublicCollections empty RegionNames = %#v, want []string{}", c.RegionNames)
+			}
+		}
+	}
+	if !foundPopPublic || !foundEmptyColPublic {
+		t.Fatalf("expected both populated (%v) and empty (%v) collections in ListPublicCollections", foundPopPublic, foundEmptyColPublic)
+	}
+
+	studioCols, err := studioSvc.ListStudioCollections(ctx, adminID)
+	if err != nil {
+		t.Fatalf("ListStudioCollections failed: %v", err)
+	}
+	foundPopStudio := false
+	for _, c := range studioCols {
+		if c.IDCollection == popCol.IDCollection {
+			foundPopStudio = true
+			if !reflect.DeepEqual(c.RegionNames, expectedColRegions) {
+				t.Errorf("ListStudioCollections pop RegionNames = %#v, want %v", c.RegionNames, expectedColRegions)
+			}
+		}
+	}
+	if !foundPopStudio {
+		t.Fatalf("expected popCol in ListStudioCollections for admin")
+	}
+}
+

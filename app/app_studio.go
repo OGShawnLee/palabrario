@@ -12,6 +12,27 @@ import (
 // MÓDULO 6: Studio Personal, Repetición Espaciada SM-2 y Maestría (CU10–CU13)
 // =============================================================================
 
+func normalizeDeckRegions(d *models.Deck) {
+	if d == nil {
+		return
+	}
+	if d.RegionNames == nil {
+		d.RegionNames = []string{}
+	}
+}
+
+func normalizeCollectionRegions(c *models.Collection) {
+	if c == nil {
+		return
+	}
+	if c.RegionNames == nil {
+		c.RegionNames = []string{}
+	}
+	for i := range c.Decks {
+		normalizeDeckRegions(&c.Decks[i])
+	}
+}
+
 // ExplorePublicCollections lista colecciones públicas con filtro de destacadas.
 func (a *App) ExplorePublicCollections(featured bool) ([]models.Collection, error) {
 	return a.ListCollections(featured)
@@ -29,6 +50,9 @@ func (a *App) ListCollections(featured bool) ([]models.Collection, error) {
 	}
 	if list == nil {
 		list = []models.Collection{}
+	}
+	for i := range list {
+		normalizeCollectionRegions(&list[i])
 	}
 	return list, nil
 }
@@ -68,6 +92,7 @@ func (a *App) GetCollection(id int) (*models.Collection, error) {
 	if err := a.doRequest(a.context(), http.MethodGet, targetURL, nil, &col); err != nil {
 		return nil, err
 	}
+	normalizeCollectionRegions(&col)
 	return &col, nil
 }
 
@@ -95,6 +120,9 @@ func (a *App) ListDecks(q string, officialOnly bool) ([]models.Deck, error) {
 	}
 	if list == nil {
 		list = []models.Deck{}
+	}
+	for i := range list {
+		normalizeDeckRegions(&list[i])
 	}
 	return list, nil
 }
@@ -134,6 +162,7 @@ func (a *App) GetDeck(id int) (*models.Deck, error) {
 	if err := a.doRequest(a.context(), http.MethodGet, targetURL, nil, &deck); err != nil {
 		return nil, err
 	}
+	normalizeDeckRegions(&deck)
 	return &deck, nil
 }
 
@@ -168,6 +197,9 @@ func (a *App) ListStudioDecks() ([]models.StudioDeckSummary, error) {
 	if list == nil {
 		list = []models.StudioDeckSummary{}
 	}
+	for i := range list {
+		normalizeDeckRegions(&list[i].Deck)
+	}
 	return list, nil
 }
 
@@ -177,6 +209,7 @@ func (a *App) CreateDeck(req models.CreateDeckRequest) (*models.Deck, error) {
 	if err := a.doRequest(a.context(), http.MethodPost, a.coreURL+"/api/v1/decks", req, &deck); err != nil {
 		return nil, err
 	}
+	normalizeDeckRegions(&deck)
 	return &deck, nil
 }
 
@@ -187,6 +220,7 @@ func (a *App) UpdateDeck(id int, req models.UpdateDeckRequest) (*models.Deck, er
 	if err := a.doRequest(a.context(), http.MethodPut, targetURL, req, &deck); err != nil {
 		return nil, err
 	}
+	normalizeDeckRegions(&deck)
 	return &deck, nil
 }
 
@@ -235,6 +269,9 @@ func (a *App) ListStudioCollections() ([]models.Collection, error) {
 	if list == nil {
 		list = []models.Collection{}
 	}
+	for i := range list {
+		normalizeCollectionRegions(&list[i])
+	}
 	return list, nil
 }
 
@@ -244,6 +281,7 @@ func (a *App) CreateCollection(req models.CreateCollectionRequest) (*models.Coll
 	if err := a.doRequest(a.context(), http.MethodPost, a.coreURL+"/api/v1/collections", req, &col); err != nil {
 		return nil, err
 	}
+	normalizeCollectionRegions(&col)
 	return &col, nil
 }
 
@@ -254,6 +292,7 @@ func (a *App) UpdateCollection(id int, req models.UpdateCollectionRequest) (*mod
 	if err := a.doRequest(a.context(), http.MethodPut, targetURL, req, &col); err != nil {
 		return nil, err
 	}
+	normalizeCollectionRegions(&col)
 	return &col, nil
 }
 

@@ -34,6 +34,7 @@ type Deck struct {
 	IsPublic    bool       `json:"is_public"`
 	IsOfficial  bool       `json:"is_official"`
 	ItemCount   int        `json:"item_count"`
+	RegionNames []string   `json:"region_names"`
 	Items       []DeckItem `json:"items,omitempty"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
@@ -47,6 +48,7 @@ type Collection struct {
 	IsPublic     bool      `json:"is_public"`
 	IsFeatured   bool      `json:"is_featured"`
 	IsOfficial   bool      `json:"is_official"`
+	RegionNames  []string  `json:"region_names"`
 	Decks        []Deck    `json:"decks,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`

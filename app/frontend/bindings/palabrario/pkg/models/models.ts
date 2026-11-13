@@ -403,6 +403,7 @@ export class Collection {
     "is_public": boolean;
     "is_featured": boolean;
     "is_official": boolean;
+    "region_names": string[];
     "decks"?: Deck[];
     "created_at": string;
     "updated_at": string;
@@ -427,6 +428,9 @@ export class Collection {
         if (!("is_official" in $$source)) {
             this["is_official"] = false;
         }
+        if (!("region_names" in $$source)) {
+            this["region_names"] = [];
+        }
         if (!("created_at" in $$source)) {
             this["created_at"] = "0001-01-01T00:00:00.000Z";
         }
@@ -441,10 +445,14 @@ export class Collection {
      * Creates a new Collection instance from a string or object.
      */
     static createFrom($$source: any = {}): Collection {
-        const $$createField7_0 = $$createType8;
+        const $$createField7_0 = $$createType0;
+        const $$createField8_0 = $$createType8;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("region_names" in $$parsedSource) {
+            $$parsedSource["region_names"] = $$createField7_0($$parsedSource["region_names"]);
+        }
         if ("decks" in $$parsedSource) {
-            $$parsedSource["decks"] = $$createField7_0($$parsedSource["decks"]);
+            $$parsedSource["decks"] = $$createField8_0($$parsedSource["decks"]);
         }
         return new Collection($$parsedSource as Partial<Collection>);
     }
@@ -1092,6 +1100,7 @@ export class Deck {
     "is_public": boolean;
     "is_official": boolean;
     "item_count": number;
+    "region_names": string[];
     "items"?: DeckItem[];
     "created_at": string;
     "updated_at": string;
@@ -1116,6 +1125,9 @@ export class Deck {
         if (!("item_count" in $$source)) {
             this["item_count"] = 0;
         }
+        if (!("region_names" in $$source)) {
+            this["region_names"] = [];
+        }
         if (!("created_at" in $$source)) {
             this["created_at"] = "0001-01-01T00:00:00.000Z";
         }
@@ -1130,10 +1142,14 @@ export class Deck {
      * Creates a new Deck instance from a string or object.
      */
     static createFrom($$source: any = {}): Deck {
-        const $$createField7_0 = $$createType16;
+        const $$createField7_0 = $$createType0;
+        const $$createField8_0 = $$createType16;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("region_names" in $$parsedSource) {
+            $$parsedSource["region_names"] = $$createField7_0($$parsedSource["region_names"]);
+        }
         if ("items" in $$parsedSource) {
-            $$parsedSource["items"] = $$createField7_0($$parsedSource["items"]);
+            $$parsedSource["items"] = $$createField8_0($$parsedSource["items"]);
         }
         return new Deck($$parsedSource as Partial<Deck>);
     }
@@ -2804,6 +2820,7 @@ export class StudioDeckSummary {
     "is_public": boolean;
     "is_official": boolean;
     "item_count": number;
+    "region_names": string[];
     "items"?: DeckItem[];
     "created_at": string;
     "updated_at": string;
@@ -2832,6 +2849,9 @@ export class StudioDeckSummary {
         if (!("item_count" in $$source)) {
             this["item_count"] = 0;
         }
+        if (!("region_names" in $$source)) {
+            this["region_names"] = [];
+        }
         if (!("created_at" in $$source)) {
             this["created_at"] = "0001-01-01T00:00:00.000Z";
         }
@@ -2858,10 +2878,14 @@ export class StudioDeckSummary {
      * Creates a new StudioDeckSummary instance from a string or object.
      */
     static createFrom($$source: any = {}): StudioDeckSummary {
-        const $$createField7_0 = $$createType16;
+        const $$createField7_0 = $$createType0;
+        const $$createField8_0 = $$createType16;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("region_names" in $$parsedSource) {
+            $$parsedSource["region_names"] = $$createField7_0($$parsedSource["region_names"]);
+        }
         if ("items" in $$parsedSource) {
-            $$parsedSource["items"] = $$createField7_0($$parsedSource["items"]);
+            $$parsedSource["items"] = $$createField8_0($$parsedSource["items"]);
         }
         return new StudioDeckSummary($$parsedSource as Partial<StudioDeckSummary>);
     }

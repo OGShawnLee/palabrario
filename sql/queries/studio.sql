@@ -13,7 +13,20 @@ SELECT
     d.is_official,
     d.created_at,
     d.updated_at,
-    (SELECT count(*)::INT FROM deck_items di WHERE di.id_deck = d.id_deck) AS item_count
+    (SELECT count(*)::INT FROM deck_items di WHERE di.id_deck = d.id_deck) AS item_count,
+    COALESCE((
+        SELECT array_agg(sub.name)
+        FROM (
+            SELECT r.name
+            FROM deck_items di
+            JOIN senses s ON s.id_sense = di.id_sense
+            JOIN regions r ON r.id_region = s.id_region
+            WHERE di.id_deck = d.id_deck
+            GROUP BY r.id_region, r.name
+            ORDER BY count(*) DESC, r.name ASC
+            LIMIT 3
+        ) sub
+    ), '{}'::TEXT[])::TEXT[] AS region_names
 FROM decks d
 WHERE d.is_public = true
   AND (sqlc.narg('query')::VARCHAR IS NULL OR sqlc.narg('query')::VARCHAR = '' OR d.title ILIKE '%' || sqlc.narg('query')::VARCHAR || '%' OR coalesce(d.description, '') ILIKE '%' || sqlc.narg('query')::VARCHAR || '%')
@@ -34,6 +47,19 @@ SELECT
     u.user_name AS owner_user_name,
     (d.id_user != @user_id)::BOOLEAN AS is_saved_from_community,
     (SELECT count(*)::INT FROM deck_items di WHERE di.id_deck = d.id_deck) AS item_count,
+    COALESCE((
+        SELECT array_agg(sub.name)
+        FROM (
+            SELECT r.name
+            FROM deck_items di
+            JOIN senses s ON s.id_sense = di.id_sense
+            JOIN regions r ON r.id_region = s.id_region
+            WHERE di.id_deck = d.id_deck
+            GROUP BY r.id_region, r.name
+            ORDER BY count(*) DESC, r.name ASC
+            LIMIT 3
+        ) sub
+    ), '{}'::TEXT[])::TEXT[] AS region_names,
     (
         SELECT count(*)::INT 
         FROM deck_items di
@@ -64,7 +90,20 @@ SELECT
     d.is_official,
     d.created_at,
     d.updated_at,
-    (SELECT count(*)::INT FROM deck_items di WHERE di.id_deck = d.id_deck) AS item_count
+    (SELECT count(*)::INT FROM deck_items di WHERE di.id_deck = d.id_deck) AS item_count,
+    COALESCE((
+        SELECT array_agg(sub.name)
+        FROM (
+            SELECT r.name
+            FROM deck_items di
+            JOIN senses s ON s.id_sense = di.id_sense
+            JOIN regions r ON r.id_region = s.id_region
+            WHERE di.id_deck = d.id_deck
+            GROUP BY r.id_region, r.name
+            ORDER BY count(*) DESC, r.name ASC
+            LIMIT 3
+        ) sub
+    ), '{}'::TEXT[])::TEXT[] AS region_names
 FROM decks d
 WHERE d.id_deck = $1;
 
@@ -180,7 +219,21 @@ SELECT
     c.is_featured,
     c.is_official,
     c.created_at,
-    c.updated_at
+    c.updated_at,
+    COALESCE((
+        SELECT array_agg(sub.name)
+        FROM (
+            SELECT r.name
+            FROM collection_decks cd
+            JOIN deck_items di ON di.id_deck = cd.id_deck
+            JOIN senses s ON s.id_sense = di.id_sense
+            JOIN regions r ON r.id_region = s.id_region
+            WHERE cd.id_collection = c.id_collection
+            GROUP BY r.id_region, r.name
+            ORDER BY count(*) DESC, r.name ASC
+            LIMIT 3
+        ) sub
+    ), '{}'::TEXT[])::TEXT[] AS region_names
 FROM collections c
 WHERE c.is_public = true
   AND (sqlc.narg('featured_only')::BOOLEAN IS NULL OR sqlc.narg('featured_only')::BOOLEAN = false OR c.is_featured = true)
@@ -198,7 +251,21 @@ SELECT
     c.is_official,
     c.created_at,
     c.updated_at,
-    (c.id_user != @user_id)::BOOLEAN AS is_saved_from_community
+    (c.id_user != @user_id)::BOOLEAN AS is_saved_from_community,
+    COALESCE((
+        SELECT array_agg(sub.name)
+        FROM (
+            SELECT r.name
+            FROM collection_decks cd
+            JOIN deck_items di ON di.id_deck = cd.id_deck
+            JOIN senses s ON s.id_sense = di.id_sense
+            JOIN regions r ON r.id_region = s.id_region
+            WHERE cd.id_collection = c.id_collection
+            GROUP BY r.id_region, r.name
+            ORDER BY count(*) DESC, r.name ASC
+            LIMIT 3
+        ) sub
+    ), '{}'::TEXT[])::TEXT[] AS region_names
 FROM collections c
 WHERE c.id_user = @user_id 
    OR (c.is_public = true AND EXISTS (SELECT 1 FROM saved_collections sc WHERE sc.id_collection = c.id_collection AND sc.id_user = @user_id))
@@ -215,7 +282,21 @@ SELECT
     c.is_featured,
     c.is_official,
     c.created_at,
-    c.updated_at
+    c.updated_at,
+    COALESCE((
+        SELECT array_agg(sub.name)
+        FROM (
+            SELECT r.name
+            FROM collection_decks cd
+            JOIN deck_items di ON di.id_deck = cd.id_deck
+            JOIN senses s ON s.id_sense = di.id_sense
+            JOIN regions r ON r.id_region = s.id_region
+            WHERE cd.id_collection = c.id_collection
+            GROUP BY r.id_region, r.name
+            ORDER BY count(*) DESC, r.name ASC
+            LIMIT 3
+        ) sub
+    ), '{}'::TEXT[])::TEXT[] AS region_names
 FROM collections c
 WHERE c.id_collection = $1;
 
@@ -232,7 +313,20 @@ SELECT
     d.is_official,
     d.created_at,
     d.updated_at,
-    (SELECT count(*)::INT FROM deck_items di WHERE di.id_deck = d.id_deck) AS item_count
+    (SELECT count(*)::INT FROM deck_items di WHERE di.id_deck = d.id_deck) AS item_count,
+    COALESCE((
+        SELECT array_agg(sub.name)
+        FROM (
+            SELECT r.name
+            FROM deck_items di
+            JOIN senses s ON s.id_sense = di.id_sense
+            JOIN regions r ON r.id_region = s.id_region
+            WHERE di.id_deck = d.id_deck
+            GROUP BY r.id_region, r.name
+            ORDER BY count(*) DESC, r.name ASC
+            LIMIT 3
+        ) sub
+    ), '{}'::TEXT[])::TEXT[] AS region_names
 FROM collection_decks cd
 JOIN decks d ON d.id_deck = cd.id_deck
 WHERE cd.id_collection = $1

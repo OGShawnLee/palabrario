@@ -50,6 +50,13 @@ func NewStudioService(databaseInstance *database.DB) StudioService {
 	}
 }
 
+func nonNilStrings(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
+}
+
 // -----------------------------------------------------------------------------
 // BARAJAS (CU10)
 // -----------------------------------------------------------------------------
@@ -78,6 +85,7 @@ func (s *studioService) ListPublicDecks(ctx context.Context, query *string, offi
 			IsPublic:    r.IsPublic,
 			IsOfficial:  r.IsOfficial,
 			ItemCount:   int(r.ItemCount),
+			RegionNames: nonNilStrings(r.RegionNames),
 			CreatedAt:   r.CreatedAt.Time,
 			UpdatedAt:   r.UpdatedAt.Time,
 		}
@@ -107,6 +115,7 @@ func (s *studioService) ListStudioDecks(ctx context.Context, userID string) ([]m
 				IsPublic:    r.IsPublic,
 				IsOfficial:  r.IsOfficial,
 				ItemCount:   int(r.ItemCount),
+				RegionNames: nonNilStrings(r.RegionNames),
 				CreatedAt:   r.CreatedAt.Time,
 				UpdatedAt:   r.UpdatedAt.Time,
 			},
@@ -212,6 +221,7 @@ func (s *studioService) GetDeckDetail(ctx context.Context, viewerID *string, vie
 		IsPublic:    deckRow.IsPublic,
 		IsOfficial:  deckRow.IsOfficial,
 		ItemCount:   len(deckItems),
+		RegionNames: nonNilStrings(deckRow.RegionNames),
 		Items:       deckItems,
 		CreatedAt:   deckRow.CreatedAt.Time,
 		UpdatedAt:   deckRow.UpdatedAt.Time,
@@ -265,6 +275,7 @@ func (s *studioService) CreateDeck(ctx context.Context, userID string, userRole 
 		IsPublic:    created.IsPublic,
 		IsOfficial:  created.IsOfficial,
 		ItemCount:   len(req.SenseIDs),
+		RegionNames: []string{},
 		CreatedAt:   created.CreatedAt.Time,
 		UpdatedAt:   created.UpdatedAt.Time,
 	}, nil
@@ -315,6 +326,7 @@ func (s *studioService) UpdateDeck(ctx context.Context, userID string, userRole 
 		IsPublic:    updated.IsPublic,
 		IsOfficial:  updated.IsOfficial,
 		ItemCount:   int(deckRow.ItemCount),
+		RegionNames: []string{},
 		CreatedAt:   updated.CreatedAt.Time,
 		UpdatedAt:   updated.UpdatedAt.Time,
 	}, nil
@@ -464,6 +476,7 @@ func (s *studioService) ListPublicCollections(ctx context.Context, featuredOnly 
 			IsPublic:     r.IsPublic,
 			IsFeatured:   r.IsFeatured,
 			IsOfficial:   r.IsOfficial,
+			RegionNames:  nonNilStrings(r.RegionNames),
 			CreatedAt:    r.CreatedAt.Time,
 			UpdatedAt:    r.UpdatedAt.Time,
 		}
@@ -492,6 +505,7 @@ func (s *studioService) ListStudioCollections(ctx context.Context, userID string
 			IsPublic:     r.IsPublic,
 			IsFeatured:   r.IsFeatured,
 			IsOfficial:   r.IsOfficial,
+			RegionNames:  nonNilStrings(r.RegionNames),
 			CreatedAt:    r.CreatedAt.Time,
 			UpdatedAt:    r.UpdatedAt.Time,
 		}
@@ -538,6 +552,7 @@ func (s *studioService) GetCollectionDetail(ctx context.Context, viewerID *strin
 			IsPublic:    r.IsPublic,
 			IsOfficial:  r.IsOfficial,
 			ItemCount:   int(r.ItemCount),
+			RegionNames: nonNilStrings(r.RegionNames),
 			CreatedAt:   r.CreatedAt.Time,
 			UpdatedAt:   r.UpdatedAt.Time,
 		}
@@ -551,6 +566,7 @@ func (s *studioService) GetCollectionDetail(ctx context.Context, viewerID *strin
 		IsPublic:     colRow.IsPublic,
 		IsFeatured:   colRow.IsFeatured,
 		IsOfficial:   colRow.IsOfficial,
+		RegionNames:  nonNilStrings(colRow.RegionNames),
 		Decks:        decks,
 		CreatedAt:    colRow.CreatedAt.Time,
 		UpdatedAt:    colRow.UpdatedAt.Time,
@@ -607,6 +623,7 @@ func (s *studioService) CreateCollection(ctx context.Context, userID string, use
 		IsPublic:     created.IsPublic,
 		IsFeatured:   created.IsFeatured,
 		IsOfficial:   created.IsOfficial,
+		RegionNames:  []string{},
 		CreatedAt:    created.CreatedAt.Time,
 		UpdatedAt:    created.UpdatedAt.Time,
 	}, nil
@@ -671,6 +688,7 @@ func (s *studioService) UpdateCollection(ctx context.Context, userID string, use
 		IsPublic:     updated.IsPublic,
 		IsFeatured:   updated.IsFeatured,
 		IsOfficial:   updated.IsOfficial,
+		RegionNames:  []string{},
 		CreatedAt:    updated.CreatedAt.Time,
 		UpdatedAt:    updated.UpdatedAt.Time,
 	}, nil

@@ -39,16 +39,18 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 
 - [x] `.tickets/034-verify-and-review-auth-refactor/` (`completed`): read-only Reviewer gate `APPROVED` in `review.md`; verified all `DB-*`, `CORE-*`, `SIB-*`, `BFF-*`, and `FE-*` findings against `028/report.md` and confirmed `-race` suites (`pkg`, `realtime-service`, `image-service`, `core-service` on `:5433`, `app`) plus `wails3 task check` all exit `0`.
 
+- [x] `.tickets/024-backend-dynamic-region-detection/` (`completed`): added PostgreSQL/`sqlc` top 1–3 `region_names` aggregation across all 7 Deck/Collection queries, hydrated non-nil `RegionNames []string` in `pkg/models/studio.go`, `studio_service.go`, and `app/app_studio.go`, updated `decks.fixture.ts` & `studio_service.md`, regenerated Wails TS bindings (`wails3 task check` exit `0`), and verified `TestStudioService_DynamicRegionDetection` + `core-service` `-race` tests.
+
 ## In progress
 - None.
 
 ## Draft tickets
 - [ ] `.tickets/019-build-arena-history-route/` (`draft`): expand `IArenaAPI` and build dedicated `/arena/history` route and 3NF round-by-round replay modal (`MatchReplayDialog.vue`) backed by `api.arena`.
-- [ ] `.tickets/024-backend-dynamic-region-detection/` (`ready`): implement dynamic top 1-3 dialect region detection in PostgreSQL / sqlc for Collections and Decks (`region_names text[]`).
 
 ## Next steps
-- [ ] Hand out ready backend ticket `.tickets/024-backend-dynamic-region-detection/` or continue the Arena route (`/arena/history` in `.tickets/019-build-arena-history-route/` or live WebSocket match room `ConnectArenaRoom`).
-- [ ] Implement remaining protected routes (`/studio`, `/settings`) now that `router.beforeEach` (`requiresAuth`), Option B middleware, and Wails dual-token refresh are in place.
+- [ ] Optionally rebuild/sync `core-service` on the running Vagrant VM (`task rebuild:core`) if testing live desktop flows against it.
+- [ ] Continue the Arena route (`/arena/history` in `.tickets/019-build-arena-history-route/` or live WebSocket match room `ConnectArenaRoom`) or build `/studio` / `/settings`.
+- [ ] Surface `region_names` metadata badges in Collection/Deck UI cards once desired.
 - [ ] Decide what happens to the Capacitor adapter (`live/http/`) during the frontend rebuild (prepared cleanly by `IAuthAPI` changes in Ticket `033`).
 
 ## Agent workflow

@@ -112,6 +112,15 @@ const OWNER_IDS: Record<string, string> = {
   editora_andina: "00000000-0000-4000-8000-000000000003",
 }
 
+const DECK_REGION_NAMES: Record<number, string[]> = {
+  1: ["Argentina", "Uruguay"],
+  2: ["Colombia", "Perú", "Chile"],
+  3: ["Chile"],
+  4: ["Cuba", "Puerto Rico", "República Dominicana"],
+  5: ["Colombia"],
+  6: ["México"],
+}
+
 function deckOf(id: number, owner: string): Deck {
   const source = mockDecks.find((deck) => deck.id_deck === id)
   if (!source) throw new Error(`Unknown mock deck ${id}`)
@@ -123,9 +132,23 @@ function deckOf(id: number, owner: string): Deck {
     is_public: true,
     is_official: source.is_official,
     item_count: source.item_count,
+    region_names: DECK_REGION_NAMES[source.id_deck] ?? [source.region_name],
     created_at: "2026-01-15T10:00:00.000Z",
     updated_at: "2026-03-02T10:00:00.000Z",
   })
+}
+
+function aggregateCollectionRegions(decks: Deck[]): string[] {
+  const counts = new Map<string, number>()
+  for (const deck of decks) {
+    for (const region of deck.region_names) {
+      counts.set(region, (counts.get(region) ?? 0) + 1)
+    }
+  }
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 3)
+    .map(([name]) => name)
 }
 
 /** Sense ids (from words.fixture) used as term previews, per deck id. */
@@ -155,8 +178,17 @@ export const mockDeckDetails: Deck[] = mockDecks.map((source) => {
   return deck
 })
 
+function collectionOf(
+  params: Omit<Partial<Collection>, "region_names"> & { decks: Deck[] },
+): Collection {
+  return new Collection({
+    ...params,
+    region_names: aggregateCollectionRegions(params.decks),
+  })
+}
+
 export const mockCollectionDetails: Collection[] = [
-  new Collection({
+  collectionOf({
     id_collection: 1,
     id_user: OWNER_IDS.palabrario,
     title: "Camino por el Cono Sur",
@@ -169,7 +201,7 @@ export const mockCollectionDetails: Collection[] = [
     created_at: "2026-01-20T10:00:00.000Z",
     updated_at: "2026-03-05T10:00:00.000Z",
   }),
-  new Collection({
+  collectionOf({
     id_collection: 2,
     id_user: OWNER_IDS.caribe_viva,
     title: "Voces del Caribe",
@@ -182,7 +214,7 @@ export const mockCollectionDetails: Collection[] = [
     created_at: "2026-02-01T10:00:00.000Z",
     updated_at: "2026-03-08T10:00:00.000Z",
   }),
-  new Collection({
+  collectionOf({
     id_collection: 3,
     id_user: OWNER_IDS.editora_andina,
     title: "Heteronimia Cotidiana",

@@ -3,9 +3,9 @@
 | Field | Value |
 | :--- | :--- |
 | **ID** | 024 |
-| **Status** | ready |
-| **Model** | Claude Sonnet 5.5, `effort: medium` (`claude-sonnet-5-5`) |
-| **Role** | Backend / Database Engineer |
+| **Status** | completed |
+| **Model** | Gemini 4 Hydrogen, `thinking_level: medium` (`gemini-4-hydrogen`) |
+| **Role** | Backend / Database Engineer (`implementation`) |
 | **Spec** | [spec.md](spec.md) |
 
 > **Specification Note:**  
@@ -14,30 +14,36 @@
 ## Scope
 
 May create or edit:
-- `sql/queries/studio.sql` (update `ListPublicCollections`, `ListStudioCollections`, `GetCollectionByID`, `ListPublicDecks`, `ListStudioDecks`, `GetDeckByID`)
-- `pkg/models/studio.go` (add `RegionNames []string `json:"region_names"`` to `Collection` and `Deck`)
-- `core-service/internal/repository/studio.sql.go` (regenerate via `sqlc generate`)
-- `core-service/internal/repository/models.go` (regenerate via `sqlc generate`)
-- `core-service/internal/service/studio/` (hydrate `RegionNames` in service mapping)
-- `app/app_studio.go` (ensure Wails bridge returns `RegionNames`)
+- `sql/queries/studio.sql` (update `ListPublicCollections`, `ListStudioCollections`, `GetCollectionByID`, `ListCollectionDecks`, `ListPublicDecks`, `ListStudioDecks`, `GetDeckByID`)
+- `pkg/models/studio.go` (add `RegionNames []string` with JSON tag `json:"region_names"` to `Collection` and `Deck`)
+- `core-service/internal/db/studio.sql.go` (regenerate via `sqlc generate`)
+- `core-service/internal/db/models.go` (regenerate via `sqlc generate` if changed)
+- `core-service/internal/service/studio_service.go` (hydrate `RegionNames` in `Deck` and `Collection` mappings, guaranteeing non-nil `[]string{}`)
+- `core-service/internal/service/studio_mastery_test.go` (add/update tests verifying `RegionNames` aggregation, top-3 ordering, and empty-slice behavior)
+- `app/app_studio.go` (ensure Wails bridge methods normalize/return non-nil `RegionNames` if needed)
 - `app/frontend/src/api/mock/fixtures/decks.fixture.ts` (add `region_names` to mock collections and decks)
+- `app/frontend/bindings/` (regenerated cleanly by `wails3 task check`)
+- `.routing/services/studio_service.md` (add `RegionNames` field to `Deck` and `Collection` model docs)
 - `.tickets/024-backend-dynamic-region-detection/changelog.md` (create)
 
 Must not touch:
 - `SCHEMA_FINAL.sql` (this is a non-destructive query-level aggregation; no DDL migration needed)
 - `app/frontend/uno.config.ts`
 - Any files outside the above declared scope
+- **No role (Router, Investigator, Implementer, Translator, or Reviewer) may commit, push, or merge without explicit user authorization.** Do not run `git commit`, `git push`, or `git merge`.
 
 ## Inputs
 
 - [.routing/services/studio_service.md](../../.routing/services/studio_service.md): Studio domain specification.
-- [sql/queries/studio.sql](../../sql/queries/studio.sql): Existing query file (see lines 310–319 for the existing single-region precursor in `SearchDecksDropdown`).
+- [sql/queries/studio.sql](../../sql/queries/studio.sql): Existing query file (see `SearchDecksDropdown` for the existing single-region precursor).
 - [pkg/models/studio.go](../../pkg/models/studio.go): Canonical Go domain models.
+- [core-service/internal/service/studio_service.go](../../core-service/internal/service/studio_service.go): Studio SOA implementation and SQL row mappings.
+- [core-service/internal/service/studio_mastery_test.go](../../core-service/internal/service/studio_mastery_test.go): Studio service integration tests against PostgreSQL.
 - [.routing/CONTEXT.md](../../.routing/CONTEXT.md): Full regional names only, zero flag emojis, zero dialect codes.
 
 ## Architectural Context
 
-In `sql/queries/studio.sql`, `SearchDecksDropdown` already computes `r.name` via an inline scalar subquery. We extend this pattern to compute top 1–3 distinct regions ordered by sense frequency:
+In `sql/queries/studio.sql`, `SearchDecksDropdown` already computes `r.name` via an inline scalar subquery. Extend this pattern to compute top 1–3 distinct regions ordered by sense frequency (`count(*) DESC, r.name ASC`):
 
 ### Collection Subquery Snippet
 ```sql
@@ -78,24 +84,27 @@ COALESCE((
 
 1. **SQL Queries Update (`sql/queries/studio.sql`):**
    - In `ListPublicCollections`, `ListStudioCollections`, and `GetCollectionByID`: add the Collection `region_names` subquery.
-   - In `ListPublicDecks`, `ListStudioDecks`, and `GetDeckByID`: add the Deck `region_names` subquery.
+   - In `ListPublicDecks`, `ListStudioDecks`, `GetDeckByID`, and `ListCollectionDecks`: add the Deck `region_names` subquery.
 
-2. **Generate Repository Code:**
-   - Run `sqlc generate` (or run through `task generate` / `wails3 task check`).
-   - Verify `region_names []string` is generated on the respective row structs in `core-service/internal/repository/`.
+2. **Generate `sqlc` Code:**
+   - Run `sqlc generate` from the repo root.
+   - Verify `RegionNames []string` is generated on the respective row structs in `core-service/internal/db/studio.sql.go`.
 
 3. **Domain Models & Service Hydration:**
-   - In `pkg/models/studio.go`: Add `RegionNames []string `json:"region_names"`` to `Collection` and `Deck`.
-   - In `core-service/internal/service/studio/` mapping functions: map `row.RegionNames` to `model.RegionNames` (ensuring non-nil empty slice `[]string{}` if empty).
-   - In `app/app_studio.go`: Verify Wails bridge returns the updated models.
+   - In `pkg/models/studio.go`: Add `RegionNames []string` with tag `` `json:"region_names"` `` to `Collection` and `Deck`.
+   - In `core-service/internal/service/studio_service.go`: map `row.RegionNames` into `model.RegionNames` across `ListPublicDecks`, `ListStudioDecks`, `GetDeckDetail`, `ListPublicCollections`, `ListStudioCollections`, `GetCollectionDetail` (both collection and nested decks), and initialize empty `RegionNames: []string{}` in `CreateDeck`, `UpdateDeck`, `CreateCollection`, and `UpdateCollection` so slices never serialize as `null`.
+   - In `core-service/internal/service/studio_mastery_test.go`: add integration assertions verifying `RegionNames` returns top 1–3 ordered full region names for populated decks/collections and `[]string{}` when empty.
+   - Run `go test -race -count=1 ./core-service/...` against the running `postgres-test` container (`:5433`, start with `task test:up` only if down).
 
-4. **Mock Fixtures & Frontend Bindings:**
-   - In `app/frontend/src/api/mock/fixtures/decks.fixture.ts`: Populate realistic `region_names` on `mockCollectionDetails` and `mockDeckDetails` (e.g. `["Argentina", "Chile"]`).
-   - Run `cd app && wails3 task check` to regenerate Wails TS bindings and verify clean build.
+4. **Mock Fixtures, Docs & Frontend Bindings:**
+   - In `app/frontend/src/api/mock/fixtures/decks.fixture.ts`: Populate realistic full region names (no flag emojis, no dialect codes) in `region_names` on `mockDeckDetails`, `deckOf`, and `mockCollectionDetails`.
+   - In `.routing/services/studio_service.md`: Update the `Deck` and `Collection` Go snippets to include `RegionNames []string`.
+   - Run `wails3 task check` inside `app/` to regenerate Wails TS bindings (`app/frontend/bindings/`) and verify clean `vue-tsc`, Vite, and Go builds.
 
 5. **Changelog:**
-   - Document changes in `.tickets/024-backend-dynamic-region-detection/changelog.md`.
+   - Document all changed files, tests, and verification command outputs in `.tickets/024-backend-dynamic-region-detection/changelog.md`.
 
 ## Verification
 
 All checks are listed in [spec.md](spec.md).
+
