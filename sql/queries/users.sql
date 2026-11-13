@@ -1,7 +1,7 @@
 -- name: CreateAccount :one
 INSERT INTO accounts (email, password_hash, role)
 VALUES ($1, $2, 'LEARNER')
-RETURNING id_account, email, password_hash, role, is_active, created_at, updated_at;
+RETURNING id_account, email, password_hash, role, is_active, token_version, created_at, updated_at;
 
 -- name: CreateUserProfile :one
 INSERT INTO users (id_user, name, user_name, anchor_dialect)
@@ -9,19 +9,52 @@ VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: GetAccountByEmail :one
-SELECT id_account, email, password_hash, role, is_active, created_at, updated_at
+SELECT id_account, email, password_hash, role, is_active, token_version, created_at, updated_at
 FROM accounts
-WHERE email = $1;
+WHERE LOWER(email) = LOWER($1);
 
 -- name: GetAccountByID :one
-SELECT id_account, email, password_hash, role, is_active, created_at, updated_at
+SELECT id_account, email, password_hash, role, is_active, token_version, created_at, updated_at
 FROM accounts
 WHERE id_account = $1;
+
+-- name: GetAuthAccountStateByID :one
+SELECT id_account, role, is_active, token_version
+FROM accounts
+WHERE id_account = $1;
+
+-- name: GetAccountWithProfileByEmail :one
+SELECT
+    a.id_account,
+    a.email,
+    a.password_hash,
+    a.role,
+    a.is_active,
+    a.token_version,
+    u.name,
+    u.user_name,
+    u.avatar_url,
+    u.anchor_dialect,
+    u.total_xp,
+    u.current_level,
+    u.current_streak,
+    u.longest_streak,
+    u.created_at,
+    u.updated_at
+FROM accounts a
+JOIN users u ON u.id_user = a.id_account
+WHERE LOWER(a.email) = LOWER($1);
 
 -- name: UpdateAccountPassword :exec
 UPDATE accounts
 SET password_hash = $2, updated_at = now()
 WHERE id_account = $1;
+
+-- name: IncrementAccountTokenVersion :one
+UPDATE accounts
+SET token_version = token_version + 1, updated_at = now()
+WHERE id_account = $1
+RETURNING token_version;
 
 -- name: GetUserProfileByID :one
 SELECT 
@@ -36,6 +69,8 @@ SELECT
     u.current_streak,
     u.longest_streak,
     a.role,
+    a.is_active,
+    a.token_version,
     u.created_at,
     u.updated_at
 FROM users u
@@ -59,7 +94,7 @@ SELECT
     u.updated_at
 FROM users u
 JOIN accounts a ON a.id_account = u.id_user
-WHERE LOWER(u.user_name) = LOWER($1);
+WHERE LOWER(u.user_name) = LOWER($1) AND a.is_active = true;
 
 -- name: UpdateUserProfile :one
 WITH updated AS (
@@ -84,10 +119,38 @@ SELECT
     u.current_streak,
     u.longest_streak,
     a.role,
+    a.is_active,
+    a.token_version,
     u.created_at,
     u.updated_at
 FROM updated u
 JOIN accounts a ON a.id_account = u.id_user;
+
+-- name: CreateRefreshToken :one
+INSERT INTO refresh_tokens (id_account, token_hash, expires_at)
+VALUES ($1, $2, $3)
+RETURNING *;
+
+-- name: GetRefreshTokenForUpdate :one
+SELECT id_token, id_account, token_hash, expires_at, revoked_at, created_at
+FROM refresh_tokens
+WHERE token_hash = $1
+FOR UPDATE;
+
+-- name: RevokeRefreshTokenByID :exec
+UPDATE refresh_tokens
+SET revoked_at = now()
+WHERE id_token = $1 AND revoked_at IS NULL;
+
+-- name: RevokeRefreshTokenByHash :exec
+UPDATE refresh_tokens
+SET revoked_at = now()
+WHERE token_hash = $1 AND revoked_at IS NULL;
+
+-- name: RevokeAllRefreshTokensForAccount :exec
+UPDATE refresh_tokens
+SET revoked_at = now()
+WHERE id_account = $1 AND revoked_at IS NULL;
 
 -- name: CountUserPrivateDecks :one
 SELECT count(*)::INT

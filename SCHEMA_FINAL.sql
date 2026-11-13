@@ -54,7 +54,19 @@ CREATE TYPE question_type AS ENUM (
 );
 
 -- ------------------------------------------------------------------------------
--- 3. CUENTAS, USUARIOS Y GOBERNANZA DE ACCESO (CU01, CU02, CU03, CU04)
+-- 3. REGIONES Y DIALECTOS
+-- ------------------------------------------------------------------------------
+CREATE TABLE regions (
+  id_region UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code VARCHAR(10) NOT NULL UNIQUE,         -- 'MX', 'ES', 'AR', 'CO', 'CL', 'CU', 'CAM', 'PAN'
+  name VARCHAR(100) NOT NULL,
+  parent_zone VARCHAR(100) NOT NULL,        -- 'Norteamérica', 'Rioplatense', 'Andina', 'Peninsular', 'Caribe'
+  country_code VARCHAR(2),                  -- 'MX', 'ES', 'AR'
+  flag_emoji VARCHAR(10) NOT NULL
+);
+
+-- ------------------------------------------------------------------------------
+-- 4. CUENTAS, USUARIOS Y GOBERNANZA DE ACCESO (CU01, CU02, CU03, CU04)
 -- ------------------------------------------------------------------------------
 CREATE TABLE accounts (
   id_account UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -62,16 +74,30 @@ CREATE TABLE accounts (
   password_hash TEXT NOT NULL,
   role account_role NOT NULL DEFAULT 'LEARNER',
   is_active BOOLEAN NOT NULL DEFAULT true,
+  token_version INTEGER NOT NULL DEFAULT 1 CHECK (token_version >= 1),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE UNIQUE INDEX idx_accounts_email_lower ON accounts (LOWER(email));
+
+CREATE TABLE refresh_tokens (
+  id_token UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id_account UUID NOT NULL REFERENCES accounts(id_account) ON DELETE CASCADE,
+  token_hash CHAR(64) NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  revoked_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_refresh_tokens_account ON refresh_tokens(id_account);
+
 CREATE TABLE users (
   id_user UUID PRIMARY KEY REFERENCES accounts(id_account) ON DELETE CASCADE,
-  name VARCHAR(100) NOT NULL,
-  user_name VARCHAR(50) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL CHECK (char_length(trim(name)) BETWEEN 2 AND 100),
+  user_name VARCHAR(50) NOT NULL UNIQUE CHECK (user_name ~ '^[a-z0-9][a-z0-9_-]{2,49}$'),
   avatar_url TEXT,
-  anchor_dialect VARCHAR(10) NOT NULL DEFAULT 'MX',
+  anchor_dialect VARCHAR(10) NOT NULL DEFAULT 'MX' REFERENCES regions(code),
 
   -- Gamificación principal
   total_xp INTEGER NOT NULL DEFAULT 0,
@@ -83,6 +109,8 @@ CREATE TABLE users (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE UNIQUE INDEX idx_users_user_name_lower ON users (LOWER(user_name));
 
 -- CU02 & CU03: Solicitudes de acreditación para ascenso a Editor
 CREATE TABLE editor_requests (
@@ -122,18 +150,6 @@ CREATE TABLE ticket_redemptions (
   id_user UUID NOT NULL REFERENCES users(id_user) ON DELETE CASCADE,
   redeemed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (id_ticket, id_user)
-);
-
--- ------------------------------------------------------------------------------
--- 4. REGIONES Y DIALECTOS
--- ------------------------------------------------------------------------------
-CREATE TABLE regions (
-  id_region UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  code VARCHAR(10) NOT NULL UNIQUE,         -- 'MX', 'ES', 'AR', 'CO', 'CL', 'CU', 'CAM', 'PAN'
-  name VARCHAR(100) NOT NULL,
-  parent_zone VARCHAR(100) NOT NULL,        -- 'Norteamérica', 'Rioplatense', 'Andina', 'Peninsular', 'Caribe'
-  country_code VARCHAR(2),                  -- 'MX', 'ES', 'AR'
-  flag_emoji VARCHAR(10) NOT NULL
 );
 
 -- ------------------------------------------------------------------------------

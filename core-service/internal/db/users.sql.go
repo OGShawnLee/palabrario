@@ -28,7 +28,7 @@ func (q *Queries) CountUserPrivateDecks(ctx context.Context, idUser uuid.UUID) (
 const createAccount = `-- name: CreateAccount :one
 INSERT INTO accounts (email, password_hash, role)
 VALUES ($1, $2, 'LEARNER')
-RETURNING id_account, email, password_hash, role, is_active, created_at, updated_at
+RETURNING id_account, email, password_hash, role, is_active, token_version, created_at, updated_at
 `
 
 type CreateAccountParams struct {
@@ -45,8 +45,35 @@ func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (A
 		&i.PasswordHash,
 		&i.Role,
 		&i.IsActive,
+		&i.TokenVersion,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createRefreshToken = `-- name: CreateRefreshToken :one
+INSERT INTO refresh_tokens (id_account, token_hash, expires_at)
+VALUES ($1, $2, $3)
+RETURNING id_token, id_account, token_hash, expires_at, revoked_at, created_at
+`
+
+type CreateRefreshTokenParams struct {
+	IDAccount uuid.UUID          `json:"id_account"`
+	TokenHash string             `json:"token_hash"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+}
+
+func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error) {
+	row := q.db.QueryRow(ctx, createRefreshToken, arg.IDAccount, arg.TokenHash, arg.ExpiresAt)
+	var i RefreshToken
+	err := row.Scan(
+		&i.IDToken,
+		&i.IDAccount,
+		&i.TokenHash,
+		&i.ExpiresAt,
+		&i.RevokedAt,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -90,13 +117,13 @@ func (q *Queries) CreateUserProfile(ctx context.Context, arg CreateUserProfilePa
 }
 
 const getAccountByEmail = `-- name: GetAccountByEmail :one
-SELECT id_account, email, password_hash, role, is_active, created_at, updated_at
+SELECT id_account, email, password_hash, role, is_active, token_version, created_at, updated_at
 FROM accounts
-WHERE email = $1
+WHERE LOWER(email) = LOWER($1)
 `
 
-func (q *Queries) GetAccountByEmail(ctx context.Context, email string) (Account, error) {
-	row := q.db.QueryRow(ctx, getAccountByEmail, email)
+func (q *Queries) GetAccountByEmail(ctx context.Context, lower string) (Account, error) {
+	row := q.db.QueryRow(ctx, getAccountByEmail, lower)
 	var i Account
 	err := row.Scan(
 		&i.IDAccount,
@@ -104,6 +131,7 @@ func (q *Queries) GetAccountByEmail(ctx context.Context, email string) (Account,
 		&i.PasswordHash,
 		&i.Role,
 		&i.IsActive,
+		&i.TokenVersion,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -111,7 +139,7 @@ func (q *Queries) GetAccountByEmail(ctx context.Context, email string) (Account,
 }
 
 const getAccountByID = `-- name: GetAccountByID :one
-SELECT id_account, email, password_hash, role, is_active, created_at, updated_at
+SELECT id_account, email, password_hash, role, is_active, token_version, created_at, updated_at
 FROM accounts
 WHERE id_account = $1
 `
@@ -125,8 +153,121 @@ func (q *Queries) GetAccountByID(ctx context.Context, idAccount uuid.UUID) (Acco
 		&i.PasswordHash,
 		&i.Role,
 		&i.IsActive,
+		&i.TokenVersion,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getAccountWithProfileByEmail = `-- name: GetAccountWithProfileByEmail :one
+SELECT
+    a.id_account,
+    a.email,
+    a.password_hash,
+    a.role,
+    a.is_active,
+    a.token_version,
+    u.name,
+    u.user_name,
+    u.avatar_url,
+    u.anchor_dialect,
+    u.total_xp,
+    u.current_level,
+    u.current_streak,
+    u.longest_streak,
+    u.created_at,
+    u.updated_at
+FROM accounts a
+JOIN users u ON u.id_user = a.id_account
+WHERE LOWER(a.email) = LOWER($1)
+`
+
+type GetAccountWithProfileByEmailRow struct {
+	IDAccount     uuid.UUID          `json:"id_account"`
+	Email         string             `json:"email"`
+	PasswordHash  string             `json:"password_hash"`
+	Role          AccountRole        `json:"role"`
+	IsActive      bool               `json:"is_active"`
+	TokenVersion  int32              `json:"token_version"`
+	Name          string             `json:"name"`
+	UserName      string             `json:"user_name"`
+	AvatarUrl     pgtype.Text        `json:"avatar_url"`
+	AnchorDialect string             `json:"anchor_dialect"`
+	TotalXp       int32              `json:"total_xp"`
+	CurrentLevel  int32              `json:"current_level"`
+	CurrentStreak int32              `json:"current_streak"`
+	LongestStreak int32              `json:"longest_streak"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) GetAccountWithProfileByEmail(ctx context.Context, lower string) (GetAccountWithProfileByEmailRow, error) {
+	row := q.db.QueryRow(ctx, getAccountWithProfileByEmail, lower)
+	var i GetAccountWithProfileByEmailRow
+	err := row.Scan(
+		&i.IDAccount,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Role,
+		&i.IsActive,
+		&i.TokenVersion,
+		&i.Name,
+		&i.UserName,
+		&i.AvatarUrl,
+		&i.AnchorDialect,
+		&i.TotalXp,
+		&i.CurrentLevel,
+		&i.CurrentStreak,
+		&i.LongestStreak,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getAuthAccountStateByID = `-- name: GetAuthAccountStateByID :one
+SELECT id_account, role, is_active, token_version
+FROM accounts
+WHERE id_account = $1
+`
+
+type GetAuthAccountStateByIDRow struct {
+	IDAccount    uuid.UUID   `json:"id_account"`
+	Role         AccountRole `json:"role"`
+	IsActive     bool        `json:"is_active"`
+	TokenVersion int32       `json:"token_version"`
+}
+
+func (q *Queries) GetAuthAccountStateByID(ctx context.Context, idAccount uuid.UUID) (GetAuthAccountStateByIDRow, error) {
+	row := q.db.QueryRow(ctx, getAuthAccountStateByID, idAccount)
+	var i GetAuthAccountStateByIDRow
+	err := row.Scan(
+		&i.IDAccount,
+		&i.Role,
+		&i.IsActive,
+		&i.TokenVersion,
+	)
+	return i, err
+}
+
+const getRefreshTokenForUpdate = `-- name: GetRefreshTokenForUpdate :one
+SELECT id_token, id_account, token_hash, expires_at, revoked_at, created_at
+FROM refresh_tokens
+WHERE token_hash = $1
+FOR UPDATE
+`
+
+func (q *Queries) GetRefreshTokenForUpdate(ctx context.Context, tokenHash string) (RefreshToken, error) {
+	row := q.db.QueryRow(ctx, getRefreshTokenForUpdate, tokenHash)
+	var i RefreshToken
+	err := row.Scan(
+		&i.IDToken,
+		&i.IDAccount,
+		&i.TokenHash,
+		&i.ExpiresAt,
+		&i.RevokedAt,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -162,6 +303,8 @@ SELECT
     u.current_streak,
     u.longest_streak,
     a.role,
+    a.is_active,
+    a.token_version,
     u.created_at,
     u.updated_at
 FROM users u
@@ -181,6 +324,8 @@ type GetUserProfileByIDRow struct {
 	CurrentStreak int32              `json:"current_streak"`
 	LongestStreak int32              `json:"longest_streak"`
 	Role          AccountRole        `json:"role"`
+	IsActive      bool               `json:"is_active"`
+	TokenVersion  int32              `json:"token_version"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
@@ -200,6 +345,8 @@ func (q *Queries) GetUserProfileByID(ctx context.Context, idUser uuid.UUID) (Get
 		&i.CurrentStreak,
 		&i.LongestStreak,
 		&i.Role,
+		&i.IsActive,
+		&i.TokenVersion,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -223,7 +370,7 @@ SELECT
     u.updated_at
 FROM users u
 JOIN accounts a ON a.id_account = u.id_user
-WHERE LOWER(u.user_name) = LOWER($1)
+WHERE LOWER(u.user_name) = LOWER($1) AND a.is_active = true
 `
 
 type GetUserProfileByUsernameRow struct {
@@ -261,6 +408,20 @@ func (q *Queries) GetUserProfileByUsername(ctx context.Context, lower string) (G
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const incrementAccountTokenVersion = `-- name: IncrementAccountTokenVersion :one
+UPDATE accounts
+SET token_version = token_version + 1, updated_at = now()
+WHERE id_account = $1
+RETURNING token_version
+`
+
+func (q *Queries) IncrementAccountTokenVersion(ctx context.Context, idAccount uuid.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, incrementAccountTokenVersion, idAccount)
+	var token_version int32
+	err := row.Scan(&token_version)
+	return token_version, err
 }
 
 const listUserPublicCollections = `-- name: ListUserPublicCollections :many
@@ -382,6 +543,39 @@ func (q *Queries) ListUserPublicDecks(ctx context.Context, idUser uuid.UUID) ([]
 	return items, nil
 }
 
+const revokeAllRefreshTokensForAccount = `-- name: RevokeAllRefreshTokensForAccount :exec
+UPDATE refresh_tokens
+SET revoked_at = now()
+WHERE id_account = $1 AND revoked_at IS NULL
+`
+
+func (q *Queries) RevokeAllRefreshTokensForAccount(ctx context.Context, idAccount uuid.UUID) error {
+	_, err := q.db.Exec(ctx, revokeAllRefreshTokensForAccount, idAccount)
+	return err
+}
+
+const revokeRefreshTokenByHash = `-- name: RevokeRefreshTokenByHash :exec
+UPDATE refresh_tokens
+SET revoked_at = now()
+WHERE token_hash = $1 AND revoked_at IS NULL
+`
+
+func (q *Queries) RevokeRefreshTokenByHash(ctx context.Context, tokenHash string) error {
+	_, err := q.db.Exec(ctx, revokeRefreshTokenByHash, tokenHash)
+	return err
+}
+
+const revokeRefreshTokenByID = `-- name: RevokeRefreshTokenByID :exec
+UPDATE refresh_tokens
+SET revoked_at = now()
+WHERE id_token = $1 AND revoked_at IS NULL
+`
+
+func (q *Queries) RevokeRefreshTokenByID(ctx context.Context, idToken uuid.UUID) error {
+	_, err := q.db.Exec(ctx, revokeRefreshTokenByID, idToken)
+	return err
+}
+
 const updateAccountPassword = `-- name: UpdateAccountPassword :exec
 UPDATE accounts
 SET password_hash = $2, updated_at = now()
@@ -421,6 +615,8 @@ SELECT
     u.current_streak,
     u.longest_streak,
     a.role,
+    a.is_active,
+    a.token_version,
     u.created_at,
     u.updated_at
 FROM updated u
@@ -446,6 +642,8 @@ type UpdateUserProfileRow struct {
 	CurrentStreak int32              `json:"current_streak"`
 	LongestStreak int32              `json:"longest_streak"`
 	Role          AccountRole        `json:"role"`
+	IsActive      bool               `json:"is_active"`
+	TokenVersion  int32              `json:"token_version"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
@@ -470,6 +668,8 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		&i.CurrentStreak,
 		&i.LongestStreak,
 		&i.Role,
+		&i.IsActive,
+		&i.TokenVersion,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

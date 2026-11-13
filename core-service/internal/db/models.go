@@ -725,6 +725,7 @@ type Account struct {
 	PasswordHash string             `json:"password_hash"`
 	Role         AccountRole        `json:"role"`
 	IsActive     bool               `json:"is_active"`
+	TokenVersion int32              `json:"token_version"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
@@ -898,6 +899,15 @@ type QuizAttempt struct {
 	TimeSpentMs    int32              `json:"time_spent_ms"`
 	PointsEarned   int32              `json:"points_earned"`
 	AnsweredAt     pgtype.Timestamptz `json:"answered_at"`
+}
+
+type RefreshToken struct {
+	IDToken   uuid.UUID          `json:"id_token"`
+	IDAccount uuid.UUID          `json:"id_account"`
+	TokenHash string             `json:"token_hash"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	RevokedAt pgtype.Timestamptz `json:"revoked_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type Region struct {
