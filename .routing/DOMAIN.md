@@ -62,7 +62,7 @@ Open the service file that matches your route or use case. Each file contains bo
 
 > [!CAUTION]
 > **MANDATORY GOLDEN RULE FOR ALL AI MODELS:**
-> 1. **Inventing JSON fields is prohibited:** No HTTP endpoint, WebSocket event, or interface component (`local-app`) may emit or consume properties that are not explicitly declared in the Go structs and JSON contracts of this document.
+> 1. **Inventing JSON fields is prohibited:** No HTTP endpoint, WebSocket event, or interface component (`app`) may emit or consume properties that are not explicitly declared in the Go structs and JSON contracts of this document.
 > 2. **Strict `snake_case` convention:** All JSON payloads (input and output) use `snake_case` identical to the `json:"..."` tags in [`pkg/models/`](../pkg/models).
 > 3. **Mandatory Typed SQL (`sqlc`):** In `core-service`, concatenating raw SQL in handlers is prohibited. Every new query is defined in `sql/queries/*.sql`, compiled with `sqlc generate` into `core-service/internal/db/`, consumed by an implementation in `core-service/internal/service/`, and exposed by a handler in `core-service/internal/api/handlers/`.
 > 4. **Single HTTP Error Format:** Every error response (`4xx` / `5xx`) uses [`response.ErrorWithCode(w, status, code, message)`](../pkg/response/json.go) (or `response.Error(w, status, message)` where `code` is omitted):
@@ -77,19 +77,19 @@ Open the service file that matches your route or use case. Each file contains bo
 
 ## 4. Shared SOA Architecture (Cross-Cutting): Service-Oriented Architecture (SOA) and Native Wails IPC Bridge in a 100% Go Monorepo
 
-The entire Go ecosystem is connected via [`go.work`](../go.work) (`.` + `./local-app`) and the root module [`palabrario` (`go.mod`)](../go.mod):
+The entire Go ecosystem is connected via [`go.work`](../go.work) (`.` + `./app`) and the root module [`palabrario` (`go.mod`)](../go.mod):
 1. **Backend Services (`core-service`, `realtime-service`, `image-service`):** Directly import shared packages [`pkg/models`](../pkg/models), [`pkg/auth`](../pkg/auth), and [`pkg/response`](../pkg/response).
-2. **Native IPC Bridge in Desktop Client ([`local-app/app.go`](../local-app/app.go)):**
-   - **The WebView (Vue 3 / TypeScript) never executes direct HTTP/WS calls or touches the JWT token.**
-   - The Wails Go process (`struct App` in `local-app/app.go`) acts as a **local BFF (*Backend-For-Frontend*) and session vault in RAM** (`sessionToken` protected by `sync.RWMutex`, immune to XSS).
-   - `local-app/app.go` imports the same structs from [`pkg/models`](../pkg/models), makes `net/http` or WebSocket requests to `:8000`, `:8001`, and `:8002` attaching `Authorization: Bearer <sessionToken>`, and exposes public Go methods.
-   - When running `wails3 generate bindings -ts` (or `wails3 task common:generate:bindings`), **Wails v3 automatically generates TypeScript bindings and types** in `local-app/frontend/bindings/palabrario/local-app/app.ts` and `local-app/frontend/bindings/palabrario/pkg/models/models.ts`. Thus, a change in `pkg/models` propagates its static typing from PostgreSQL (`sqlc`) all the way to Vue 3 without human intervention or risk of hallucination.
+2. **Native IPC Bridge in Desktop Client ([`app/app.go`](../app/app.go), [`app/app_auth.go`](../app/app_auth.go)):**
+   - **The WebView (Vue 3 / TypeScript) never executes direct HTTP/WS calls or touches the JWT/refresh tokens.**
+   - The Wails Go process (`struct App` in `app/app.go`) acts as a **local BFF (*Backend-For-Frontend*) with dual-token custody**: the short-lived access JWT (`accessToken`) lives exclusively in private Go RAM (`sync.RWMutex`, immune to XSS), while the opaque `refreshToken` is persisted atomically on the host filesystem at `os.UserConfigDir()/palabrario/session.json` (`0700` directory / `0600` file permissions) for restart recovery.
+   - `app/app.go` imports the same structs from [`pkg/models`](../pkg/models), executes `net/http` and WebSocket requests to `:8000`, `:8001`, and `:8002` attaching `Authorization: Bearer <accessToken>`, performs single-flight auto-refresh (`refreshMu sync.Mutex` -> `POST /api/v1/auth/refresh`) on `401 Unauthorized` with a single retry, and clears RAM + deletes `session.json` + emits the Wails `"auth:expired"` event on `403 ACCOUNT_SUSPENDED` or failed/exhausted refresh.
+   - When running `wails3 task bindings` (`wails3 generate bindings -clean=true -ts`), **Wails v3 automatically generates TypeScript bindings and types** in `app/frontend/bindings/palabrario/app/app.ts` and `app/frontend/bindings/palabrario/pkg/models/models.ts`. Thus, a change in `pkg/models` propagates its static typing from PostgreSQL (`sqlc`) all the way to Vue 3 without human intervention or risk of hallucination.
 
 ```mermaid
 flowchart TB
     subgraph Client["Native Desktop Client (Wails v3 — Single Process)"]
-        UI["Vue 3 + TypeScript Frontend\n(Imports local-app/frontend/bindings/)"]
-        WailsBFF["Native Go Bridge BFF (local-app/app.go)\n• Custodies JWT sessionToken in private RAM (sync.RWMutex)\n• Imports pkg/models via go.work\n• net/http & WebSockets client in Go"]
+        UI["Vue 3 + TypeScript Frontend\n(Imports app/frontend/bindings/)"]
+        WailsBFF["Native Go Bridge BFF (app/app.go, app/app_auth.go)\n• Access JWT in private RAM + 0600 session.json refresh token\n• Single-flight 401 refresh + auth:expired eviction\n• Imports pkg/models via go.work; net/http & WS client in Go"]
         UI <-->|"Wails v3 IPC Bindings & Events\n(wails3 generate bindings -ts)"| WailsBFF
     end
 
@@ -131,7 +131,7 @@ flowchart TB
     WailsBFF -.->|"Imports Structs"| PkgModels
     CoreService -.->|"Imports"| SharedPkg
     WailsBFF -->|"net/http JSON + Bearer JWT (/api/v1/*)"| Router
-    WailsBFF <-->|"WS /ws/arena/{roomCode}?token={jwt}"| WSHub
+    WailsBFF <-->|"WS /ws/arena/{roomCode} (Authorization: Bearer {jwt})"| WSHub
     WailsBFF -->|"Multipart /api/v1/images/upload"| ImgProc
 
     DBLayer -->|"ACID TCP Pool"| PG

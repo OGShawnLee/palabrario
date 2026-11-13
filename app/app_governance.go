@@ -12,11 +12,14 @@ import (
 // MÓDULO 3: Gobernanza Institucional, Roles y Boletos (CU02, CU03, CU04)
 // =============================================================================
 
-// RedeemInvitationTicket canjea un boleto institucional para ascenso directo de rol.
+// RedeemInvitationTicket redeems an institutional ticket for direct role promotion and refreshes the access token.
 func (a *App) RedeemInvitationTicket(req models.RedeemTicketRequest) (*models.UserProfile, error) {
 	var profile models.UserProfile
 	if err := a.doRequest(a.context(), http.MethodPost, a.coreURL+"/api/v1/governance/tickets/redeem", req, &profile); err != nil {
 		return nil, err
+	}
+	if a.getRefreshToken() != "" {
+		_, _ = a.refreshSession(a.context())
 	}
 	return &profile, nil
 }
@@ -40,11 +43,6 @@ func (a *App) ListMyEditorRequests() ([]models.EditorRequest, error) {
 		list = []models.EditorRequest{}
 	}
 	return list, nil
-}
-
-// ListPendingEditorRequests lista las solicitudes de editor en estado PENDING para administradores.
-func (a *App) ListPendingEditorRequests() ([]models.EditorRequest, error) {
-	return a.ListEditorRequests("PENDING")
 }
 
 // ListEditorRequests lista solicitudes con filtro opcional de estado.
@@ -71,11 +69,6 @@ func (a *App) ResolveEditorRequest(id string, req models.ResolveEditorRequestDTO
 		return nil, err
 	}
 	return &res, nil
-}
-
-// GenerateInvitationTickets alias para emisión de boletos institucionales.
-func (a *App) GenerateInvitationTickets(req models.CreateTicketRequest) (*models.InvitationTicket, error) {
-	return a.CreateInvitationTicket(req)
 }
 
 // CreateInvitationTicket genera un boleto institucional de acceso/ascenso.
@@ -106,11 +99,6 @@ func (a *App) ListInvitationTickets(activeOnly bool) ([]models.InvitationTicket,
 // RevokeInvitationTicket revoca un boleto de invitación.
 func (a *App) RevokeInvitationTicket(id string) error {
 	return a.doRequest(a.context(), http.MethodDelete, a.coreURL+"/api/v1/governance/tickets/"+url.PathEscape(id), nil, nil)
-}
-
-// ListUsersForGovernance lista usuarios para moderación y gobierno de roles.
-func (a *App) ListUsersForGovernance(q string, role string, limit int, offset int) ([]models.UserProfile, error) {
-	return a.ListUsers(q, role, limit, offset)
 }
 
 // ListUsers busca y lista usuarios con paginación.
@@ -144,16 +132,6 @@ func (a *App) ListUsers(q string, role string, limit int, offset int) ([]models.
 	return users, nil
 }
 
-// UpdateUserRole modifica el rol de un usuario.
-func (a *App) UpdateUserRole(id string, role models.AccountRole) (*models.UserProfile, error) {
-	return a.UpdateUserRoleOrStatus(id, models.UpdateUserRoleOrStatusRequest{Role: &role})
-}
-
-// UpdateUserStatus activa o suspende la cuenta de un usuario.
-func (a *App) UpdateUserStatus(id string, isActive bool) (*models.UserProfile, error) {
-	return a.UpdateUserRoleOrStatus(id, models.UpdateUserRoleOrStatusRequest{IsActive: &isActive})
-}
-
 // UpdateUserRoleOrStatus actualiza rol y/o estado de activación de usuario.
 func (a *App) UpdateUserRoleOrStatus(id string, req models.UpdateUserRoleOrStatusRequest) (*models.UserProfile, error) {
 	var user models.UserProfile
@@ -164,11 +142,6 @@ func (a *App) UpdateUserRoleOrStatus(id string, req models.UpdateUserRoleOrStatu
 	return &user, nil
 }
 
-// CreateCommunityReport emite un reporte comunitario sobre léxico o sentidos.
-func (a *App) CreateCommunityReport(req models.CreateReportRequest) (*models.ContentReport, error) {
-	return a.CreateReport(req)
-}
-
 // CreateReport emite un reporte de moderación.
 func (a *App) CreateReport(req models.CreateReportRequest) (*models.ContentReport, error) {
 	var rep models.ContentReport
@@ -176,11 +149,6 @@ func (a *App) CreateReport(req models.CreateReportRequest) (*models.ContentRepor
 		return nil, err
 	}
 	return &rep, nil
-}
-
-// ListCommunityReports lista reportes abiertos de la comunidad.
-func (a *App) ListCommunityReports(status string) ([]models.ContentReport, error) {
-	return a.ListReports(status)
 }
 
 // ListReports lista reportes con filtro de estado.
@@ -197,11 +165,6 @@ func (a *App) ListReports(status string) ([]models.ContentReport, error) {
 		list = []models.ContentReport{}
 	}
 	return list, nil
-}
-
-// ResolveCommunityReport resuelve formalmente un reporte comunitario.
-func (a *App) ResolveCommunityReport(reportId string, req models.ResolveReportRequest) (*models.ContentReport, error) {
-	return a.ResolveReport(reportId, req)
 }
 
 // ResolveReport resuelve un reporte de contenido.

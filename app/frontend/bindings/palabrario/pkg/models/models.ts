@@ -286,12 +286,16 @@ export class ArenaRoomState {
 
 export class AuthResponse {
     "token": string;
+    "refresh_token": string;
     "user": UserProfile;
 
     /** Creates a new AuthResponse instance. */
     constructor($$source: Partial<AuthResponse> = {}) {
         if (!("token" in $$source)) {
             this["token"] = "";
+        }
+        if (!("refresh_token" in $$source)) {
+            this["refresh_token"] = "";
         }
         if (!("user" in $$source)) {
             this["user"] = (new UserProfile());
@@ -304,10 +308,10 @@ export class AuthResponse {
      * Creates a new AuthResponse instance from a string or object.
      */
     static createFrom($$source: any = {}): AuthResponse {
-        const $$createField1_0 = $$createType3;
+        const $$createField2_0 = $$createType3;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("user" in $$parsedSource) {
-            $$parsedSource["user"] = $$createField1_0($$parsedSource["user"]);
+            $$parsedSource["user"] = $$createField2_0($$parsedSource["user"]);
         }
         return new AuthResponse($$parsedSource as Partial<AuthResponse>);
     }

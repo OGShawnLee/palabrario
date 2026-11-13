@@ -9,30 +9,51 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"palabrario/pkg/models"
 )
 
+// APIError represents a structured HTTP or transport error returned by the BFF.
+type APIError struct {
+	Status  int    `json:"status"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+func (e *APIError) Error() string { return e.Message }
+
+type persistedSession struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
 // App is the desktop Backend-For-Frontend service for Palabrario in Wails v3.
 type App struct {
-	ctx          context.Context
-	httpClient   *http.Client
-	coreURL      string
-	realtimeURL  string
-	imageURL     string
+	ctx             context.Context
+	httpClient      *http.Client
+	coreURL         string
+	realtimeURL     string
+	imageURL        string
+	sessionFilePath string
+
 	mu           sync.RWMutex
-	sessionToken string
+	accessToken  string
+	refreshToken string
+
+	refreshMu sync.Mutex
 
 	wsMu   sync.Mutex
 	wsConn *websocket.Conn
 	wsStop chan struct{}
 }
 
-// NewApp instantiates the App service reading environment defaults.
+// NewApp instantiates the App service reading environment defaults and loading any persisted refresh token.
 func NewApp() *App {
 	coreURL := os.Getenv("PALABRARIO_CORE_URL")
 	if coreURL == "" {
@@ -49,14 +70,27 @@ func NewApp() *App {
 		imageURL = "http://localhost:8002"
 	}
 
-	return &App{
+	cfgDir, err := os.UserConfigDir()
+	if err != nil || strings.TrimSpace(cfgDir) == "" {
+		cfgDir = os.TempDir()
+	}
+	sessionFilePath := filepath.Join(cfgDir, "palabrario", "session.json")
+
+	return newAppWithConfig(coreURL, realtimeURL, imageURL, sessionFilePath)
+}
+
+func newAppWithConfig(coreURL, realtimeURL, imageURL, sessionFilePath string) *App {
+	a := &App{
 		httpClient: &http.Client{
 			Timeout: 20 * time.Second,
 		},
-		coreURL:     coreURL,
-		realtimeURL: realtimeURL,
-		imageURL:    imageURL,
+		coreURL:         strings.TrimRight(coreURL, "/"),
+		realtimeURL:     strings.TrimRight(realtimeURL, "/"),
+		imageURL:        strings.TrimRight(imageURL, "/"),
+		sessionFilePath: sessionFilePath,
 	}
+	a.loadPersistedSession()
+	return a
 }
 
 // SetContext sets the context from Wails runtime.
@@ -71,61 +105,270 @@ func (a *App) context() context.Context {
 	return context.Background()
 }
 
-func (a *App) getSessionToken() string {
+func (a *App) getAccessToken() string {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
-	return a.sessionToken
+	return a.accessToken
 }
 
-func (a *App) setSessionToken(token string) {
+func (a *App) getRefreshToken() string {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.refreshToken
+}
+
+func (a *App) getTokens() (string, string) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.accessToken, a.refreshToken
+}
+
+func (a *App) setTokens(access, refresh string) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	a.sessionToken = token
+	a.accessToken = access
+	a.refreshToken = refresh
+	if refresh != "" {
+		_ = a.writePersistedSessionLocked(refresh)
+	} else {
+		_ = a.removePersistedSessionLocked()
+	}
 }
 
-// doRequest serializa JSON, inyecta Bearer JWT y maneja errores con descripciones humanas exactas.
-func (a *App) doRequest(ctx context.Context, method, targetURL string, body any, target any) error {
-	var reqBody io.Reader
-	if body != nil {
-		data, err := json.Marshal(body)
-		if err != nil {
-			return fmt.Errorf("error al serializar cuerpo JSON: %w", err)
-		}
-		reqBody = bytes.NewReader(data)
-	}
+func (a *App) clearSession() {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.accessToken = ""
+	a.refreshToken = ""
+	_ = a.removePersistedSessionLocked()
+}
 
-	req, err := http.NewRequestWithContext(ctx, method, targetURL, reqBody)
+func (a *App) loadPersistedSession() {
+	if strings.TrimSpace(a.sessionFilePath) == "" {
+		return
+	}
+	data, err := os.ReadFile(a.sessionFilePath)
 	if err != nil {
-		return fmt.Errorf("error al crear petición HTTP: %w", err)
+		return
+	}
+	var sess persistedSession
+	if err := json.Unmarshal(data, &sess); err != nil {
+		return
+	}
+	token := strings.TrimSpace(sess.RefreshToken)
+	if token == "" {
+		return
+	}
+	a.mu.Lock()
+	a.refreshToken = token
+	a.mu.Unlock()
+}
+
+func (a *App) writePersistedSessionLocked(refresh string) error {
+	if strings.TrimSpace(a.sessionFilePath) == "" {
+		return nil
+	}
+	dir := filepath.Dir(a.sessionFilePath)
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return err
+	}
+	payload, err := json.Marshal(persistedSession{RefreshToken: refresh})
+	if err != nil {
+		return err
+	}
+	tmpFile, err := os.CreateTemp(dir, "session-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmpFile.Name()
+	cleanupTmp := true
+	defer func() {
+		if cleanupTmp {
+			_ = os.Remove(tmpPath)
+		}
+	}()
+
+	if _, err := tmpFile.Write(payload); err != nil {
+		_ = tmpFile.Close()
+		return err
+	}
+	if err := tmpFile.Close(); err != nil {
+		return err
+	}
+	if err := os.Chmod(tmpPath, 0600); err != nil {
+		return err
+	}
+	if err := os.Rename(tmpPath, a.sessionFilePath); err != nil {
+		return err
+	}
+	cleanupTmp = false
+	return nil
+}
+
+func (a *App) removePersistedSessionLocked() error {
+	if strings.TrimSpace(a.sessionFilePath) == "" {
+		return nil
+	}
+	err := os.Remove(a.sessionFilePath)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	return err
+}
+
+func (a *App) emitAuthExpired(code, reason string) {
+	if app := application.Get(); app != nil && app.Event != nil {
+		app.Event.Emit("auth:expired", map[string]string{
+			"code":   code,
+			"reason": reason,
+		})
+	}
+}
+
+func parseAPIError(resp *http.Response) *APIError {
+	respBody, _ := io.ReadAll(resp.Body)
+	var errResp struct {
+		Code  string `json:"code"`
+		Error string `json:"error"`
+	}
+	if len(respBody) > 0 {
+		_ = json.Unmarshal(respBody, &errResp)
+	}
+	msg := strings.TrimSpace(errResp.Error)
+	if msg == "" {
+		msg = http.StatusText(resp.StatusCode)
+	}
+	return &APIError{
+		Status:  resp.StatusCode,
+		Code:    strings.TrimSpace(errResp.Code),
+		Message: msg,
+	}
+}
+
+// refreshSession exchanges the persisted refresh token for a fresh access/refresh token pair.
+func (a *App) refreshSession(ctx context.Context) (*models.UserProfile, error) {
+	a.refreshMu.Lock()
+	defer a.refreshMu.Unlock()
+	return a.doRefreshLocked(ctx)
+}
+
+// refreshSessionIfStale performs a single-flight refresh only if the access token has not already been rotated by another goroutine.
+func (a *App) refreshSessionIfStale(ctx context.Context, staleAccessToken string) (*models.UserProfile, bool, error) {
+	a.refreshMu.Lock()
+	defer a.refreshMu.Unlock()
+
+	curAccess := a.getAccessToken()
+	if staleAccessToken == "" && curAccess != "" {
+		return nil, false, nil
+	}
+	if staleAccessToken != "" && curAccess != "" && curAccess != staleAccessToken {
+		return nil, false, nil
 	}
 
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+	profile, err := a.doRefreshLocked(ctx)
+	return profile, true, err
+}
+
+func (a *App) doRefreshLocked(ctx context.Context) (*models.UserProfile, error) {
+	refresh := a.getRefreshToken()
+	if refresh == "" {
+		apiErr := &APIError{
+			Status:  http.StatusUnauthorized,
+			Code:    "UNAUTHORIZED",
+			Message: "Your session has expired. Please sign in again.",
+		}
+		a.clearSession()
+		a.emitAuthExpired(apiErr.Code, apiErr.Message)
+		return nil, apiErr
 	}
+
+	payload, err := json.Marshal(models.RefreshTokenRequest{RefreshToken: refresh})
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize refresh request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.coreURL+"/api/v1/auth/refresh", bytes.NewReader(payload))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create refresh request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-
-	token := a.getSessionToken()
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-	}
 
 	resp, err := a.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("error de red al conectar con el servidor: %w", err)
+		return nil, &APIError{
+			Status:  0,
+			Code:    "NETWORK_ERROR",
+			Message: "Unable to reach the Palabrario server. Please check your connection.",
+		}
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		var errResp struct {
-			Error string `json:"error"`
+		apiErr := parseAPIError(resp)
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+			a.clearSession()
+			a.emitAuthExpired(apiErr.Code, apiErr.Message)
 		}
-		respBody, _ := io.ReadAll(resp.Body)
-		if len(respBody) > 0 {
-			if jsonErr := json.Unmarshal(respBody, &errResp); jsonErr == nil && errResp.Error != "" {
-				return errors.New(errResp.Error)
+		return nil, apiErr
+	}
+
+	var authResp models.AuthResponse
+	if err := json.NewDecoder(resp.Body).Decode(&authResp); err != nil {
+		return nil, fmt.Errorf("failed to decode refresh response: %w", err)
+	}
+
+	a.setTokens(authResp.Token, authResp.RefreshToken)
+	return &authResp.User, nil
+}
+
+// executeRequest executes a request built by buildReq, injects Bearer auth, handles single-flight 401 refresh,
+// and evicts expired/suspended sessions cleanly.
+func (a *App) executeRequest(ctx context.Context, buildReq func() (*http.Request, error), target any, allowRetry bool) error {
+	req, err := buildReq()
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Accept", "application/json")
+
+	token := a.getAccessToken()
+	tokenWasSent := false
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+		tokenWasSent = true
+	}
+
+	resp, err := a.httpClient.Do(req)
+	if err != nil {
+		return &APIError{
+			Status:  0,
+			Code:    "NETWORK_ERROR",
+			Message: "Unable to reach the Palabrario server. Please check your connection.",
+		}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		apiErr := parseAPIError(resp)
+
+		if resp.StatusCode == http.StatusUnauthorized {
+			if allowRetry && tokenWasSent && a.getRefreshToken() != "" {
+				if _, _, refreshErr := a.refreshSessionIfStale(ctx, token); refreshErr == nil {
+					return a.executeRequest(ctx, buildReq, target, false)
+				} else {
+					return refreshErr
+				}
 			}
+			if tokenWasSent {
+				a.clearSession()
+				a.emitAuthExpired(apiErr.Code, apiErr.Message)
+			}
+		} else if resp.StatusCode == http.StatusForbidden && apiErr.Code == "ACCOUNT_SUSPENDED" {
+			a.clearSession()
+			a.emitAuthExpired(apiErr.Code, apiErr.Message)
 		}
-		return errors.New(http.StatusText(resp.StatusCode))
+
+		return apiErr
 	}
 
 	if resp.StatusCode == http.StatusNoContent || target == nil {
@@ -133,19 +376,41 @@ func (a *App) doRequest(ctx context.Context, method, targetURL string, body any,
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(target); err != nil {
-		return fmt.Errorf("error al decodificar respuesta JSON: %w", err)
+		return fmt.Errorf("failed to decode server response: %w", err)
 	}
 	return nil
+}
+
+// doRequest serializes JSON payloads and delegates execution to executeRequest.
+func (a *App) doRequest(ctx context.Context, method, targetURL string, body any, target any) error {
+	var data []byte
+	if body != nil {
+		var err error
+		data, err = json.Marshal(body)
+		if err != nil {
+			return fmt.Errorf("failed to serialize JSON body: %w", err)
+		}
+	}
+
+	return a.executeRequest(ctx, func() (*http.Request, error) {
+		var reqBody io.Reader
+		if data != nil {
+			reqBody = bytes.NewReader(data)
+		}
+		req, err := http.NewRequestWithContext(ctx, method, targetURL, reqBody)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+		}
+		if data != nil {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		return req, nil
+	}, target, true)
 }
 
 // HealthCheck returns connectivity status for local client.
 func (a *App) HealthCheck() (string, error) {
 	return "ok", nil
-}
-
-// HasActiveSession checks if there is an active session token in memory.
-func (a *App) HasActiveSession() bool {
-	return a.getSessionToken() != ""
 }
 
 // =============================================================================

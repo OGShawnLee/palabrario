@@ -18,12 +18,7 @@ import (
 // MÓDULO 7: Arena Multijugador y WebSockets (CU14–CU16)
 // =============================================================================
 
-// CreateArenaMatch prepara una nueva partida competitiva en vivo.
-func (a *App) CreateArenaMatch(req models.CreateMatchRequest) (*models.MatchPackage, error) {
-	return a.PrepareMatch(req)
-}
-
-// PrepareMatch prepara una partida de arena.
+// PrepareMatch prepares a competitive arena match.
 func (a *App) PrepareMatch(req models.CreateMatchRequest) (*models.MatchPackage, error) {
 	var pkg models.MatchPackage
 	if err := a.doRequest(a.context(), http.MethodPost, a.coreURL+"/api/v1/arena/matches/prepare", req, &pkg); err != nil {
@@ -32,17 +27,17 @@ func (a *App) PrepareMatch(req models.CreateMatchRequest) (*models.MatchPackage,
 	return &pkg, nil
 }
 
-// JoinArenaMatch valida e inicializa la participación en una sala por código PIN.
+// JoinArenaMatch validates and initializes participation in a room by PIN code.
 func (a *App) JoinArenaMatch(roomCode string) (*models.MatchPackage, error) {
 	roomCode = strings.TrimSpace(roomCode)
 	if roomCode == "" {
-		return nil, errors.New("código de sala requerido")
+		return nil, errors.New("Room code is required.")
 	}
 	return &models.MatchPackage{RoomCode: roomCode}, nil
 }
 
-// FindMatchRoom consulta una partida en espera por su código PIN.
-// Retorna (nil, nil) si no existe para que TypeScript lo reciba como `null`.
+// FindMatchRoom queries a waiting match by its room PIN code.
+// Returns (nil, nil) if not found so TypeScript receives `null`.
 func (a *App) FindMatchRoom(roomCode string) (*models.PublicMatchItem, error) {
 	roomCode = strings.TrimSpace(strings.ToUpper(strings.TrimPrefix(strings.TrimSpace(roomCode), "#")))
 	if roomCode == "" {
@@ -52,8 +47,8 @@ func (a *App) FindMatchRoom(roomCode string) (*models.PublicMatchItem, error) {
 	targetURL := a.coreURL + "/api/v1/arena/matches/code/" + url.PathEscape(roomCode)
 	var item models.PublicMatchItem
 	if err := a.doRequest(a.context(), http.MethodGet, targetURL, nil, &item); err != nil {
-		msg := strings.ToLower(err.Error())
-		if strings.Contains(msg, "not found") || strings.Contains(msg, "no encontrada") {
+		var apiErr *APIError
+		if errors.As(err, &apiErr) && apiErr.Status == http.StatusNotFound {
 			return nil, nil
 		}
 		return nil, err
@@ -61,12 +56,7 @@ func (a *App) FindMatchRoom(roomCode string) (*models.PublicMatchItem, error) {
 	return &item, nil
 }
 
-// GetMyMatchHistory consulta el historial de partidas del usuario.
-func (a *App) GetMyMatchHistory(limit int) ([]models.MatchSummary, error) {
-	return a.ListMatchHistory(limit)
-}
-
-// ListMatchHistory lista historial de partidas.
+// ListMatchHistory lists the authenticated user's match history.
 func (a *App) ListMatchHistory(limit int) ([]models.MatchSummary, error) {
 	targetURL := a.coreURL + "/api/v1/arena/matches/history"
 	if limit > 0 {
@@ -82,7 +72,7 @@ func (a *App) ListMatchHistory(limit int) ([]models.MatchSummary, error) {
 	return list, nil
 }
 
-// ListPublicWaitingMatches lista las partidas públicas en espera.
+// ListPublicWaitingMatches lists public waiting arena matches.
 func (a *App) ListPublicWaitingMatches(limit int) ([]models.PublicMatchItem, error) {
 	targetURL := a.coreURL + "/api/v1/arena/matches/public"
 	if limit > 0 {
@@ -98,13 +88,7 @@ func (a *App) ListPublicWaitingMatches(limit int) ([]models.PublicMatchItem, err
 	return list, nil
 }
 
-
-// GetMatchReplayDetail recupera el replay granular 3NF ronda por ronda.
-func (a *App) GetMatchReplayDetail(matchId string) (*models.MatchReplayDetail, error) {
-	return a.GetMatchReplay(matchId)
-}
-
-// GetMatchReplay obtiene replay de partida.
+// GetMatchReplay retrieves the 3NF round-by-round replay for a match.
 func (a *App) GetMatchReplay(matchId string) (*models.MatchReplayDetail, error) {
 	var rep models.MatchReplayDetail
 	targetURL := a.coreURL + "/api/v1/arena/matches/" + url.PathEscape(matchId)
@@ -114,29 +98,22 @@ func (a *App) GetMatchReplay(matchId string) (*models.MatchReplayDetail, error) 
 	return &rep, nil
 }
 
-// ConnectArenaRoom establece conexión WebSocket hacia realtime-service (:8001).
+// ConnectArenaRoom establishes a WebSocket connection to realtime-service (:8001) using the Authorization Bearer header.
 func (a *App) ConnectArenaRoom(roomCode string) error {
-	a.wsMu.Lock()
-	defer a.wsMu.Unlock()
-
-	// Si hay conexión previa abierta, cerrarla limpiamente
-	if a.wsConn != nil {
-		if a.wsStop != nil {
-			close(a.wsStop)
-			a.wsStop = nil
-		}
-		_ = a.wsConn.Close()
-		a.wsConn = nil
-	}
-
-	token := a.getSessionToken()
-	if token == "" {
-		return errors.New("se requiere una sesión activa para ingresar a la arena")
-	}
-
 	roomCode = strings.TrimSpace(roomCode)
 	if roomCode == "" {
-		return errors.New("código de sala requerido")
+		return errors.New("Room code is required.")
+	}
+
+	token := a.getAccessToken()
+	if token == "" && a.getRefreshToken() != "" {
+		if _, _, err := a.refreshSessionIfStale(a.context(), ""); err != nil {
+			return err
+		}
+		token = a.getAccessToken()
+	}
+	if token == "" {
+		return errors.New("An active session is required to enter the Arena.")
 	}
 
 	wsBase := a.realtimeURL
@@ -146,17 +123,44 @@ func (a *App) ConnectArenaRoom(roomCode string) error {
 		wsBase = "wss://" + strings.TrimPrefix(wsBase, "https://")
 	}
 
-	wsURL := fmt.Sprintf("%s/ws/arena/%s?token=%s", wsBase, url.PathEscape(roomCode), url.QueryEscape(token))
+	wsURL := fmt.Sprintf("%s/ws/arena/%s", wsBase, url.PathEscape(roomCode))
 
-	conn, _, err := websocket.DefaultDialer.DialContext(a.context(), wsURL, nil)
+	a.wsMu.Lock()
+	defer a.wsMu.Unlock()
+
+	if a.wsConn != nil {
+		if a.wsStop != nil {
+			close(a.wsStop)
+			a.wsStop = nil
+		}
+		_ = a.wsConn.Close()
+		a.wsConn = nil
+	}
+
+	headers := http.Header{"Authorization": {"Bearer " + token}}
+	conn, resp, err := websocket.DefaultDialer.DialContext(a.context(), wsURL, headers)
+	if err != nil && resp != nil && resp.StatusCode == http.StatusUnauthorized && a.getRefreshToken() != "" {
+		if _, _, refreshErr := a.refreshSessionIfStale(a.context(), token); refreshErr == nil {
+			newToken := a.getAccessToken()
+			if newToken != "" {
+				headers = http.Header{"Authorization": {"Bearer " + newToken}}
+				conn, resp, err = websocket.DefaultDialer.DialContext(a.context(), wsURL, headers)
+			}
+		} else {
+			return refreshErr
+		}
+	}
 	if err != nil {
-		return fmt.Errorf("error al conectar con la sala de arena: %w", err)
+		if resp != nil && resp.StatusCode == http.StatusUnauthorized {
+			a.clearSession()
+			a.emitAuthExpired("UNAUTHORIZED", "Your session has expired. Please sign in again.")
+		}
+		return fmt.Errorf("failed to connect to the arena room: %w", err)
 	}
 
 	a.wsConn = conn
 	a.wsStop = make(chan struct{})
 
-	// Goroutine receptora de tramas WS
 	go func(ws *websocket.Conn, stop <-chan struct{}) {
 		defer func() {
 			_ = ws.Close()
@@ -186,18 +190,13 @@ func (a *App) ConnectArenaRoom(roomCode string) error {
 	return nil
 }
 
-// ConnectArena alias para conexión a sala de arena.
-func (a *App) ConnectArena(roomCode string) error {
-	return a.ConnectArenaRoom(roomCode)
-}
-
-// StartArenaMatch emite el evento para iniciar la partida (Host).
+// StartArenaMatch emits the event to start the match (Host).
 func (a *App) StartArenaMatch() error {
 	a.wsMu.Lock()
 	defer a.wsMu.Unlock()
 
 	if a.wsConn == nil {
-		return errors.New("no hay conexión activa con la sala de arena")
+		return errors.New("No active connection to the arena room.")
 	}
 
 	evt := models.WSEvent{
@@ -206,13 +205,13 @@ func (a *App) StartArenaMatch() error {
 	return a.wsConn.WriteJSON(evt)
 }
 
-// SubmitArenaAnswer envía la respuesta del jugador en la ronda actual.
+// SubmitArenaAnswer submits the player's answer for the current round.
 func (a *App) SubmitArenaAnswer(roundNumber int, selectedOption string) error {
 	a.wsMu.Lock()
 	defer a.wsMu.Unlock()
 
 	if a.wsConn == nil {
-		return errors.New("no hay conexión activa con la sala de arena")
+		return errors.New("No active connection to the arena room.")
 	}
 
 	evt := models.WSEvent{
@@ -225,7 +224,7 @@ func (a *App) SubmitArenaAnswer(roundNumber int, selectedOption string) error {
 	return a.wsConn.WriteJSON(evt)
 }
 
-// LeaveArenaRoom cierra la conexión activa con la sala.
+// LeaveArenaRoom closes the active WebSocket connection to the room.
 func (a *App) LeaveArenaRoom() error {
 	a.wsMu.Lock()
 	defer a.wsMu.Unlock()
@@ -239,9 +238,4 @@ func (a *App) LeaveArenaRoom() error {
 		a.wsConn = nil
 	}
 	return nil
-}
-
-// LeaveArena alias para abandonar sala.
-func (a *App) LeaveArena() error {
-	return a.LeaveArenaRoom()
 }
