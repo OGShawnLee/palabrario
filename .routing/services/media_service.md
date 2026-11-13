@@ -31,7 +31,7 @@ Related media rules referenced elsewhere in the domain:
 ## Part B — Technical Contracts
 
 > [!IMPORTANT]
-> Contract-first rules apply: no invented JSON fields, strict `snake_case`, and `response.Error(w, status, message)` for every error. See [`DOMAIN.md`](../DOMAIN.md#3-global-contract-first-rules-cross-cutting).
+> Contract-first rules apply: no invented JSON fields, strict `snake_case`, and `response.Error(w, status, message)` / `response.ErrorWithCode(w, status, code, message)` (`{ "code", "error" }` in English) for every error. See [`DOMAIN.md`](../DOMAIN.md#3-global-contract-first-rules-cross-cutting).
 
 ### MODULE 8: Multimedia Processing (`image-service` in Go 1.24 — `:8002`)
 
@@ -57,5 +57,5 @@ type ImageUploadResponse struct {
 | :---: | :--- | :---: | :---: | :---: | :--- | :--- |
 | `GET` | `/health` | Public | Infra | ✅ Ready | `200 OK` $\to$ `{"status":"ok","service":"image-service","timestamp":"..."}` | Operational health probe. |
 | `GET` | `/` | Public | Infra | ✅ Ready | `200 OK` $\to$ `{"message":"Bienvenido a Palabrario Image Service (Golang)"}` | Service welcome message. |
-| `POST` | `/api/v1/images/upload` | `RequireAuth` (`pkg/auth`) | CU01 / CU02 / CU06 (RN12) | ✅ Ready | `201 Created` $\to$ `models.ImageUploadResponse` | Receives `multipart/form-data` (`file` max 5 MB + `category`: `avatar`, `credentials`, `word`, or `sense`). Validates magic bytes (`image/jpeg`, `image/png`, `image/webp`), applies heuristic skin-entropy safety filter in pure Go, strips EXIF metadata (`RNF-SEG-04`), stores in local volume, and returns `models.ImageUploadResponse`. `400` on invalid category/file/empty, `413` on file too large (> 5 MB), `415` on unsupported MIME, `422` on NSFW rejection. |
+| `POST` | `/api/v1/images/upload` | `RequireAuth` (`pkg/auth` via `auth.ExtractBearerToken`) | CU01 / CU02 / CU06 (RN12) | ✅ Ready | `201 Created` $\to$ `models.ImageUploadResponse` | Receives `multipart/form-data` (`file` max 5 MB + `category`: `avatar`, `credentials`, `word`, or `sense`). Validates magic bytes (`image/jpeg`, `image/png`, `image/webp`), applies heuristic skin-entropy safety filter in pure Go, strips EXIF metadata (`RNF-SEG-04`), stores in local volume, and returns `models.ImageUploadResponse`. Returns `401` English `response.ErrorWithCode` (`MISSING_TOKEN`, `INVALID_TOKEN_FORMAT`, `INVALID_TOKEN`) without leaking internal JWT verification errors in the HTTP body; `400` on invalid category/file/empty, `413` on file too large (> 5 MB), `415` on unsupported MIME, `422` on NSFW rejection. CORS uses `CORS_ALLOWED_ORIGINS` with `AllowCredentials: false`. |
 | `GET` | `/uploads/*` | Public | Infra / Media | ✅ Ready | `200 OK` (binary stream) | Statically serves sanitized images from local volume of `image-service` with `X-Content-Type-Options: nosniff`. |

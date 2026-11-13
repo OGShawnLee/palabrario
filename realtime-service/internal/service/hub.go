@@ -15,20 +15,13 @@ import (
 	"palabrario/pkg/response"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true // Permite conexiones desde cualquier origen en desarrollo y Wails
-	},
-}
-
 // ArenaHub administra todas las salas activas de la Arena en memoria RAM.
 type ArenaHub struct {
 	mu                sync.RWMutex
 	rooms             map[string]*ActiveRoom
 	coreClient        *CoreClient
 	tokenService      *auth.TokenService
+	allowedOrigins    []string
 	ReconnectWindow   time.Duration
 	CountdownDuration time.Duration
 	InterRoundPause   time.Duration
@@ -40,10 +33,34 @@ func NewArenaHub(coreClient *CoreClient, tokenService *auth.TokenService) *Arena
 		rooms:             make(map[string]*ActiveRoom),
 		coreClient:        coreClient,
 		tokenService:      tokenService,
+		allowedOrigins:    auth.DefaultDevCORSOrigins(),
 		ReconnectWindow:   10 * time.Second,
 		CountdownDuration: 3 * time.Second,
 		InterRoundPause:   3 * time.Second,
 	}
+}
+
+// SetAllowedOrigins configures the WebSocket CheckOrigin allowlist.
+func (h *ArenaHub) SetAllowedOrigins(origins []string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	copied := make([]string, len(origins))
+	copy(copied, origins)
+	h.allowedOrigins = copied
+}
+
+// CheckOrigin validates non-empty WebSocket Origin headers against the configured allowlist,
+// while permitting empty Origin headers from native Go/Wails desktop clients.
+func (h *ArenaHub) CheckOrigin(r *http.Request) bool {
+	h.mu.RLock()
+	allowed := h.allowedOrigins
+	h.mu.RUnlock()
+
+	origin := ""
+	if r != nil {
+		origin = r.Header.Get("Origin")
+	}
+	return auth.IsOriginAllowed(origin, allowed)
 }
 
 // ActiveRoomsCount retorna el número de salas activas en memoria RAM de forma concurrente y segura.
@@ -102,8 +119,15 @@ func (h *ArenaHub) GetOrCreateRoom(ctx context.Context, roomCode string) (*Activ
 func (h *ArenaHub) HandleWS(w http.ResponseWriter, r *http.Request, roomCode string, claims *auth.Claims) {
 	room, err := h.GetOrCreateRoom(r.Context(), roomCode)
 	if err != nil {
-		response.Error(w, http.StatusNotFound, fmt.Sprintf("Sala %s no disponible: %v", roomCode, err))
+		log.Printf("⚠️ Room %s unavailable: %v", roomCode, err)
+		response.ErrorWithCode(w, http.StatusNotFound, "ROOM_UNAVAILABLE", fmt.Sprintf("Room %s is unavailable", roomCode))
 		return
+	}
+
+	upgrader := websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin:     h.CheckOrigin,
 	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)

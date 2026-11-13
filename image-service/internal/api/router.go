@@ -68,9 +68,18 @@ func (rt *Router) Setup() http.Handler {
 	// Asegurar existencia del directorio de uploads
 	_ = os.MkdirAll(rt.cfg.UploadDir, 0755)
 
-	tokenService := auth.NewTokenService(rt.cfg.JWTSecret, rt.cfg.JWTExpirationHours)
+	ttl := rt.cfg.AccessTokenTTL
+	if ttl <= 0 {
+		ttl = rt.cfg.JWTExpirationHours
+	}
+	tokenService := auth.NewTokenService(rt.cfg.JWTSecret, ttl)
 	authMiddleware := middleware.NewAuthMiddleware(tokenService)
 	imageHandler := handlers.NewImageHandler(rt.processor, rt.validator, rt.storage, rt.cfg.MaxFileSizeMB)
+
+	allowedOrigins := rt.cfg.AllowedOrigins
+	if len(allowedOrigins) == 0 {
+		allowedOrigins = auth.ParseCORSAllowedOrigins("")
+	}
 
 	r := chi.NewRouter()
 
@@ -80,10 +89,10 @@ func (rt *Router) Setup() http.Handler {
 	r.Use(chimiddleware.Recoverer)
 
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
-		AllowCredentials: true,
+		AllowCredentials: false,
 		MaxAge:           300,
 	}))
 

@@ -39,12 +39,18 @@ func (rt *Router) Setup() http.Handler {
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 
-	// Configuración CORS permisiva para clientes web y puente Wails local
+	allowedOrigins := rt.cfg.AllowedOrigins
+	if len(allowedOrigins) == 0 {
+		allowedOrigins = auth.ParseCORSAllowedOrigins("")
+	}
+	rt.hub.SetAllowedOrigins(allowedOrigins)
+
+	// CORS configured from environment allowlist without credentials (Bearer auth only)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
-		AllowCredentials: true,
+		AllowCredentials: false,
 		MaxAge:           300,
 	}))
 

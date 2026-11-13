@@ -11,13 +11,13 @@ import (
 	"palabrario/realtime-service/internal/service"
 )
 
-// ArenaHandler administra la conexión y suscripción de clientes WebSocket a la Arena.
+// ArenaHandler manages WebSocket authentication and subscription for Arena rooms.
 type ArenaHandler struct {
 	hub          *service.ArenaHub
 	tokenService *auth.TokenService
 }
 
-// NewArenaHandler crea una nueva instancia de ArenaHandler con sus dependencias inyectadas.
+// NewArenaHandler creates a new ArenaHandler with its injected dependencies.
 func NewArenaHandler(hub *service.ArenaHub, tokenService *auth.TokenService) *ArenaHandler {
 	return &ArenaHandler{
 		hub:          hub,
@@ -25,30 +25,33 @@ func NewArenaHandler(hub *service.ArenaHub, tokenService *auth.TokenService) *Ar
 	}
 }
 
-// HandleWS valida las credenciales del jugador y eleva la conexión HTTP a WebSocket para la sala solicitada.
+// HandleWS validates the player's JWT credentials (Authorization header primary, ?token= fallback)
+// and upgrades the HTTP connection to a WebSocket for the requested room.
 func (h *ArenaHandler) HandleWS(w http.ResponseWriter, r *http.Request) {
 	roomCode := strings.TrimSpace(chi.URLParam(r, "roomCode"))
 	if roomCode == "" {
-		response.Error(w, http.StatusBadRequest, "El código de sala es requerido")
+		response.ErrorWithCode(w, http.StatusBadRequest, "MISSING_ROOM_CODE", "Room code is required")
 		return
 	}
 
-	tokenStr := strings.TrimSpace(r.URL.Query().Get("token"))
-	if tokenStr == "" {
-		authHeader := r.Header.Get("Authorization")
-		if strings.HasPrefix(authHeader, "Bearer ") {
-			tokenStr = strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+	tokenStr, present, err := auth.ExtractBearerToken(r)
+	if present {
+		if err != nil {
+			response.ErrorWithCode(w, http.StatusUnauthorized, "INVALID_TOKEN_FORMAT", "Invalid authorization header format")
+			return
 		}
+	} else {
+		tokenStr = strings.TrimSpace(r.URL.Query().Get("token"))
 	}
 
 	if tokenStr == "" {
-		response.Error(w, http.StatusUnauthorized, "Token JWT requerido en ?token= o Authorization")
+		response.ErrorWithCode(w, http.StatusUnauthorized, "MISSING_TOKEN", "JWT token is required in Authorization header or ?token= query parameter")
 		return
 	}
 
 	claims, err := h.tokenService.VerifyToken(tokenStr)
 	if err != nil {
-		response.Error(w, http.StatusUnauthorized, "Token inválido o expirado")
+		response.ErrorWithCode(w, http.StatusUnauthorized, "INVALID_TOKEN", "Invalid or expired token")
 		return
 	}
 

@@ -58,16 +58,16 @@ Represent the lifecycle, room operating rules, and consolidated outcome of a mul
 ## Part B — Technical Contracts
 
 > [!IMPORTANT]
-> Contract-first rules apply: no invented JSON fields, strict `snake_case`, typed `sqlc` queries only, and `response.Error(w, status, message)` for every error. See [`DOMAIN.md`](../DOMAIN.md#3-global-contract-first-rules-cross-cutting).
+> Contract-first rules apply: no invented JSON fields, strict `snake_case`, typed `sqlc` queries only, and `response.Error(w, status, message)` / `response.ErrorWithCode(w, status, code, message)` (`{ "code", "error" }` in English) for every error. See [`DOMAIN.md`](../DOMAIN.md#3-global-contract-first-rules-cross-cutting).
 
 ### MODULE 7: Multiplayer Arena in Go (`ArenaCatalogService` on `:8000` + `realtime-service` on `:8001` — `CU14, CU15, CU16`)
 
 #### 2.7.1. `realtime-service` Design in Go 1.24 (`:8001`) and S2S Security (`pkg/auth`)
 
 `realtime-service` is implemented in **Go 1.24** within the same monorepo (root `go.mod` `palabrario`), utilizing:
-- **HTTP Router:** `github.com/go-chi/chi/v5` (exposing `GET /health` and `GET /ws/arena/{roomCode}`).
-- **WebSocket Engine:** `github.com/gorilla/websocket` with read/write buffers of `1024 bytes` and `WriteWait` of `5s`.
-- **Client Authentication (WebSocket):** Imports `palabrario/pkg/auth` and validates the user JWT token received in `?token={jwt}` or `Authorization: Bearer {jwt}` using `VerifyToken`.
+- **HTTP Router:** `github.com/go-chi/chi/v5` (exposing `GET /health` and `GET /ws/arena/{roomCode}`), with CORS configured via `CORS_ALLOWED_ORIGINS` (`auth.ParseCORSAllowedOrigins`) and `AllowCredentials: false`.
+- **WebSocket Engine:** `github.com/gorilla/websocket` with read/write buffers of `1024 bytes`, `WriteWait` of `5s`, and `CheckOrigin` validation against `CORS_ALLOWED_ORIGINS` (permitting empty `Origin` headers for native Go/Wails desktop clients, and defaulting in non-production to dev localhost / Wails / Capacitor origins).
+- **Client Authentication (WebSocket):** Imports `palabrario/pkg/auth` and validates the user JWT token via `VerifyToken`. `Authorization: Bearer {jwt}` header is primary (extracted via `auth.ExtractBearerToken`, case-insensitive `Bearer` scheme), with `?token={jwt}` query parameter fallback only when the `Authorization` header is absent. User `Claims` carry `TokenVersion` (`token_version`) and `TokenType: "access"` with a `15m` default `AccessTokenTTL` (`ACCESS_TOKEN_TTL_MINUTES`).
 - **Internal Service-to-Service Authentication (`S2S` Impossible for Clients to Forge):**
   - In [`pkg/auth/auth.go`](../../pkg/auth/auth.go), `TokenService` derives an exclusive cryptographic sub-key for internal calls:
     $$\text{s2sSecretKey} = \text{SHA256}(\text{JWT\_SECRET} + \text{":palabrario-s2s-internal"})$$
@@ -77,7 +77,7 @@ Represent the lifecycle, room operating rules, and consolidated outcome of a mul
   - Furthermore, `VerifyToken` (human user tokens) explicitly validates `claims.Issuer == "palabrario-core-service"`, guaranteeing total cryptographic separation: **no player JWT can ever bypass the `RequireInternalService` middleware in `core-service`**.
 - **In-Memory RAM Concurrency (`ArenaHub` and `ActiveRoom`):**
   - A global `ArenaHub` protected by `sync.RWMutex` maintains the map `rooms map[string]*ActiveRoom` indexed by `room_code` (6-character uppercase alphanumeric PIN, e.g. `"MX8921"`).
-  - **Maximum room capacity:** `MaxParticipants = 8`. If a 9th distinct user attempts to join, it is rejected with a WebSocket error (`"La sala está llena (máximo 8 participantes)"`).
+  - **Maximum room capacity:** `MaxParticipants = 8`. If a 9th distinct user attempts to join, it is rejected with a WebSocket error (`"La sala está llena (máximo 8 jugadores)"`).
   - Each `ActiveRoom` runs its own coordinator goroutine (`room.RunLoop()`) with typed channels (`joinCh`, `leaveCh`, `answerCh`, `startCh`), eliminating data races when scoring simultaneous responses in milliseconds.
   - **Micro-Disconnection Tolerance (`RNF-CON-02`) and Automatic Host Succession:**
     - When a socket closes during `WAITING` or `IN_PROGRESS`, the player in `ActiveRoom.Participants[userID]` is NOT removed immediately: they are internally marked as `Connected = false` (`IsReady = false` in the `ArenaParticipant` broadcast in `ROOM_STATE`) with a **10-second** expiration timer, preserving their `Score`, `Rank`, previous answers, and accumulated times. If they reconnect before `10s`, their state resumes (`Connected = true`, `IsReady = true`) immediately.
@@ -323,7 +323,7 @@ In `realtime-service`, response time is measured using the server's monotonic cl
 | `core-service (:8000)` | `GET` | `/api/v1/arena/matches/{matchId}` | `RequireAuth` | CU16 (Replay) | Returns complete `models.MatchReplayDetail` with podium and round-by-round breakdown (`match_rounds` + `quiz_attempts`). |
 | `realtime-service (:8001)` | `GET` | `/health` | Public | Infra | Verifies Go process health and active room count in RAM (`{"status","service","active_rooms","timestamp"}`). |
 | `realtime-service (:8001)` | `GET` | `/` | Public | Infra | Welcome message (`{"message": ...}`). |
-| `realtime-service (:8001)` | `WS` | `/ws/arena/{roomCode}?token={jwt}` | JWT (`pkg/auth`, validated in the handler via `VerifyToken`; also accepts `Authorization: Bearer {jwt}`) | CU15 / CU16 | Low-latency ($< 50\text{ ms}$) bidirectional channel (see event table below). Pre-upgrade failures: `400` (empty room code), `401` (missing/invalid token), `404` (room package unavailable in `core-service`). |
+| `realtime-service (:8001)` | `WS` | `/ws/arena/{roomCode}` (fallback `?token={jwt}`) | JWT (`pkg/auth`: `Authorization: Bearer {jwt}` primary via `auth.ExtractBearerToken`, `?token={jwt}` fallback when header absent; `CheckOrigin` against `CORS_ALLOWED_ORIGINS`) | CU15 / CU16 | Low-latency ($< 50\text{ ms}$) bidirectional channel (see event table below). Pre-upgrade failures return English `response.ErrorWithCode`: `400` (`MISSING_ROOM_CODE`), `401` (`MISSING_TOKEN`, `INVALID_TOKEN_FORMAT`, `INVALID_TOKEN`), `403` (disallowed `Origin` rejected by `CheckOrigin`), `404` (`ROOM_UNAVAILABLE` when room package is unavailable in `core-service`). |
 
 **WebSocket events (`models.WSEvent{type, payload}`).** Joining a room is implicit: the room join happens when the WebSocket upgrade succeeds (there is **no** client `JOIN_ROOM` event in the code); a successful join (or reconnection) triggers a `ROOM_STATE` broadcast.
 

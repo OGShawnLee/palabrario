@@ -3,40 +3,37 @@ package middleware
 import (
 	"context"
 	"net/http"
-	"strings"
 
 	"palabrario/pkg/auth"
 	"palabrario/pkg/response"
 )
 
-// AuthMiddleware encapsula la validación de tokens JWT para los endpoints de image-service.
+// AuthMiddleware validates user JWT tokens for image-service endpoints.
 type AuthMiddleware struct {
 	tokenService *auth.TokenService
 }
 
-// NewAuthMiddleware inicializa el middleware de autenticación.
+// NewAuthMiddleware initializes the authentication middleware.
 func NewAuthMiddleware(tokenService *auth.TokenService) *AuthMiddleware {
 	return &AuthMiddleware{tokenService: tokenService}
 }
 
-// RequireAuth valida que la petición contenga un encabezado 'Authorization: Bearer <token>' válido.
+// RequireAuth validates that the request includes a valid 'Authorization: Bearer <token>' header.
 func (m *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-			response.Error(w, http.StatusUnauthorized, "token de autorización no proporcionado o con formato inválido")
+		tokenStr, present, err := auth.ExtractBearerToken(r)
+		if !present {
+			response.ErrorWithCode(w, http.StatusUnauthorized, "MISSING_TOKEN", "Authorization header is required")
 			return
 		}
-
-		tokenStr := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
-		if tokenStr == "" {
-			response.Error(w, http.StatusUnauthorized, "token de autorización vacío")
+		if err != nil {
+			response.ErrorWithCode(w, http.StatusUnauthorized, "INVALID_TOKEN_FORMAT", "Invalid authorization header format")
 			return
 		}
 
 		claims, err := m.tokenService.VerifyToken(tokenStr)
 		if err != nil {
-			response.Error(w, http.StatusUnauthorized, "token inválido o expirado: "+err.Error())
+			response.ErrorWithCode(w, http.StatusUnauthorized, "INVALID_TOKEN", "Invalid or expired token")
 			return
 		}
 

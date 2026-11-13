@@ -6,10 +6,11 @@ import (
 )
 
 type ErrorBody struct {
+	Code  string `json:"code,omitempty"`
 	Error string `json:"error"`
 }
 
-// JSON escribe una respuesta serializada en application/json con el código de estado indicado.
+// JSON writes a serialized application/json response with the given HTTP status code.
 func JSON(w http.ResponseWriter, status int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
@@ -18,7 +19,12 @@ func JSON(w http.ResponseWriter, status int, payload interface{}) {
 	}
 }
 
-// Error escribe un error estandarizado {"error": "..."} con Content-Type application/json.
+// Error writes a standardized {"error": "..."} JSON response.
 func Error(w http.ResponseWriter, status int, message string) {
 	JSON(w, status, ErrorBody{Error: message})
+}
+
+// ErrorWithCode writes a standardized {"code": "...", "error": "..."} JSON response.
+func ErrorWithCode(w http.ResponseWriter, status int, code string, message string) {
+	JSON(w, status, ErrorBody{Code: code, Error: message})
 }

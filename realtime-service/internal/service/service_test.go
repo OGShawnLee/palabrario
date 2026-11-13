@@ -29,42 +29,97 @@ func generateTestUserToken(ts *auth.TokenService, userID, userName, dialect stri
 	return tok
 }
 
-func readNextEvent(t *testing.T, ws *websocket.Conn, timeout time.Duration) models.WSEvent {
-	t.Helper()
-	_ = ws.SetReadDeadline(time.Now().Add(timeout))
-	var ev models.WSEvent
-	err := ws.ReadJSON(&ev)
-	if err != nil {
-		t.Fatalf("error leyendo evento de websocket: %v", err)
-	}
-	return ev
+type wsReadResult struct {
+	event models.WSEvent
+	err   error
 }
 
-func waitForEventType(t *testing.T, ws *websocket.Conn, targetType string, timeout time.Duration) models.WSEvent {
-	t.Helper()
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		_ = ws.SetReadDeadline(time.Now().Add(300 * time.Millisecond))
-		var ev models.WSEvent
-		if err := ws.ReadJSON(&ev); err == nil {
-			if ev.Type == targetType {
-				return ev
+// wsReader owns a single dedicated reader goroutine per WebSocket connection so
+// read timeouts never put gorilla/websocket into a permanently failed state.
+type wsReader struct {
+	conn *websocket.Conn
+	ch   chan wsReadResult
+}
+
+func newWSReader(ws *websocket.Conn) *wsReader {
+	r := &wsReader{
+		conn: ws,
+		ch:   make(chan wsReadResult, 64),
+	}
+	go func() {
+		defer close(r.ch)
+		for {
+			var ev models.WSEvent
+			err := ws.ReadJSON(&ev)
+			r.ch <- wsReadResult{event: ev, err: err}
+			if err != nil {
+				return
 			}
 		}
-	}
-	t.Fatalf("tiempo de espera agotado esperando evento de tipo: %s", targetType)
-	return models.WSEvent{}
+	}()
+	return r
 }
 
-func waitForRoomStateCondition(t *testing.T, ws *websocket.Conn, predicate func(state models.ArenaRoomState) bool, timeout time.Duration) models.ArenaRoomState {
+func readNextEvent(t *testing.T, r *wsReader, timeout time.Duration) models.WSEvent {
 	t.Helper()
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		_ = ws.SetReadDeadline(time.Now().Add(300 * time.Millisecond))
-		var ev models.WSEvent
-		if err := ws.ReadJSON(&ev); err == nil {
-			if ev.Type == "ROOM_STATE" {
-				stateBytes, _ := json.Marshal(ev.Payload)
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	select {
+	case res, ok := <-r.ch:
+		if !ok {
+			t.Fatal("websocket reader channel closed unexpectedly")
+		}
+		if res.err != nil {
+			t.Fatalf("error reading websocket event: %v", res.err)
+		}
+		return res.event
+	case <-timer.C:
+		t.Fatalf("timed out after %v waiting for next websocket event", timeout)
+		return models.WSEvent{}
+	}
+}
+
+func waitForEventType(t *testing.T, r *wsReader, targetType string, timeout time.Duration) models.WSEvent {
+	t.Helper()
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	for {
+		select {
+		case res, ok := <-r.ch:
+			if !ok {
+				t.Fatalf("websocket reader closed while waiting for event %s", targetType)
+			}
+			if res.err != nil {
+				t.Fatalf("websocket read error while waiting for event %s: %v", targetType, res.err)
+			}
+			if res.event.Type == targetType {
+				return res.event
+			}
+		case <-timer.C:
+			t.Fatalf("timed out after %v waiting for event type: %s", timeout, targetType)
+			return models.WSEvent{}
+		}
+	}
+}
+
+func waitForRoomStateCondition(t *testing.T, r *wsReader, predicate func(state models.ArenaRoomState) bool, timeout time.Duration) models.ArenaRoomState {
+	t.Helper()
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	for {
+		select {
+		case res, ok := <-r.ch:
+			if !ok {
+				t.Fatal("websocket reader closed while waiting for ROOM_STATE condition")
+			}
+			if res.err != nil {
+				t.Fatalf("websocket read error while waiting for ROOM_STATE condition: %v", res.err)
+			}
+			if res.event.Type == "ROOM_STATE" {
+				stateBytes, _ := json.Marshal(res.event.Payload)
 				var state models.ArenaRoomState
 				if err := json.Unmarshal(stateBytes, &state); err == nil {
 					if predicate(state) {
@@ -72,10 +127,56 @@ func waitForRoomStateCondition(t *testing.T, ws *websocket.Conn, predicate func(
 					}
 				}
 			}
+		case <-timer.C:
+			t.Fatalf("timed out after %v waiting for ROOM_STATE condition", timeout)
+			return models.ArenaRoomState{}
 		}
 	}
-	t.Fatalf("tiempo de espera agotado esperando condición en ROOM_STATE")
-	return models.ArenaRoomState{}
+}
+
+func eventually(t *testing.T, timeout, interval time.Duration, condition func() bool, failureMsg string) {
+	t.Helper()
+	if condition() {
+		return
+	}
+	deadline := time.NewTimer(timeout)
+	defer deadline.Stop()
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if condition() {
+				return
+			}
+		case <-deadline.C:
+			t.Fatal(failureMsg)
+			return
+		}
+	}
+}
+
+func newTestWSHandler(tokenService *auth.TokenService, hub *ArenaHub) http.Handler {
+	r := chi.NewRouter()
+	r.Get("/ws/arena/{roomCode}", func(w http.ResponseWriter, req *http.Request) {
+		tokenStr, present, err := auth.ExtractBearerToken(req)
+		if present {
+			if err != nil {
+				response.ErrorWithCode(w, http.StatusUnauthorized, "INVALID_TOKEN_FORMAT", "Invalid authorization header format")
+				return
+			}
+		} else {
+			tokenStr = strings.TrimSpace(req.URL.Query().Get("token"))
+		}
+		claims, err := tokenService.VerifyToken(tokenStr)
+		if err != nil {
+			response.ErrorWithCode(w, http.StatusUnauthorized, "INVALID_TOKEN", "Invalid or expired token")
+			return
+		}
+		hub.HandleWS(w, req, chi.URLParam(req, "roomCode"), claims)
+	})
+	return r
 }
 
 // 1. TestCalculateRoundPoints_RN10
@@ -84,43 +185,43 @@ func TestCalculateRoundPoints_RN10(t *testing.T) {
 
 	// 0 ms => 1000 pts
 	if pts := CalculateRoundPoints(true, 0, roundTime); pts != 1000 {
-		t.Errorf("esperado 1000 pts a 0ms, obtenido %d", pts)
+		t.Errorf("expected 1000 pts at 0ms, got %d", pts)
 	}
 
-	// ms negativos => acotado a 0ms => 1000 pts
+	// negative ms => clamped to 0ms => 1000 pts
 	if pts := CalculateRoundPoints(true, -100, roundTime); pts != 1000 {
-		t.Errorf("esperado 1000 pts con ms negativos, obtenido %d", pts)
+		t.Errorf("expected 1000 pts with negative ms, got %d", pts)
 	}
 
-	// Mitad de tiempo (7500 ms) => 750 pts
+	// half time (7500 ms) => 750 pts
 	if pts := CalculateRoundPoints(true, 7500, roundTime); pts != 750 {
-		t.Errorf("esperado 750 pts a mitad de tiempo, obtenido %d", pts)
+		t.Errorf("expected 750 pts at half time, got %d", pts)
 	}
 
-	// Límite de tiempo exacto (15000 ms) => 500 pts
+	// exact deadline (15000 ms) => 500 pts
 	if pts := CalculateRoundPoints(true, 15000, roundTime); pts != 500 {
-		t.Errorf("esperado 500 pts al límite de tiempo, obtenido %d", pts)
+		t.Errorf("expected 500 pts at time limit, got %d", pts)
 	}
 
-	// Pasado el límite (15001 ms) => 0 pts (timeout)
+	// past limit (15001 ms) => 0 pts (timeout)
 	if pts := CalculateRoundPoints(true, 15001, roundTime); pts != 0 {
-		t.Errorf("esperado 0 pts en timeout, obtenido %d", pts)
+		t.Errorf("expected 0 pts on timeout, got %d", pts)
 	}
 
-	// Respuesta incorrecta => 0 pts
+	// wrong answer => 0 pts
 	if pts := CalculateRoundPoints(false, 500, roundTime); pts != 0 {
-		t.Errorf("esperado 0 pts con respuesta incorrecta, obtenido %d", pts)
+		t.Errorf("expected 0 pts for wrong answer, got %d", pts)
 	}
 
-	// roundTimeSec inválido => 0 pts
+	// invalid roundTimeSec <= 0 => 0 pts
 	if pts := CalculateRoundPoints(true, 500, 0); pts != 0 {
-		t.Errorf("esperado 0 pts con tiempo de ronda <= 0, obtenido %d", pts)
+		t.Errorf("expected 0 pts when roundTimeSec <= 0, got %d", pts)
 	}
 }
 
 // 2. TestActiveRoom_Max8Participants
 func TestActiveRoom_Max8Participants(t *testing.T) {
-	jwtSecret := "test-secret-key-12345"
+	jwtSecret := "test-jwt-secret-key-palabrario-minimum-32-chars"
 	tokenService := auth.NewTokenService(jwtSecret, 1*time.Hour)
 
 	mockMatchPkg := &models.MatchPackage{
@@ -143,11 +244,13 @@ func TestActiveRoom_Max8Participants(t *testing.T) {
 		},
 	}
 
-	// Mock core-service
 	mockCore := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/package") {
-			authHeader := r.Header.Get("Authorization")
-			token := strings.TrimPrefix(authHeader, "Bearer ")
+			token, _, err := auth.ExtractBearerToken(r)
+			if err != nil {
+				http.Error(w, "Unauthorized S2S", http.StatusUnauthorized)
+				return
+			}
 			if _, err := tokenService.VerifyInternalToken(token); err != nil {
 				http.Error(w, "Unauthorized S2S", http.StatusUnauthorized)
 				return
@@ -162,34 +265,22 @@ func TestActiveRoom_Max8Participants(t *testing.T) {
 	coreClient := NewCoreClient(mockCore.URL, mockCore.Client(), tokenService)
 	hub := NewArenaHub(coreClient, tokenService)
 
-	// Router para realtime-service
-	r := chi.NewRouter()
-	r.Get("/ws/arena/{roomCode}", func(w http.ResponseWriter, req *http.Request) {
-		tokenStr := req.URL.Query().Get("token")
-		claims, err := tokenService.VerifyToken(tokenStr)
-		if err != nil {
-			response.Error(w, http.StatusUnauthorized, "Token inválido")
-			return
-		}
-		hub.HandleWS(w, req, chi.URLParam(req, "roomCode"), claims)
-	})
-
-	server := httptest.NewServer(r)
+	server := httptest.NewServer(newTestWSHandler(tokenService, hub))
 	defer server.Close()
 
 	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/ws/arena/MX8888"
 
 	conns := make([]*websocket.Conn, 8)
-	// Conectar 8 jugadores
 	for i := 1; i <= 8; i++ {
 		userID := "user-" + string(rune('0'+i))
 		token := generateTestUserToken(tokenService, userID, "Player"+string(rune('0'+i)), "MX")
-		ws, _, err := websocket.DefaultDialer.Dial(wsURL+"?token="+token, nil)
+		ws, _, err := websocket.DefaultDialer.Dial(wsURL, http.Header{"Authorization": {"Bearer " + token}})
 		if err != nil {
-			t.Fatalf("error conectando jugador %d: %v", i, err)
+			t.Fatalf("error connecting player %d: %v", i, err)
 		}
 		conns[i-1] = ws
-		_ = readNextEvent(t, ws, 1*time.Second) // ROOM_STATE inicial
+		r := newWSReader(ws)
+		_ = readNextEvent(t, r, 2*time.Second) // initial ROOM_STATE
 	}
 
 	defer func() {
@@ -200,25 +291,26 @@ func TestActiveRoom_Max8Participants(t *testing.T) {
 		}
 	}()
 
-	// Intentar conectar el 9° jugador
+	// Attempt to connect the 9th player
 	token9 := generateTestUserToken(tokenService, "user-9", "Player9", "MX")
-	ws9, _, err := websocket.DefaultDialer.Dial(wsURL+"?token="+token9, nil)
+	ws9, _, err := websocket.DefaultDialer.Dial(wsURL, http.Header{"Authorization": {"Bearer " + token9}})
 	if err == nil {
 		defer ws9.Close()
-		ev := readNextEvent(t, ws9, 1*time.Second)
+		r9 := newWSReader(ws9)
+		ev := readNextEvent(t, r9, 2*time.Second)
 		if ev.Type != "ERROR" {
-			t.Fatalf("esperado evento ERROR para el 9° jugador, recibido: %s", ev.Type)
+			t.Fatalf("expected ERROR event for 9th player, got: %s", ev.Type)
 		}
 		payloadBytes, _ := json.Marshal(ev.Payload)
 		if !strings.Contains(string(payloadBytes), "La sala está llena (máximo 8 jugadores)") {
-			t.Fatalf("mensaje de error inesperado: %s", string(payloadBytes))
+			t.Fatalf("unexpected error payload: %s", string(payloadBytes))
 		}
 	}
 }
 
 // 3. TestActiveRoom_ReconnectWithinWindow_And_HostSuccession
 func TestActiveRoom_ReconnectWithinWindow_And_HostSuccession(t *testing.T) {
-	jwtSecret := "test-secret-key-succession"
+	jwtSecret := "test-jwt-secret-key-palabrario-minimum-32-chars"
 	tokenService := auth.NewTokenService(jwtSecret, 1*time.Hour)
 
 	mockMatchPkg := &models.MatchPackage{
@@ -252,72 +344,70 @@ func TestActiveRoom_ReconnectWithinWindow_And_HostSuccession(t *testing.T) {
 
 	coreClient := NewCoreClient(mockCore.URL, mockCore.Client(), tokenService)
 	hub := NewArenaHub(coreClient, tokenService)
-	hub.ReconnectWindow = 80 * time.Millisecond
+	hub.ReconnectWindow = 250 * time.Millisecond
 	hub.CountdownDuration = 20 * time.Millisecond
 
-	r := chi.NewRouter()
-	r.Get("/ws/arena/{roomCode}", func(w http.ResponseWriter, req *http.Request) {
-		tokenStr := req.URL.Query().Get("token")
-		claims, err := tokenService.VerifyToken(tokenStr)
-		if err != nil {
-			response.Error(w, http.StatusUnauthorized, "Token inválido")
-			return
-		}
-		hub.HandleWS(w, req, chi.URLParam(req, "roomCode"), claims)
-	})
-
-	server := httptest.NewServer(r)
+	server := httptest.NewServer(newTestWSHandler(tokenService, hub))
 	defer server.Close()
 
 	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/ws/arena/MX7777"
 
-	// Conectar Host
+	// Connect Host and confirm initial ROOM_STATE
 	tokenHost := generateTestUserToken(tokenService, "user-host", "HostUser", "MX")
-	wsHost, _, err := websocket.DefaultDialer.Dial(wsURL+"?token="+tokenHost, nil)
+	wsHost, _, err := websocket.DefaultDialer.Dial(wsURL, http.Header{"Authorization": {"Bearer " + tokenHost}})
 	if err != nil {
-		t.Fatalf("error conectando host: %v", err)
+		t.Fatalf("error connecting host: %v", err)
 	}
-	_ = readNextEvent(t, wsHost, 1*time.Second)
+	defer wsHost.Close()
+	rHost := newWSReader(wsHost)
+	_ = readNextEvent(t, rHost, 2*time.Second)
 
-	time.Sleep(10 * time.Millisecond)
-
-	// Conectar Jugador 2
+	// Connect Player 2 and confirm initial ROOM_STATE
 	tokenP2 := generateTestUserToken(tokenService, "user-p2", "Player2", "ES")
-	wsP2, _, err := websocket.DefaultDialer.Dial(wsURL+"?token="+tokenP2, nil)
+	wsP2, _, err := websocket.DefaultDialer.Dial(wsURL, http.Header{"Authorization": {"Bearer " + tokenP2}})
 	if err != nil {
-		t.Fatalf("error conectando p2: %v", err)
+		t.Fatalf("error connecting p2: %v", err)
 	}
-	_ = readNextEvent(t, wsP2, 1*time.Second)
+	rP2 := newWSReader(wsP2)
+	_ = readNextEvent(t, rP2, 2*time.Second)
 
-	// Parte A: Jugador 2 se desconecta y reconecta antes de ReconnectWindow (80ms)
+	// Part A: Player 2 disconnects; wait deterministically on Host for IsReady=false broadcast,
+	// then reconnect immediately within the 250ms ReconnectWindow.
 	_ = wsP2.Close()
-	time.Sleep(20 * time.Millisecond) // 20ms < 80ms
+	_ = waitForRoomStateCondition(t, rHost, func(state models.ArenaRoomState) bool {
+		for _, p := range state.Participants {
+			if p.IDUser == "user-p2" && !p.IsReady {
+				return true
+			}
+		}
+		return false
+	}, 2*time.Second)
 
-	wsP2Reconnected, _, err := websocket.DefaultDialer.Dial(wsURL+"?token="+tokenP2, nil)
+	wsP2Reconnected, _, err := websocket.DefaultDialer.Dial(wsURL, http.Header{"Authorization": {"Bearer " + tokenP2}})
 	if err != nil {
-		t.Fatalf("error reconectando p2: %v", err)
+		t.Fatalf("error reconnecting p2: %v", err)
 	}
 	defer wsP2Reconnected.Close()
+	rP2Reconnected := newWSReader(wsP2Reconnected)
 
-	// Verifica que al reconectar recibe ROOM_STATE con Connected = true
-	reconnectState := waitForRoomStateCondition(t, wsP2Reconnected, func(state models.ArenaRoomState) bool {
+	reconnectState := waitForRoomStateCondition(t, rP2Reconnected, func(state models.ArenaRoomState) bool {
 		for _, p := range state.Participants {
 			if p.IDUser == "user-p2" && p.IsReady {
 				return true
 			}
 		}
 		return false
-	}, 1*time.Second)
+	}, 2*time.Second)
 
 	if len(reconnectState.Participants) < 2 {
-		t.Fatalf("esperados al menos 2 participantes tras reconexión")
+		t.Fatalf("expected at least 2 participants after reconnection, got %d", len(reconnectState.Participants))
 	}
 
-	// Parte B: El Host se desconecta y expira ReconnectWindow (80ms)
+	// Part B: Host disconnects and ReconnectWindow (250ms) expires
 	_ = wsHost.Close()
 
-	// Esperamos a que Player 2 reciba la actualización de ROOM_STATE con IsHost = true
-	successionState := waitForRoomStateCondition(t, wsP2Reconnected, func(state models.ArenaRoomState) bool {
+	// Wait for Player 2 to receive ROOM_STATE promotion with IsHost = true
+	successionState := waitForRoomStateCondition(t, rP2Reconnected, func(state models.ArenaRoomState) bool {
 		for _, p := range state.Participants {
 			if p.IDUser == "user-p2" && p.IsHost {
 				return true
@@ -326,31 +416,26 @@ func TestActiveRoom_ReconnectWithinWindow_And_HostSuccession(t *testing.T) {
 		return false
 	}, 2*time.Second)
 
-	// Verificar que el host antiguo ya no está en los participantes
 	for _, p := range successionState.Participants {
 		if p.IDUser == "user-host" {
-			t.Fatalf("el host desconectado no debió figurar en participantes tras expirar la ventana")
+			t.Fatalf("disconnected host should not remain in participants after ReconnectWindow expired")
 		}
 	}
 
-	// Player 2 como nuevo Host ahora dispara START_MATCH
-	startEvent := models.WSEvent{
-		Type: "START_MATCH",
-	}
-	if err := wsP2Reconnected.WriteJSON(startEvent); err != nil {
-		t.Fatalf("error enviando START_MATCH como nuevo host: %v", err)
+	// Player 2 as the new Host triggers START_MATCH
+	if err := wsP2Reconnected.WriteJSON(models.WSEvent{Type: "START_MATCH"}); err != nil {
+		t.Fatalf("error sending START_MATCH as new host: %v", err)
 	}
 
-	// Debe recibir COUNTDOWN
-	evCountdown := waitForEventType(t, wsP2Reconnected, "COUNTDOWN", 1*time.Second)
+	evCountdown := waitForEventType(t, rP2Reconnected, "COUNTDOWN", 2*time.Second)
 	if evCountdown.Type != "COUNTDOWN" {
-		t.Fatalf("esperado evento COUNTDOWN tras START_MATCH, recibido: %s", evCountdown.Type)
+		t.Fatalf("expected COUNTDOWN event after START_MATCH, got: %s", evCountdown.Type)
 	}
 }
 
 // 4. TestActiveRoom_FullMatchFlow_And_BatchFlushS2S
 func TestActiveRoom_FullMatchFlow_And_BatchFlushS2S(t *testing.T) {
-	jwtSecret := "test-secret-key-fullflow"
+	jwtSecret := "test-jwt-secret-key-palabrario-minimum-32-chars"
 	tokenService := auth.NewTokenService(jwtSecret, 1*time.Hour)
 
 	mockMatchPkg := &models.MatchPackage{
@@ -389,8 +474,11 @@ func TestActiveRoom_FullMatchFlow_And_BatchFlushS2S(t *testing.T) {
 
 	mockCore := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/package") {
-			authHeader := r.Header.Get("Authorization")
-			token := strings.TrimPrefix(authHeader, "Bearer ")
+			token, _, err := auth.ExtractBearerToken(r)
+			if err != nil {
+				http.Error(w, "Unauthorized S2S", http.StatusUnauthorized)
+				return
+			}
 			if _, err := tokenService.VerifyInternalToken(token); err != nil {
 				http.Error(w, "Unauthorized S2S", http.StatusUnauthorized)
 				return
@@ -400,8 +488,11 @@ func TestActiveRoom_FullMatchFlow_And_BatchFlushS2S(t *testing.T) {
 		}
 
 		if strings.HasSuffix(r.URL.Path, "/consolidate") {
-			authHeader := r.Header.Get("Authorization")
-			token := strings.TrimPrefix(authHeader, "Bearer ")
+			token, _, err := auth.ExtractBearerToken(r)
+			if err != nil {
+				http.Error(w, "Unauthorized S2S", http.StatusUnauthorized)
+				return
+			}
 			claims, err := tokenService.VerifyInternalToken(token)
 			if err != nil {
 				http.Error(w, "Unauthorized S2S", http.StatusUnauthorized)
@@ -445,140 +536,131 @@ func TestActiveRoom_FullMatchFlow_And_BatchFlushS2S(t *testing.T) {
 	hub := NewArenaHub(coreClient, tokenService)
 	hub.CountdownDuration = 20 * time.Millisecond
 	hub.InterRoundPause = 30 * time.Millisecond
-	hub.ReconnectWindow = 100 * time.Millisecond
+	hub.ReconnectWindow = 250 * time.Millisecond
 
-	r := chi.NewRouter()
-	r.Get("/ws/arena/{roomCode}", func(w http.ResponseWriter, req *http.Request) {
-		tokenStr := req.URL.Query().Get("token")
-		claims, err := tokenService.VerifyToken(tokenStr)
-		if err != nil {
-			response.Error(w, http.StatusUnauthorized, "Token inválido")
-			return
-		}
-		hub.HandleWS(w, req, chi.URLParam(req, "roomCode"), claims)
-	})
-
-	server := httptest.NewServer(r)
+	server := httptest.NewServer(newTestWSHandler(tokenService, hub))
 	defer server.Close()
 
 	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/ws/arena/MX9999"
 
 	tokenHost := generateTestUserToken(tokenService, "user-host", "HostPlayer", "MX")
-	wsHost, _, err := websocket.DefaultDialer.Dial(wsURL+"?token="+tokenHost, nil)
+	wsHost, _, err := websocket.DefaultDialer.Dial(wsURL, http.Header{"Authorization": {"Bearer " + tokenHost}})
 	if err != nil {
-		t.Fatalf("error conectando host: %v", err)
+		t.Fatalf("error connecting host: %v", err)
 	}
 	defer wsHost.Close()
-	_ = readNextEvent(t, wsHost, 1*time.Second)
+	rHost := newWSReader(wsHost)
+	_ = readNextEvent(t, rHost, 2*time.Second)
 
 	tokenP2 := generateTestUserToken(tokenService, "user-p2", "PlayerDos", "CO")
-	wsP2, _, err := websocket.DefaultDialer.Dial(wsURL+"?token="+tokenP2, nil)
+	wsP2, _, err := websocket.DefaultDialer.Dial(wsURL, http.Header{"Authorization": {"Bearer " + tokenP2}})
 	if err != nil {
-		t.Fatalf("error conectando p2: %v", err)
+		t.Fatalf("error connecting p2: %v", err)
 	}
 	defer wsP2.Close()
-	_ = readNextEvent(t, wsP2, 1*time.Second)
+	rP2 := newWSReader(wsP2)
+	_ = readNextEvent(t, rP2, 2*time.Second)
 
-	// Host inicia la partida
+	// Host starts match
 	if err := wsHost.WriteJSON(models.WSEvent{Type: "START_MATCH"}); err != nil {
-		t.Fatalf("error enviando START_MATCH: %v", err)
+		t.Fatalf("error sending START_MATCH: %v", err)
 	}
 
-	// Ambos reciben COUNTDOWN
-	_ = waitForEventType(t, wsHost, "COUNTDOWN", 1*time.Second)
-	_ = waitForEventType(t, wsP2, "COUNTDOWN", 1*time.Second)
+	// Both receive COUNTDOWN
+	_ = waitForEventType(t, rHost, "COUNTDOWN", 2*time.Second)
+	_ = waitForEventType(t, rP2, "COUNTDOWN", 2*time.Second)
 
-	// Ronda 1: Ambos reciben QUESTION
-	q1Host := waitForEventType(t, wsHost, "QUESTION", 1*time.Second)
-	_ = waitForEventType(t, wsP2, "QUESTION", 1*time.Second)
+	// Round 1: both receive QUESTION
+	q1Host := waitForEventType(t, rHost, "QUESTION", 2*time.Second)
+	_ = waitForEventType(t, rP2, "QUESTION", 2*time.Second)
 
-	// Verificar que QUESTION no revela CorrectOption
+	// QUESTION must never leak correct_option
 	q1Bytes, _ := json.Marshal(q1Host.Payload)
 	if strings.Contains(string(q1Bytes), "correct_option") {
-		t.Fatalf("el evento QUESTION no debe contener el campo correct_option: %s", string(q1Bytes))
+		t.Fatalf("QUESTION event must not contain correct_option: %s", string(q1Bytes))
 	}
 
-	// Pequeña pausa para asegurar elapsedMs >= 5ms
-	time.Sleep(5 * time.Millisecond)
-
-	// Enviar respuestas para Ronda 1
-	_ = wsHost.WriteJSON(models.WSEvent{
+	// Submit Round 1 answers
+	if err := wsHost.WriteJSON(models.WSEvent{
 		Type: "SUBMIT_ANSWER",
 		Payload: models.SubmitAnswerPayload{
 			RoundNumber:    1,
-			SelectedOption: "Pajilla", // Correcta
+			SelectedOption: "Pajilla",
 		},
-	})
-	_ = wsP2.WriteJSON(models.WSEvent{
+	}); err != nil {
+		t.Fatalf("host submit round 1 failed: %v", err)
+	}
+	if err := wsP2.WriteJSON(models.WSEvent{
 		Type: "SUBMIT_ANSWER",
 		Payload: models.SubmitAnswerPayload{
 			RoundNumber:    1,
-			SelectedOption: "Vaso", // Incorrecta
+			SelectedOption: "Vaso",
 		},
-	})
+	}); err != nil {
+		t.Fatalf("p2 submit round 1 failed: %v", err)
+	}
 
-	// Ronda 1: Ambos reciben ROUND_RESULT
-	rr1Host := waitForEventType(t, wsHost, "ROUND_RESULT", 1*time.Second)
-	_ = waitForEventType(t, wsP2, "ROUND_RESULT", 1*time.Second)
+	// Round 1: both receive ROUND_RESULT
+	rr1Host := waitForEventType(t, rHost, "ROUND_RESULT", 2*time.Second)
+	_ = waitForEventType(t, rP2, "ROUND_RESULT", 2*time.Second)
 	rr1Bytes, _ := json.Marshal(rr1Host.Payload)
 	if !strings.Contains(string(rr1Bytes), "Pajilla") {
-		t.Fatalf("ROUND_RESULT debe contener la opción correcta: %s", string(rr1Bytes))
+		t.Fatalf("ROUND_RESULT must include correct option: %s", string(rr1Bytes))
 	}
 
-	// Ronda 2: Ambos reciben QUESTION
-	_ = waitForEventType(t, wsHost, "QUESTION", 1*time.Second)
-	_ = waitForEventType(t, wsP2, "QUESTION", 1*time.Second)
+	// Round 2: both receive QUESTION
+	_ = waitForEventType(t, rHost, "QUESTION", 2*time.Second)
+	_ = waitForEventType(t, rP2, "QUESTION", 2*time.Second)
 
-	time.Sleep(5 * time.Millisecond)
-
-	// Enviar respuestas para Ronda 2
-	_ = wsHost.WriteJSON(models.WSEvent{
+	// Submit Round 2 answers
+	if err := wsHost.WriteJSON(models.WSEvent{
 		Type: "SUBMIT_ANSWER",
 		Payload: models.SubmitAnswerPayload{
 			RoundNumber:    2,
-			SelectedOption: "Chaqueta", // Correcta
+			SelectedOption: "Chaqueta",
 		},
-	})
-	_ = wsP2.WriteJSON(models.WSEvent{
+	}); err != nil {
+		t.Fatalf("host submit round 2 failed: %v", err)
+	}
+	if err := wsP2.WriteJSON(models.WSEvent{
 		Type: "SUBMIT_ANSWER",
 		Payload: models.SubmitAnswerPayload{
 			RoundNumber:    2,
-			SelectedOption: "Chaqueta", // Correcta
+			SelectedOption: "Chaqueta",
 		},
-	})
+	}); err != nil {
+		t.Fatalf("p2 submit round 2 failed: %v", err)
+	}
 
-	// Ronda 2: Ambos reciben ROUND_RESULT
-	_ = waitForEventType(t, wsHost, "ROUND_RESULT", 1*time.Second)
-	_ = waitForEventType(t, wsP2, "ROUND_RESULT", 1*time.Second)
+	// Round 2: both receive ROUND_RESULT
+	_ = waitForEventType(t, rHost, "ROUND_RESULT", 2*time.Second)
+	_ = waitForEventType(t, rP2, "ROUND_RESULT", 2*time.Second)
 
-	// Al terminar la ronda 2, tras InterRoundPause, ambos reciben PODIUM
-	podiumHost := waitForEventType(t, wsHost, "PODIUM", 2*time.Second)
-	_ = waitForEventType(t, wsP2, "PODIUM", 2*time.Second)
+	// After InterRoundPause, both receive PODIUM
+	podiumHost := waitForEventType(t, rHost, "PODIUM", 2*time.Second)
+	_ = waitForEventType(t, rP2, "PODIUM", 2*time.Second)
 
 	if podiumHost.Type != "PODIUM" {
-		t.Fatalf("esperado evento PODIUM al finalizar partida")
+		t.Fatal("expected PODIUM event at end of match")
 	}
 
-	// Verificar consolidación S2S capturada en el mock
+	// Verify captured S2S consolidation payload
 	mu.Lock()
 	req := capturedConsolidateReq
 	tok := capturedS2SToken
 	mu.Unlock()
 
 	if req == nil {
-		t.Fatalf("no se recibió la consolidación en core-service")
+		t.Fatal("consolidation request was not received by mock core-service")
 	}
-
 	if tok == "" {
-		t.Fatalf("no se capturó el token S2S en la consolidación")
+		t.Fatal("S2S token was not captured in consolidation request")
 	}
-
 	if req.RoomCode != "MX9999" || req.IDMatch != "match-flow-123" {
-		t.Fatalf("RoomCode o IDMatch inválidos en consolidación: %+v", req)
+		t.Fatalf("invalid RoomCode or IDMatch in consolidation: %+v", req)
 	}
-
 	if len(req.Participants) != 2 {
-		t.Fatalf("esperados 2 participantes en la consolidación, obtenidos %d", len(req.Participants))
+		t.Fatalf("expected 2 participants in consolidation, got %d", len(req.Participants))
 	}
 
 	var hostPart, p2Part *models.ParticipantFinalResult
@@ -589,39 +671,54 @@ func TestActiveRoom_FullMatchFlow_And_BatchFlushS2S(t *testing.T) {
 			p2Part = &req.Participants[i]
 		}
 	}
-
 	if hostPart == nil || p2Part == nil {
-		t.Fatalf("participantes no encontrados en la consolidación")
+		t.Fatal("participants missing from consolidation payload")
 	}
 
-	// Host acertó 2/2
+	maxMatchMs := mockMatchPkg.TotalRounds * mockMatchPkg.RoundTimeSec * 1000
+	maxRoundMs := mockMatchPkg.RoundTimeSec * 1000
+
+	// Host answered 2/2 correctly within round window
 	if len(hostPart.CorrectSenseIDs) != 2 || len(hostPart.WrongSenseIDs) != 0 {
-		t.Errorf("host debió tener 2 aciertos y 0 fallos, obtenidos: aciertos=%v, fallos=%v", hostPart.CorrectSenseIDs, hostPart.WrongSenseIDs)
+		t.Errorf("host expected 2 correct and 0 wrong, got correct=%v wrong=%v", hostPart.CorrectSenseIDs, hostPart.WrongSenseIDs)
 	}
 	if len(hostPart.RoundAttempts) != 2 {
-		t.Errorf("host debió tener 2 RoundAttempts, obtenidos: %d", len(hostPart.RoundAttempts))
+		t.Errorf("host expected 2 RoundAttempts, got %d", len(hostPart.RoundAttempts))
 	}
-	if hostPart.TotalTimeSpentMs <= 0 {
-		t.Errorf("host TotalTimeSpentMs debe ser > 0, obtenido %d", hostPart.TotalTimeSpentMs)
+	for _, att := range hostPart.RoundAttempts {
+		if att.TimeSpentMs < 0 || att.TimeSpentMs > maxRoundMs {
+			t.Errorf("host round %d TimeSpentMs out of bounds [0, %d]: %d", att.RoundNumber, maxRoundMs, att.TimeSpentMs)
+		}
+		if att.PointsEarned < 500 || att.PointsEarned > 1000 {
+			t.Errorf("host round %d PointsEarned out of bounds [500, 1000]: %d", att.RoundNumber, att.PointsEarned)
+		}
+	}
+	if hostPart.TotalTimeSpentMs < 0 || hostPart.TotalTimeSpentMs > maxMatchMs {
+		t.Errorf("host TotalTimeSpentMs out of bounds [0, %d]: %d", maxMatchMs, hostPart.TotalTimeSpentMs)
+	}
+	if hostPart.FinalScore < 1000 || hostPart.FinalScore > 2000 {
+		t.Errorf("host FinalScore out of bounds [1000, 2000]: %d", hostPart.FinalScore)
 	}
 	if hostPart.FinalRank != 1 {
-		t.Errorf("host debió terminar en Rank 1, obtenido: %d", hostPart.FinalRank)
+		t.Errorf("host expected FinalRank 1, got %d", hostPart.FinalRank)
 	}
 
-	// Player 2 acertó 1/2
+	// Player 2 answered 1/2 correctly
 	if len(p2Part.CorrectSenseIDs) != 1 || len(p2Part.WrongSenseIDs) != 1 {
-		t.Errorf("p2 debió tener 1 acierto y 1 fallo, obtenidos: aciertos=%v, fallos=%v", p2Part.CorrectSenseIDs, p2Part.WrongSenseIDs)
+		t.Errorf("p2 expected 1 correct and 1 wrong, got correct=%v wrong=%v", p2Part.CorrectSenseIDs, p2Part.WrongSenseIDs)
 	}
 	if len(p2Part.RoundAttempts) != 2 {
-		t.Errorf("p2 debió tener 2 RoundAttempts, obtenidos: %d", len(p2Part.RoundAttempts))
+		t.Errorf("p2 expected 2 RoundAttempts, got %d", len(p2Part.RoundAttempts))
+	}
+	if p2Part.FinalScore < 500 || p2Part.FinalScore > 1000 {
+		t.Errorf("p2 FinalScore out of bounds [500, 1000]: %d", p2Part.FinalScore)
 	}
 	if p2Part.FinalRank != 2 {
-		t.Errorf("p2 debió terminar en Rank 2, obtenido: %d", p2Part.FinalRank)
+		t.Errorf("p2 expected FinalRank 2, got %d", p2Part.FinalRank)
 	}
 
-	// Sala debe haber sido removida del ArenaHub
-	time.Sleep(50 * time.Millisecond)
-	if count := hub.ActiveRoomsCount(); count != 0 {
-		t.Errorf("esperadas 0 salas activas en RAM tras el PODIUM, encontradas %d", count)
-	}
+	// Room must be removed from ArenaHub shortly after PODIUM broadcast
+	eventually(t, 2*time.Second, 10*time.Millisecond, func() bool {
+		return hub.ActiveRoomsCount() == 0
+	}, "expected 0 active rooms in RAM after PODIUM")
 }
