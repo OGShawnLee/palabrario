@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { ref } from "vue"
-import { RouterLink } from "vue-router"
+import { RouterLink, useRouter } from "vue-router"
 import { api } from "@/api"
 import CreateMatchDialog from "@/components/arena/CreateMatchDialog.vue"
 import JoinMatchDialog from "@/components/arena/JoinMatchDialog.vue"
 import PublicRoomsTable from "@/components/arena/PublicRoomsTable.vue"
+import { useAuth } from "@/composables/useAuth"
 import type { MatchPackage } from "@bindings/palabrario/pkg/models/index.js"
 
 const PIN_LENGTH = 6
+
+const router = useRouter()
+const { isAuthenticated } = useAuth()
 
 const isJoining = ref(false)
 const errorMessage = ref("")
@@ -15,6 +19,14 @@ const isCreateOpen = ref(false)
 const isJoinOpen = ref(false)
 const currentMatch = ref<MatchPackage | null>(null)
 const table = ref<InstanceType<typeof PublicRoomsTable> | null>(null)
+
+function handleCreateRoom() {
+  if (!isAuthenticated.value) {
+    void router.push({ name: "sign-in", query: { redirect: "/arena" } })
+    return
+  }
+  isCreateOpen.value = true
+}
 
 async function join(roomCode: string) {
   const code = roomCode.trim().replace(/^#/, "").toUpperCase()
@@ -53,7 +65,7 @@ async function onCreated(match: MatchPackage) {
     </p>
 
     <div class="mt-8 mb-10 flex flex-wrap items-center gap-3">
-      <button type="button" class="button-main" @click="isCreateOpen = true">
+      <button type="button" class="button-main" @click="handleCreateRoom">
         Create Room
       </button>
       <button type="button" class="button-side" @click="isJoinOpen = true">

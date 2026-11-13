@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from "vue"
+import { computed } from "vue"
 import { RouterLink, useRoute, useRouter } from "vue-router"
 import { Search } from "lucide-vue-next"
 import TopBarDesktopStatus from "@/components/TopBarDesktopStatus.vue"
@@ -11,11 +11,7 @@ const emit = defineEmits<{ "open-search": [] }>()
 
 const route = useRoute()
 const router = useRouter()
-const { currentUser, init, signOut } = useAuth()
-
-onMounted(() => {
-  void init()
-})
+const { currentUser, signOut } = useAuth()
 
 const authState = computed<AuthState>(() => (currentUser.value ? "logged-in" : "anonymous"))
 
@@ -27,7 +23,12 @@ const topBarUser = computed<TopBarUser>(() => ({
 
 async function handleSignOut() {
   await signOut()
-  if (route.path.startsWith("/studio") || route.path.startsWith("/settings")) {
+  if (
+    route.meta.requiresAuth ||
+    route.path.startsWith("/studio") ||
+    route.path.startsWith("/settings") ||
+    route.path.startsWith("/arena/history")
+  ) {
     await router.push("/")
   }
 }

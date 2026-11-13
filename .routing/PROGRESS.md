@@ -35,17 +35,18 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] `.tickets/031-harden-core-service-auth/` (`completed`): implemented short-lived (`15m`) JWTs + rotating `refresh_tokens` (`/auth/refresh`, `/auth/sign-out`), Option B middleware (`is_active`, `token_version`, live DB `role` sync on writes, `/auth/*`, `/governance/*`), `OptionalAuth` `401` on invalid headers, symmetric `SignUp` validation, `PgError` mapping, English `{ "code", "error" }` responses, full HTTP/service tests (`-race -count=1` passing), and `.routing/` docs sync.
 - [x] `.tickets/032-harden-wails-bff-auth/` (`completed`): added typed `APIError`, RAM access JWT + atomic `0600` `session.json` refresh token persistence, single-flight `401` auto-refresh, `auth:expired` eviction, WS `Authorization: Bearer` header auth, removed `HasActiveSession` and 14 duplicate aliases, regenerated Wails TS bindings (`wails3 task bindings`), synced `.routing/DOMAIN.md`, and verified `app/app_auth_test.go` (`-race -count=1` passing).
 
+- [x] `.tickets/033-align-frontend-auth-and-guards/` (`completed`): removed `AuthResponse`/`hasActiveSession()` from `IAuthAPI`, aligned `MockAuthAPI` (passwords, suspended fixture/checks, `core-service` validation) & `WailsAuthAdapter` (`"auth:expired"` Events.On, 404 null mapping), wired `onSessionExpired` + `sessionNotice` in `useAuth()`, added `router.beforeEach` session hydration + `requiresAuth`/`guestOnly` guards, tightened `SignUpView`/`ProfileView`/`ArenaView` auth UX, updated `.routing/API.md`, and verified `wails3 task check` exit code `0`.
+
 ## In progress
 - None.
 
 ## Draft tickets
 - [ ] `.tickets/019-build-arena-history-route/` (`draft`): expand `IArenaAPI` and build dedicated `/arena/history` route and 3NF round-by-round replay modal (`MatchReplayDialog.vue`) backed by `api.arena`.
 - [ ] `.tickets/024-backend-dynamic-region-detection/` (`ready`): implement dynamic top 1-3 dialect region detection in PostgreSQL / sqlc for Collections and Decks (`region_names text[]`).
-- [ ] `.tickets/033-align-frontend-auth-and-guards/` (`draft`): remove `AuthResponse`/`hasActiveSession()` from `IAuthAPI`, align `MockAuthAPI` & `WailsAuthAdapter`, wire `onSessionExpired` + `router.beforeEach` guards, and tighten `SignUpView`/`ProfileView`/`ArenaView` auth UX.
 - [ ] `.tickets/034-verify-and-review-auth-refactor/` (`draft`): read-only Reviewer gate and full Go/Postgres/Wails test verification across Tickets `029`–`033`.
 
 ## Next steps
-- [ ] Await user go-ahead to hand out Ticket `033` (next in sequential chain `033` → `034`).
+- [ ] Commit Ticket `033` once user authorizes, then hand out Reviewer Ticket `034` (remember to double-check `task:test:up` / Postgres test DB readiness).
 - [ ] Implement live WebSocket match room (`ConnectArenaRoom`) and interactive in-game multiplayer match screen after `/arena` lobby route and auth hardening are complete.
 - [ ] Decide what happens to the Capacitor adapter (`live/http/`) during the frontend rebuild (prepared cleanly by `IAuthAPI` changes in Ticket `033`).
 

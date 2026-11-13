@@ -175,3 +175,28 @@ function resolveAPIMode(): APIMode {
    Contract interfaces must always return standard native `Promise<T>`. Proprietary Wails promises are unwrapped inside `wails.adapter.ts`.
 3. **Modular Domain Expansion:**  
    When a new route requires API methods (e.g. Arena in Ticket 017), add the contract method to `contract/`, implement it in `live/wails/`, and implement a realistic mock response in `mock/`.
+
+---
+
+## 6. Auth Contract & Session Lifecycle (`IAuthAPI`)
+
+Token storage and refresh rotation are encapsulated inside each transport adapter (Go RAM + disk refresh token for `WailsAuthAdapter`; `localStorage` for `MockAuthAPI`; `@capacitor/preferences` for the future `http` adapter). The frontend contract never exposes `AuthResponse` or `hasActiveSession()`:
+
+```ts
+// app/frontend/src/api/contract/auth.contract.ts
+export interface IAuthAPI {
+  signIn(req: SignInRequest): Promise<UserProfile>
+  signUp(req: SignUpRequest): Promise<UserProfile>
+  signOut(): Promise<void>
+  getMe(): Promise<UserProfile | null>
+  getPublicProfileByUsername(username: string): Promise<PublicUserProfile | null>
+  onSessionExpired(callback: (reason: string) => void): () => void
+}
+```
+
+### Contract Guarantees
+1. **`signIn` / `signUp`:** Always resolve with `UserProfile` on success or reject with a normalized `Error` (e.g., invalid credentials, suspended account, duplicate email/username, validation error). Never return `null`.
+2. **`getMe`:** Hydrates the active session in a single round-trip. Returns `null` when unauthenticated or when an expired/suspended session is cleared.
+3. **`getPublicProfileByUsername`:** Returns `null` when the user does not exist or is inactive (`is_active = false`); throws on network/server failures so views can distinguish `404` from retryable errors.
+4. **`onSessionExpired`:** Subscribes to out-of-band session eviction events (in Wails, `"auth:expired"` emitted by `App` on unrecoverable `401` or `403 ACCOUNT_SUSPENDED`). `useAuth()` registers this listener once on initialization to clear `currentUser`, populate `sessionNotice`, and trigger a redirect to `/auth/sign-in` when on a `meta.requiresAuth` route.
+

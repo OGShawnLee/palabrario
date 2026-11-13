@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
+import { useRouter } from "vue-router"
 import { Check, Lock } from "lucide-vue-next"
 import { api } from "@/api"
 import AppDialog from "@/components/ui/AppDialog.vue"
+import { useAuth } from "@/composables/useAuth"
 import {
   CreateMatchRequest,
   type Deck,
@@ -15,6 +17,9 @@ const TIME_OPTIONS = [10, 15, 20]
 
 const open = defineModel<boolean>("open", { default: false })
 const emit = defineEmits<{ created: [match: MatchPackage] }>()
+
+const router = useRouter()
+const { isAuthenticated } = useAuth()
 
 const decks = ref<Deck[]>([])
 const isLoadingDecks = ref(false)
@@ -47,6 +52,11 @@ watch(selectedDeck, (deck) => {
 
 watch(open, async (isOpen) => {
   if (!isOpen) return
+  if (!isAuthenticated.value) {
+    open.value = false
+    void router.push({ name: "sign-in", query: { redirect: "/arena" } })
+    return
+  }
   errorMessage.value = ""
   isLoadingDecks.value = true
   try {
@@ -59,6 +69,11 @@ watch(open, async (isOpen) => {
 })
 
 async function handleSubmit() {
+  if (!isAuthenticated.value) {
+    open.value = false
+    void router.push({ name: "sign-in", query: { redirect: "/arena" } })
+    return
+  }
   if (!selectedDeck.value || !canSubmit.value) return
   isSubmitting.value = true
   errorMessage.value = ""

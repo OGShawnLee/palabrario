@@ -1,5 +1,4 @@
 import type {
-  AuthResponse,
   PublicUserProfile,
   SignInRequest,
   SignUpRequest,
@@ -7,10 +6,10 @@ import type {
 } from "@bindings/palabrario/pkg/models/index.js"
 
 export interface IAuthAPI {
-  hasActiveSession(): Promise<boolean>
-  signIn(req: SignInRequest): Promise<AuthResponse | null>
-  signUp(req: SignUpRequest): Promise<AuthResponse | null>
+  signIn(req: SignInRequest): Promise<UserProfile>
+  signUp(req: SignUpRequest): Promise<UserProfile>
   signOut(): Promise<void>
   getMe(): Promise<UserProfile | null>
   getPublicProfileByUsername(username: string): Promise<PublicUserProfile | null>
+  onSessionExpired(callback: (reason: string) => void): () => void
 }

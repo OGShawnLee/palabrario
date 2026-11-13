@@ -7,7 +7,6 @@ import type {
 } from "@/api/contract"
 import {
   AccountRole,
-  AuthResponse,
   type Collection,
   type CollectionSearchResult,
   type CreateMatchRequest,
@@ -27,15 +26,20 @@ import { mockCollectionDetails, mockCollections, mockDeckDetails, mockDecks } fr
 import { mockPublicWaitingMatches } from "./fixtures/arena.fixture"
 import { mockRegions, mockWords } from "./fixtures/words.fixture"
 import {
+  MOCK_DEMO_PASSWORD,
+  type MockAccountRecord,
+  mockAccountRecords,
   mockAchievements,
   mockArenaStatsByUser,
   mockUnlockedCodesByUser,
-  mockUsers,
 } from "./fixtures/user.fixture"
 
 const SESSION_KEY = "palabrario_mock_session"
 const MOCK_USERS_KEY = "palabrario_mock_users"
-const MOCK_TOKEN = "mock-session-token"
+const VALID_DIALECTS = new Set(["MX", "ES", "AR", "CO", "CL", "CU", "CAM", "PAN"])
+const USERNAME_REGEX = /^[a-z0-9][a-z0-9_-]{2,49}$/
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const utf8Encoder = new TextEncoder()
 
 function delay(): Promise<void> {
   const ms = 50 + Math.floor(Math.random() * 71) // 50-120ms
@@ -53,6 +57,16 @@ function normalize(text: string): string {
 
 function clone<T>(value: T): T {
   return structuredClone(value)
+}
+
+function isValidEmail(email: string): boolean {
+  if (!email || email.length > 255 || /\s/.test(email) || !EMAIL_REGEX.test(email)) {
+    return false
+  }
+  const atIndex = email.indexOf("@")
+  if (atIndex <= 0) return false
+  const domain = email.slice(atIndex + 1)
+  return domain.includes(".") && !domain.startsWith(".") && !domain.endsWith(".")
 }
 
 function readStorage(): UserProfile | null {
@@ -73,21 +87,61 @@ function writeStorage(profile: UserProfile | null): void {
   }
 }
 
-function readUsersStorage(): UserProfile[] {
+function cloneAccountRecords(records: MockAccountRecord[]): MockAccountRecord[] {
+  return records.map((record) => ({
+    user: clone(record.user),
+    password: record.password,
+    is_active: record.is_active,
+  }))
+}
+
+function readAccountsStorage(): MockAccountRecord[] {
   try {
     const raw = localStorage.getItem(MOCK_USERS_KEY)
-    if (!raw) return clone(mockUsers)
+    if (!raw) return cloneAccountRecords(mockAccountRecords)
     const parsed: unknown = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return clone(mockUsers)
-    return parsed.map((item) => UserProfile.createFrom(item))
+    if (!Array.isArray(parsed)) return cloneAccountRecords(mockAccountRecords)
+
+    const hydrated: MockAccountRecord[] = []
+    for (const item of parsed) {
+      if (item && typeof item === "object" && "user" in item) {
+        const record = item as { user: unknown; password?: unknown; is_active?: unknown }
+        hydrated.push({
+          user: UserProfile.createFrom(record.user),
+          password: typeof record.password === "string" ? record.password : MOCK_DEMO_PASSWORD,
+          is_active: typeof record.is_active === "boolean" ? record.is_active : true,
+        })
+      } else if (item && typeof item === "object") {
+        hydrated.push({
+          user: UserProfile.createFrom(item),
+          password: MOCK_DEMO_PASSWORD,
+          is_active: true,
+        })
+      }
+    }
+
+    // Ensure built-in fixture accounts (including suspended fixture) remain available.
+    for (const fixture of mockAccountRecords) {
+      const exists = hydrated.some(
+        (candidate) => candidate.user.email.toLowerCase() === fixture.user.email.toLowerCase(),
+      )
+      if (!exists) {
+        hydrated.push({
+          user: clone(fixture.user),
+          password: fixture.password,
+          is_active: fixture.is_active,
+        })
+      }
+    }
+    return hydrated
   } catch {
-    return clone(mockUsers)
+    return cloneAccountRecords(mockAccountRecords)
   }
 }
 
-function writeUsersStorage(users: UserProfile[]): void {
+function writeAccountsStorage(accounts: MockAccountRecord[]): void {
   try {
-    localStorage.setItem(MOCK_USERS_KEY, JSON.stringify(users))
+    localStorage.setItem(MOCK_USERS_KEY, JSON.stringify(accounts))
   } catch {
     // Storage unavailable: in-memory state is still authoritative.
   }
@@ -95,44 +149,92 @@ function writeUsersStorage(users: UserProfile[]): void {
 
 class MockAuthAPI implements IAuthAPI {
   private session: UserProfile | null = readStorage()
-  private users: UserProfile[] = readUsersStorage()
+  private accounts: MockAccountRecord[] = readAccountsStorage()
+  private sessionExpiredListeners = new Set<(reason: string) => void>()
 
   private persist(profile: UserProfile | null): void {
     this.session = profile
     writeStorage(profile)
   }
 
-  async hasActiveSession(): Promise<boolean> {
-    await delay()
-    return this.session !== null
+  onSessionExpired(callback: (reason: string) => void): () => void {
+    this.sessionExpiredListeners.add(callback)
+    return () => {
+      this.sessionExpiredListeners.delete(callback)
+    }
   }
 
-  async signIn(req: SignInRequest): Promise<AuthResponse | null> {
-    await delay()
-    const email = req.email.trim().toLowerCase()
-    const user = this.users.find((candidate) => candidate.email.toLowerCase() === email)
-    if (!user || req.password.length === 0) return null
-    this.persist(clone(user))
-    return new AuthResponse({ token: MOCK_TOKEN, user: clone(user) })
+  triggerSessionExpired(reason = "Your session has expired. Please sign in again."): void {
+    this.persist(null)
+    for (const listener of this.sessionExpiredListeners) {
+      listener(reason)
+    }
   }
 
-  async signUp(req: SignUpRequest): Promise<AuthResponse | null> {
+  async signIn(req: SignInRequest): Promise<UserProfile> {
     await delay()
     const email = req.email.trim().toLowerCase()
-    const userName = req.user_name.trim().replace(/^@/, "").toLowerCase()
+    const password = req.password
+
+    if (!email || !password) {
+      throw new Error("Email and password are required.")
+    }
+
+    const account = this.accounts.find((candidate) => candidate.user.email.toLowerCase() === email)
+    if (!account || account.password !== password) {
+      throw new Error("Invalid email or password.")
+    }
+    if (!account.is_active) {
+      throw new Error("This account has been suspended by an administrator.")
+    }
+
+    this.persist(clone(account.user))
+    return clone(account.user)
+  }
+
+  async signUp(req: SignUpRequest): Promise<UserProfile> {
+    await delay()
+    const email = req.email.trim().toLowerCase()
+    const userName = req.user_name.trim().toLowerCase().replace(/^@/, "")
     const name = req.name.trim() || userName
     const anchorDialect = req.anchor_dialect.trim().toUpperCase() || "MX"
 
-    if (!email || !req.password || !userName) {
-      throw new Error("Email, username, and password are required.")
+    if (!isValidEmail(email)) {
+      throw new Error("Please enter a valid email address.")
+    }
+    if (!USERNAME_REGEX.test(userName)) {
+      throw new Error(
+        "Username must be 3 to 50 characters, start with a letter or number, and contain only lowercase letters, numbers, underscores, or hyphens.",
+      )
     }
 
-    const exists = this.users.some(
-      (candidate) =>
-        candidate.email.toLowerCase() === email || candidate.user_name.toLowerCase() === userName,
+    const nameLen = Array.from(name).length
+    if (nameLen < 2 || nameLen > 100) {
+      throw new Error("Name must be between 2 and 100 characters.")
+    }
+
+    if (!VALID_DIALECTS.has(anchorDialect)) {
+      throw new Error("Invalid anchor dialect. Allowed values: MX, ES, AR, CO, CL, CU, CAM, PAN.")
+    }
+
+    const passwordBytes = utf8Encoder.encode(req.password).length
+    if (passwordBytes < 8) {
+      throw new Error("Password must be at least 8 characters long.")
+    }
+    if (passwordBytes > 72) {
+      throw new Error("Password must not exceed 72 bytes.")
+    }
+
+    const emailTaken = this.accounts.some((candidate) => candidate.user.email.toLowerCase() === email)
+    if (emailTaken) {
+      throw new Error("An account with that email already exists.")
+    }
+
+    const usernameTaken = this.accounts.some(
+      (candidate) => candidate.user.user_name.toLowerCase() === userName,
     )
-    if (exists) {
-      throw new Error("An account with that email or username already exists.")
+    if (usernameTaken) {
+      throw new Error("That username is already taken.")
     }
 
     const now = new Date().toISOString()
@@ -152,10 +254,10 @@ class MockAuthAPI implements IAuthAPI {
       updated_at: now,
     })
 
-    this.users.push(clone(user))
-    writeUsersStorage(this.users)
+    this.accounts.push({ user: clone(user), password: req.password, is_active: true })
+    writeAccountsStorage(this.accounts)
     this.persist(clone(user))
-    return new AuthResponse({ token: MOCK_TOKEN, user: clone(user) })
+    return clone(user)
   }
 
   async signOut(): Promise<void> {
@@ -165,16 +267,25 @@ class MockAuthAPI implements IAuthAPI {
 
   async getMe(): Promise<UserProfile | null> {
     await delay()
-    return this.session ? clone(this.session) : null
+    if (!this.session) return null
+    const account = this.accounts.find((candidate) => candidate.user.id_user === this.session?.id_user)
+    if (account && !account.is_active) {
+      this.persist(null)
+      return null
+    }
+    return clone(this.session)
   }
 
   async getPublicProfileByUsername(username: string): Promise<PublicUserProfile | null> {
     await delay()
     const normalized = username.trim().replace(/^@/, "").toLowerCase()
     if (!normalized) return null
-    const user = this.users.find((candidate) => candidate.user_name.toLowerCase() === normalized)
-    if (!user) return null
+    const account = this.accounts.find(
+      (candidate) => candidate.user.user_name.toLowerCase() === normalized,
+    )
+    if (!account || !account.is_active) return null
 
+    const user = account.user
     const isOwner = this.session?.id_user === user.id_user
     const unlockedCodes = mockUnlockedCodesByUser[user.user_name] ?? []
     const stats = mockArenaStatsByUser[user.user_name] ?? { matches_won: 0, podium_count: 0 }

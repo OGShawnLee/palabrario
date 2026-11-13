@@ -2,6 +2,14 @@ import { AccountRole, AchievementStatus, UserProfile } from "@bindings/palabrari
 
 export const MOCK_LEARNER_EMAIL = "aprendiz@palabrario.app"
 export const MOCK_EDITOR_EMAIL = "editora@palabrario.app"
+export const MOCK_SUSPENDED_EMAIL = "suspended@palabrario.app"
+export const MOCK_DEMO_PASSWORD = "password123"
+
+export interface MockAccountRecord {
+  user: UserProfile
+  password: string
+  is_active: boolean
+}
 
 export const mockLearnerProfile: UserProfile = new UserProfile({
   id_user: "00000000-0000-4000-8000-000000000001",
@@ -35,7 +43,29 @@ export const mockEditorProfile: UserProfile = new UserProfile({
   updated_at: "2026-03-05T12:00:00.000Z",
 })
 
+export const mockSuspendedProfile: UserProfile = new UserProfile({
+  id_user: "00000000-0000-4000-8000-000000000003",
+  email: MOCK_SUSPENDED_EMAIL,
+  name: "Mateo Vargas",
+  user_name: "mateo_vargas",
+  avatar_url: null,
+  anchor_dialect: "MX",
+  total_xp: 320,
+  current_level: 2,
+  current_streak: 0,
+  longest_streak: 5,
+  role: AccountRole.RoleLearner,
+  created_at: "2026-02-01T10:00:00.000Z",
+  updated_at: "2026-03-01T14:00:00.000Z",
+})
+
 export const mockUsers: UserProfile[] = [mockLearnerProfile, mockEditorProfile]
+
+export const mockAccountRecords: MockAccountRecord[] = [
+  { user: mockLearnerProfile, password: MOCK_DEMO_PASSWORD, is_active: true },
+  { user: mockEditorProfile, password: MOCK_DEMO_PASSWORD, is_active: true },
+  { user: mockSuspendedProfile, password: MOCK_DEMO_PASSWORD, is_active: false },
+]
 
 export const mockAchievements: AchievementStatus[] = [
   new AchievementStatus({

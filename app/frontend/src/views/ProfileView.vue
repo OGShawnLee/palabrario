@@ -8,33 +8,46 @@ import ProfileHeader from "@/components/profile/ProfileHeader.vue"
 import ProfileLibrarySection from "@/components/profile/ProfileLibrarySection.vue"
 import ProfileStatsStrip from "@/components/profile/ProfileStatsStrip.vue"
 import { breadcrumbLeafLabel } from "@/components/ui/AppBreadcrumb.vue"
+import { useAuth } from "@/composables/useAuth"
 import type { PublicUserProfile } from "@bindings/palabrario/pkg/models/index.js"
 
 const route = useRoute()
+const { currentUser } = useAuth()
 
 const profile = ref<PublicUserProfile | null>(null)
 const isLoading = ref(true)
+const loadError = ref<string | null>(null)
+let latestRequest = 0
 
 async function load() {
+  const requestId = ++latestRequest
   const raw = String(route.params.username ?? "").trim().replace(/^@/, "")
   if (!raw) {
     profile.value = null
+    loadError.value = null
     breadcrumbLeafLabel.value = null
     isLoading.value = false
     return
   }
   isLoading.value = true
+  loadError.value = null
   try {
-    profile.value = await api.auth.getPublicProfileByUsername(raw)
+    const result = await api.auth.getPublicProfileByUsername(raw)
+    if (requestId !== latestRequest) return
+    profile.value = result
   } catch {
+    if (requestId !== latestRequest) return
     profile.value = null
+    loadError.value = "Unable to load profile. Please try again."
   } finally {
-    breadcrumbLeafLabel.value = profile.value ? `@${profile.value.user_name}` : null
-    isLoading.value = false
+    if (requestId === latestRequest) {
+      breadcrumbLeafLabel.value = profile.value ? `@${profile.value.user_name}` : null
+      isLoading.value = false
+    }
   }
 }
 
-watch(() => route.params.username, load, { immediate: true })
+watch([() => route.params.username, () => currentUser.value?.id_user], load, { immediate: true })
 onUnmounted(() => {
   breadcrumbLeafLabel.value = null
 })
@@ -43,6 +56,17 @@ onUnmounted(() => {
 <template>
   <main class="flex-1 w-full max-w-6xl mx-auto px-4 pt-6 pb-20 flex flex-col gap-12">
     <div v-if="isLoading" class="border border-light bg-ground p-6 text-sm text-dull">Loading profile...</div>
+    <div
+      v-else-if="loadError"
+      role="alert"
+      class="border border-main bg-white p-6 text-sm text-main flex flex-col items-start gap-3"
+    >
+      <span>{{ loadError }}</span>
+      <div class="flex items-center gap-4">
+        <button type="button" class="button-main button--small cursor-pointer" @click="load">Retry</button>
+        <RouterLink to="/dictionary" class="font-medium text-main">← Back to Dictionary</RouterLink>
+      </div>
+    </div>
     <div v-else-if="!profile" class="border border-light bg-ground p-6 text-sm text-dull flex flex-col gap-3">
       <span>Profile not found.</span>
       <RouterLink to="/dictionary" class="font-medium text-main">← Back to Dictionary</RouterLink>

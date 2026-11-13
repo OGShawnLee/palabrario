@@ -1,24 +1,34 @@
 <script setup lang="ts">
 import { computed, ref } from "vue"
-import { RouterLink, useRouter } from "vue-router"
+import { RouterLink, useRoute, useRouter } from "vue-router"
 import AuthHeader from "@/components/AuthHeader.vue"
 import FormField from "@/components/FormField.vue"
 import { useAuth } from "@/composables/useAuth"
 
+const route = useRoute()
 const router = useRouter()
-const { signIn, isAuthLoading } = useAuth()
+const { signIn, isAuthLoading, sessionNotice, clearSessionNotice } = useAuth()
 
 const email = ref("")
 const password = ref("")
 const errorMessage = ref<string | null>(null)
 const isFormValid = computed(() => email.value.trim().includes("@") && password.value.length > 0)
 
+function getSafeRedirectTarget(): string {
+  const raw = route.query.redirect
+  const target = typeof raw === "string" ? raw : Array.isArray(raw) ? raw[0] : ""
+  if (target && target.startsWith("/") && !target.startsWith("//")) {
+    return target
+  }
+  return "/dictionary"
+}
+
 async function onSubmit() {
   if (!isFormValid.value || isAuthLoading.value) return
   errorMessage.value = null
   try {
     await signIn({ email: email.value.trim(), password: password.value })
-    await router.push("/dictionary")
+    await router.push(getSafeRedirectTarget())
   } catch (err) {
     errorMessage.value = err instanceof Error ? err.message : "Unable to sign in."
   }
@@ -28,6 +38,20 @@ async function onSubmit() {
 <template>
   <div class="flex flex-col gap-8">
     <AuthHeader title="Welcome back" subtitle="Pick up your streak and your decks where you left them." />
+    <div
+      v-if="sessionNotice"
+      role="status"
+      class="border border-main bg-white px-4 py-3 text-sm font-medium text-main flex items-center justify-between gap-3"
+    >
+      <span>{{ sessionNotice }}</span>
+      <button
+        type="button"
+        class="bg-transparent text-xs font-bold text-main underline shrink-0 cursor-pointer"
+        @click="clearSessionNotice"
+      >
+        Dismiss
+      </button>
+    </div>
     <form class="flex flex-col gap-4" @submit.prevent="onSubmit">
       <FormField id="email" label="Email">
         <input id="email" v-model="email" type="email" required autocomplete="email" class="field w-full" />

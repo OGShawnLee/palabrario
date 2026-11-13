@@ -5,12 +5,18 @@ import type { SignInRequest, SignUpRequest, UserProfile } from "@bindings/palabr
 const currentUser = ref<UserProfile | null>(null)
 const isInitialized = ref(false)
 const isAuthLoading = ref(false)
+const sessionNotice = ref<string | null>(null)
 let initPromise: Promise<void> | null = null
+
+api.auth.onSessionExpired((reason) => {
+  currentUser.value = null
+  isInitialized.value = true
+  sessionNotice.value = reason || "Your session has expired. Please sign in again."
+})
 
 async function loadSession(): Promise<void> {
   try {
-    const active = await api.auth.hasActiveSession()
-    const user = active ? await api.auth.getMe() : null
+    const user = await api.auth.getMe()
     if (!isInitialized.value) {
       currentUser.value = user
     }
@@ -37,13 +43,11 @@ function init(): Promise<void> {
 async function signIn(req: SignInRequest): Promise<UserProfile> {
   isAuthLoading.value = true
   try {
-    const res = await api.auth.signIn(req)
-    if (!res) {
-      throw new Error("Invalid email or password.")
-    }
-    currentUser.value = res.user
+    const user = await api.auth.signIn(req)
+    currentUser.value = user
+    sessionNotice.value = null
     isInitialized.value = true
-    return res.user
+    return user
   } finally {
     isAuthLoading.value = false
   }
@@ -52,13 +56,11 @@ async function signIn(req: SignInRequest): Promise<UserProfile> {
 async function signUp(req: SignUpRequest): Promise<UserProfile> {
   isAuthLoading.value = true
   try {
-    const res = await api.auth.signUp(req)
-    if (!res) {
-      throw new Error("Could not create account.")
-    }
-    currentUser.value = res.user
+    const user = await api.auth.signUp(req)
+    currentUser.value = user
+    sessionNotice.value = null
     isInitialized.value = true
-    return res.user
+    return user
   } finally {
     isAuthLoading.value = false
   }
@@ -69,6 +71,7 @@ async function signOut(): Promise<void> {
   try {
     await api.auth.signOut()
     currentUser.value = null
+    sessionNotice.value = null
     isInitialized.value = true
   } finally {
     isAuthLoading.value = false
@@ -80,12 +83,18 @@ function setUser(user: UserProfile | null): void {
   isInitialized.value = true
 }
 
+function clearSessionNotice(): void {
+  sessionNotice.value = null
+}
+
 export function useAuth() {
   return {
     currentUser,
     isAuthenticated: computed(() => currentUser.value !== null),
     isInitialized,
     isAuthLoading,
+    sessionNotice,
+    clearSessionNotice,
     init,
     signIn,
     signUp,

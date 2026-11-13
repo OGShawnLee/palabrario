@@ -6,6 +6,10 @@ import FormField from "@/components/FormField.vue"
 import { useAuth } from "@/composables/useAuth"
 import { REGIONS } from "@/data/regions"
 
+const USERNAME_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9_-]{2,49}$/
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const utf8Encoder = new TextEncoder()
+
 const router = useRouter()
 const { signUp, isAuthLoading } = useAuth()
 
@@ -20,9 +24,34 @@ const form = reactive({
   anchor_dialect: "MX",
 })
 
-const isStep1Valid = computed(
-  () => form.user_name.trim().length >= 3 && form.email.trim().includes("@") && form.password.length >= 8,
-)
+function isValidEmail(raw: string): boolean {
+  const email = raw.trim()
+  if (!email || email.length > 255 || !EMAIL_REGEX.test(email)) return false
+  const atIndex = email.indexOf("@")
+  if (atIndex <= 0) return false
+  const domain = email.slice(atIndex + 1)
+  return domain.includes(".") && !domain.startsWith(".") && !domain.endsWith(".")
+}
+
+const isStep1Valid = computed(() => {
+  const normalizedUsername = form.user_name.trim().replace(/^@/, "")
+  if (!USERNAME_REGEX.test(normalizedUsername)) return false
+
+  if (!isValidEmail(form.email)) return false
+
+  const passwordBytes = utf8Encoder.encode(form.password).length
+  if (passwordBytes < 8 || passwordBytes > 72) return false
+
+  if (showFullName.value) {
+    const trimmedName = form.name.trim()
+    const nameLen = Array.from(trimmedName).length
+    if (trimmedName.length > 0 && (nameLen < 2 || nameLen > 100)) {
+      return false
+    }
+  }
+
+  return true
+})
 
 function removeFullName() {
   showFullName.value = false
@@ -43,13 +72,14 @@ async function onSubmit() {
   }
   if (!isStep1Valid.value || isAuthLoading.value) return
   errorMessage.value = null
-  const displayName = form.name.trim() || form.user_name.trim()
+  const normalizedUsername = form.user_name.trim().replace(/^@/, "").toLowerCase()
+  const displayName = form.name.trim() || normalizedUsername
   try {
     await signUp({
-      email: form.email.trim(),
+      email: form.email.trim().toLowerCase(),
       password: form.password,
       name: displayName,
-      user_name: form.user_name.trim(),
+      user_name: normalizedUsername,
       anchor_dialect: form.anchor_dialect,
     })
     await router.push("/dictionary")
