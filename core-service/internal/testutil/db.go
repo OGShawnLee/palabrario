@@ -77,7 +77,11 @@ func SetupTestDB(t *testing.T) *database.DB {
 		t.Fatalf("Fallo adquiriendo conexión admin para clonar DB: %v", err)
 	}
 
-	_, _ = conn.Exec(ctx, "SELECT pg_advisory_lock($1)", templateAdvisoryLockID)
+	if _, lockErr := conn.Exec(ctx, "SELECT pg_advisory_lock($1)", templateAdvisoryLockID); lockErr != nil {
+		conn.Release()
+		adminPool.Close()
+		t.Fatalf("failed to acquire PostgreSQL advisory lock: %v", lockErr)
+	}
 
 	createSQL := fmt.Sprintf("CREATE DATABASE %s TEMPLATE %s", testDBName, TemplateDBName)
 	_, createErr := conn.Exec(ctx, createSQL)
@@ -92,7 +96,9 @@ func SetupTestDB(t *testing.T) *database.DB {
 		_, createErr = conn.Exec(ctx, createSQL)
 	}
 
-	_, _ = conn.Exec(ctx, "SELECT pg_advisory_unlock($1)", templateAdvisoryLockID)
+	if _, unlockErr := conn.Exec(ctx, "SELECT pg_advisory_unlock($1)", templateAdvisoryLockID); unlockErr != nil {
+		t.Logf("warning: failed to release PostgreSQL advisory lock: %v", unlockErr)
+	}
 	conn.Release()
 
 	if createErr != nil {

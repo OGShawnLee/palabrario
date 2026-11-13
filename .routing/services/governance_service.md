@@ -50,7 +50,7 @@ Materialize the institutional access model without payment gateways (**CU04**). 
 ## Part B — Technical Contracts
 
 > [!IMPORTANT]
-> Contract-first rules apply: no invented JSON fields, strict `snake_case`, typed `sqlc` queries only, and `response.Error(w, status, message)` for every error. See [`DOMAIN.md`](../DOMAIN.md#3-global-contract-first-rules-cross-cutting).
+> Contract-first rules apply: no invented JSON fields, strict `snake_case`, typed `sqlc` queries only, and English error responses using `response.ErrorWithCode(w, status, code, message)` (`{ "code", "error" }`) — or `response.Error` when `code` is omitted. See [`DOMAIN.md`](../DOMAIN.md#3-global-contract-first-rules-cross-cutting).
 
 ### MODULE 2: Institutional Governance, Roles, and Tickets (`GovernanceService` — `CU02, CU03, CU04`)
 
@@ -149,27 +149,27 @@ type GovernanceService interface {
 ```
 
 #### 2.2.3. Transactional and Integrity Rules in `GovernanceService`
-1. **RN02 in `CreateEditorRequest`:** If the user already has the `EDITOR` or `ADMIN` role, returns `409 Conflict`. If they attempt to create a second request while another is `PENDING`, PostgreSQL's partial unique index `idx_unique_pending_editor_request` (`SQLSTATE 23505`) translates to `409 Conflict ("Ya tienes una solicitud de promoción pendiente de revisión")`.
-2. **Atomic Promotion in `ResolveEditorRequest`:** Executes inside `pgx.Tx`. If `req.Status == "APPROVED"`, updates `editor_requests` (`status = 'APPROVED'`, `reviewed_by`, `resolved_at = now()`) **and within the same transaction** executes `UPDATE accounts SET role = 'EDITOR' WHERE id_account = $1`.
-3. **Protection of the Last Administrator in `UpdateUserRoleOrStatus` (CU03 4a):** Before demoting the role or deactivating (`is_active = false`) an `ADMIN` user, counts how many active administrators remain (`SELECT count(*) FROM accounts WHERE role = 'ADMIN' AND is_active = true`). If the count is $\le 1$, aborts with `409 Conflict ("No se puede revocar ni desactivar al único Administrador activo del sistema")`.
-4. **Atomic Redemption in `RedeemInvitationTicket` (CU04):** Inside `pgx.Tx`, locks the ticket row (`SELECT ... FROM invitation_tickets WHERE code = $1 FOR UPDATE`), verifies `is_active == true`, `(expires_at IS NULL OR expires_at > now())`, and `current_uses < max_uses`. Inserts into `ticket_redemptions`, increments `current_uses = current_uses + 1`, and if `granted_role == 'EDITOR'` and the user was `'LEARNER'`, promotes their account to `'EDITOR'`.
+1. **RN02 in `CreateEditorRequest`:** If the user already has the `EDITOR` or `ADMIN` role, returns `409 Conflict` (`ALREADY_PRIVILEGED`: `"User already has the Editor or Administrator role."`). If they attempt to create a second request while another is `PENDING`, PostgreSQL's partial unique index `idx_unique_pending_editor_request` (`SQLSTATE 23505`) translates to `409 Conflict` (`"You already have a pending promotion request."`).
+2. **Atomic Promotion & Token Invalidation in `ResolveEditorRequest`:** Executes inside `pgx.Tx`. If `req.Status == "APPROVED"`, updates `editor_requests` (`status = 'APPROVED'`, `reviewed_by`, `resolved_at = now()`) **and within the same transaction** promotes `role = 'EDITOR'` and calls `IncrementAccountTokenVersion` so stale learner JWTs are invalidated immediately.
+3. **Protection of the Last Administrator & Session Revocation in `UpdateUserRoleOrStatus` (CU03 4a):** Inside `pgx.Tx`, before demoting the role or deactivating (`is_active = false`) an `ADMIN` user, counts active administrators (`CountActiveAdmins`). If the count is $\le 1$, aborts with `409 Conflict` (`LAST_ADMIN_PROTECTED`: `"Cannot demote or deactivate the only active administrator."`). Whenever `req.Role != nil` or `is_active = false`, executes `IncrementAccountTokenVersion`; when deactivating (`is_active = false`), also executes `RevokeAllRefreshTokensForAccount`.
+4. **Atomic Redemption in `RedeemInvitationTicket` (CU04):** Inside `pgx.Tx`, locks the ticket row (`SELECT ... FROM invitation_tickets WHERE code = $1 FOR UPDATE`), verifies `is_active == true`, `(expires_at IS NULL OR expires_at > now())`, and `current_uses < max_uses`. Inserts into `ticket_redemptions`, increments `current_uses = current_uses + 1`, and if `granted_role == 'EDITOR'` and the user was `'LEARNER'`, promotes their account to `'EDITOR'` and calls `IncrementAccountTokenVersion`.
 
 #### 2.2.4. HTTP Endpoints (`/api/v1/governance`)
 
-All routes are registered in `core-service/internal/api/router.go` inside a `RequireAuth` group; the admin-only rows are additionally nested in a `RequireRole(ADMIN)` group (`401` if the token is missing/invalid, `403` if the role is not `ADMIN`).
+All routes are registered in `core-service/internal/api/router.go` inside a `RequireAuth` group; because every `/api/v1/governance/*` route falls under **Option B** strict DB verification, `RequireAuth` verifies `is_active`, `token_version`, and syncs live DB `role` before downstream `RequireRole(ADMIN)` executes (`401` on missing/expired/revoked tokens, `403 ACCOUNT_SUSPENDED` on suspended accounts, `403 FORBIDDEN` if the live DB role is not `ADMIN`).
 
 | Method | Path | Middleware | Use Case | HTTP Status Codes |
 | :---: | :--- | :---: | :---: | :--- |
-| `POST` | `/api/v1/governance/editor-requests` | `RequireAuth` | CU02 (RN02) | `201`, `400`, `401`, `409` (pending request or already an editor) |
-| `GET` | `/api/v1/governance/editor-requests/me` | `RequireAuth` | CU02 | `200`, `401` |
-| `POST` | `/api/v1/governance/tickets/redeem` | `RequireAuth` | CU04 | `200`, `400`, `401`, `404`, `409` (exhausted, expired, or already redeemed by user) |
-| `GET` | `/api/v1/governance/editor-requests` | `RequireAuth` + `RequireRole(ADMIN)` | CU03 | `200` (`?status=PENDING`), `401`, `403` |
-| `PUT` | `/api/v1/governance/editor-requests/{id}/resolve` | `RequireAuth` + `RequireRole(ADMIN)` | CU03 (RN08) | `200`, `400`, `401`, `403`, `404`, `409` |
-| `GET` | `/api/v1/governance/users` | `RequireAuth` + `RequireRole(ADMIN)` | CU03 | `200` (`?q=&role=&limit=20&offset=0`; total returned in the `X-Total-Count` response header), `401`, `403` |
-| `PUT` | `/api/v1/governance/users/{id}/access` | `RequireAuth` + `RequireRole(ADMIN)` | CU03 (RN08) | `200`, `401`, `403`, `404`, `409` (last admin) |
-| `POST` | `/api/v1/governance/tickets` | `RequireAuth` + `RequireRole(ADMIN)` | CU04 (RN08) | `201`, `400`, `401`, `403`, `409` |
-| `GET` | `/api/v1/governance/tickets` | `RequireAuth` + `RequireRole(ADMIN)` | CU04 | `200` (`?active_only=true`), `401`, `403` |
-| `DELETE` | `/api/v1/governance/tickets/{id}` | `RequireAuth` + `RequireRole(ADMIN)` | CU04 | `204`, `401`, `403`, `404` |
+| `POST` | `/api/v1/governance/editor-requests` | `RequireAuth` (Option B) | CU02 (RN02) | `201`, `400`, `401`, `403` (`ACCOUNT_SUSPENDED`), `409` (pending request or already an editor) |
+| `GET` | `/api/v1/governance/editor-requests/me` | `RequireAuth` (Option B) | CU02 | `200`, `401`, `403` (`ACCOUNT_SUSPENDED`) |
+| `POST` | `/api/v1/governance/tickets/redeem` | `RequireAuth` (Option B) | CU04 | `200`, `400`, `401`, `403` (`ACCOUNT_SUSPENDED`), `404`, `409` (exhausted, expired, or already redeemed by user) |
+| `GET` | `/api/v1/governance/editor-requests` | `RequireAuth` (Option B) + `RequireRole(ADMIN)` | CU03 | `200` (`?status=PENDING`), `401`, `403` |
+| `PUT` | `/api/v1/governance/editor-requests/{id}/resolve` | `RequireAuth` (Option B) + `RequireRole(ADMIN)` | CU03 (RN08) | `200`, `400`, `401`, `403`, `404`, `409` |
+| `GET` | `/api/v1/governance/users` | `RequireAuth` (Option B) + `RequireRole(ADMIN)` | CU03 | `200` (`?q=&role=&limit=20&offset=0`; total returned in the `X-Total-Count` response header), `401`, `403` |
+| `PUT` | `/api/v1/governance/users/{id}/access` | `RequireAuth` (Option B) + `RequireRole(ADMIN)` | CU03 (RN08) | `200`, `401`, `403`, `404`, `409` (`LAST_ADMIN_PROTECTED`) |
+| `POST` | `/api/v1/governance/tickets` | `RequireAuth` (Option B) + `RequireRole(ADMIN)` | CU04 (RN08) | `201`, `400`, `401`, `403`, `409` |
+| `GET` | `/api/v1/governance/tickets` | `RequireAuth` (Option B) + `RequireRole(ADMIN)` | CU04 | `200` (`?active_only=true`), `401`, `403` |
+| `DELETE` | `/api/v1/governance/tickets/{id}` | `RequireAuth` (Option B) + `RequireRole(ADMIN)` | CU04 | `204`, `401`, `403`, `404` |
 
 #### 2.2.5. `sqlc` Queries (`sql/queries/governance.sql`)
-`CreateEditorRequest :one`, `ListMyEditorRequests :many`, `ListEditorRequests :many`, `GetEditorRequestByID :one`, `ResolveEditorRequest :one`, `UpdateAccountRole :exec`, `CountActiveAdmins :one`, `UpdateUserRoleOrStatus :one`, `ListUsers :many`, `CountUsers :one`, `CreateInvitationTicket :one`, `ListInvitationTickets :many`, `GetInvitationTicketByID :one`, `RevokeInvitationTicket :exec`, `GetInvitationTicketByCodeForUpdate :one`, `HasUserRedeemedTicket :one`, `CreateTicketRedemption :exec`, `IncrementTicketUses :one`. The service additionally reuses `GetAccountByID` and `GetUserProfileByID` from `users.sql` (see [`identity_service.md`](identity_service.md)).
+`CreateEditorRequest :one`, `ListMyEditorRequests :many`, `ListEditorRequests :many`, `GetEditorRequestByID :one`, `ResolveEditorRequest :one`, `UpdateAccountRole :exec`, `CountActiveAdmins :one`, `UpdateUserRoleOrStatus :one`, `ListUsers :many`, `CountUsers :one`, `CreateInvitationTicket :one`, `ListInvitationTickets :many`, `GetInvitationTicketByID :one`, `RevokeInvitationTicket :exec`, `GetInvitationTicketByCodeForUpdate :one`, `HasUserRedeemedTicket :one`, `CreateTicketRedemption :exec`, `IncrementTicketUses :one`. The service additionally reuses `GetAccountByID`, `GetUserProfileByID`, `IncrementAccountTokenVersion`, and `RevokeAllRefreshTokensForAccount` from `users.sql` (see [`identity_service.md`](identity_service.md)).

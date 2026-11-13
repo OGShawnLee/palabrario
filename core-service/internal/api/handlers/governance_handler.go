@@ -23,42 +23,42 @@ func NewGovernanceHandler(governanceService service.GovernanceService) *Governan
 	}
 }
 
-// CreateEditorRequest maneja POST /api/v1/governance/editor-requests (CU02, RN02)
+// CreateEditorRequest handles POST /api/v1/governance/editor-requests (CU02, RN02)
 func (h *GovernanceHandler) CreateEditorRequest(w http.ResponseWriter, r *http.Request) {
 	claims, ok := r.Context().Value(auth.UserContextKey).(*auth.Claims)
 	if !ok || claims == nil {
-		response.Error(w, http.StatusUnauthorized, "No autorizado")
+		response.ErrorWithCode(w, http.StatusUnauthorized, "UNAUTHORIZED", "Authentication required.")
 		return
 	}
 
 	var req models.CreateEditorRequestDTO
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		response.Error(w, http.StatusBadRequest, "Cuerpo de petición inválido")
+		response.ErrorWithCode(w, http.StatusBadRequest, "INVALID_JSON", "Invalid request body.")
 		return
 	}
 
 	res, err := h.governanceService.CreateEditorRequest(r.Context(), claims.UserID, req)
 	if err != nil {
-		status, msg := service.HTTPStatusAndMessage(err, "Error al crear la solicitud de editor")
-		response.Error(w, status, msg)
+		status, code, msg := service.HTTPStatusCodeAndMessage(err, "INTERNAL_ERROR", "Failed to create editor promotion request.")
+		response.ErrorWithCode(w, status, code, msg)
 		return
 	}
 
 	response.JSON(w, http.StatusCreated, res)
 }
 
-// ListMyEditorRequests maneja GET /api/v1/governance/editor-requests/me (CU02)
+// ListMyEditorRequests handles GET /api/v1/governance/editor-requests/me (CU02)
 func (h *GovernanceHandler) ListMyEditorRequests(w http.ResponseWriter, r *http.Request) {
 	claims, ok := r.Context().Value(auth.UserContextKey).(*auth.Claims)
 	if !ok || claims == nil {
-		response.Error(w, http.StatusUnauthorized, "No autorizado")
+		response.ErrorWithCode(w, http.StatusUnauthorized, "UNAUTHORIZED", "Authentication required.")
 		return
 	}
 
 	res, err := h.governanceService.ListMyEditorRequests(r.Context(), claims.UserID)
 	if err != nil {
-		status, msg := service.HTTPStatusAndMessage(err, "Error al listar las solicitudes del usuario")
-		response.Error(w, status, msg)
+		status, code, msg := service.HTTPStatusCodeAndMessage(err, "INTERNAL_ERROR", "Failed to list user editor requests.")
+		response.ErrorWithCode(w, status, code, msg)
 		return
 	}
 
@@ -69,14 +69,14 @@ func (h *GovernanceHandler) ListMyEditorRequests(w http.ResponseWriter, r *http.
 	response.JSON(w, http.StatusOK, res)
 }
 
-// ListEditorRequests maneja GET /api/v1/governance/editor-requests (CU03)
+// ListEditorRequests handles GET /api/v1/governance/editor-requests (CU03)
 func (h *GovernanceHandler) ListEditorRequests(w http.ResponseWriter, r *http.Request) {
 	statusFilter := optionalQueryString(r, "status")
 
 	res, err := h.governanceService.ListEditorRequests(r.Context(), statusFilter)
 	if err != nil {
-		status, msg := service.HTTPStatusAndMessage(err, "Error al listar solicitudes de editor")
-		response.Error(w, status, msg)
+		status, code, msg := service.HTTPStatusCodeAndMessage(err, "INTERNAL_ERROR", "Failed to list editor requests.")
+		response.ErrorWithCode(w, status, code, msg)
 		return
 	}
 
@@ -87,37 +87,37 @@ func (h *GovernanceHandler) ListEditorRequests(w http.ResponseWriter, r *http.Re
 	response.JSON(w, http.StatusOK, res)
 }
 
-// ResolveEditorRequest maneja PUT /api/v1/governance/editor-requests/{id}/resolve (CU03, RN08)
+// ResolveEditorRequest handles PUT /api/v1/governance/editor-requests/{id}/resolve (CU03, RN08)
 func (h *GovernanceHandler) ResolveEditorRequest(w http.ResponseWriter, r *http.Request) {
 	claims, ok := r.Context().Value(auth.UserContextKey).(*auth.Claims)
 	if !ok || claims == nil {
-		response.Error(w, http.StatusUnauthorized, "No autorizado")
+		response.ErrorWithCode(w, http.StatusUnauthorized, "UNAUTHORIZED", "Authentication required.")
 		return
 	}
 
 	requestID := chi.URLParam(r, "id")
 	if requestID == "" {
-		response.Error(w, http.StatusBadRequest, "Identificador de solicitud requerido")
+		response.ErrorWithCode(w, http.StatusBadRequest, "INVALID_INPUT", "Request identifier is required.")
 		return
 	}
 
 	var req models.ResolveEditorRequestDTO
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		response.Error(w, http.StatusBadRequest, "Cuerpo de petición inválido")
+		response.ErrorWithCode(w, http.StatusBadRequest, "INVALID_JSON", "Invalid request body.")
 		return
 	}
 
 	res, err := h.governanceService.ResolveEditorRequest(r.Context(), claims.UserID, requestID, req)
 	if err != nil {
-		status, msg := service.HTTPStatusAndMessage(err, "Error al resolver solicitud de editor")
-		response.Error(w, status, msg)
+		status, code, msg := service.HTTPStatusCodeAndMessage(err, "INTERNAL_ERROR", "Failed to resolve editor request.")
+		response.ErrorWithCode(w, status, code, msg)
 		return
 	}
 
 	response.JSON(w, http.StatusOK, res)
 }
 
-// ListUsers maneja GET /api/v1/governance/users (CU03)
+// ListUsers handles GET /api/v1/governance/users (CU03)
 func (h *GovernanceHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	roleFilter := optionalQueryString(r, "role")
@@ -126,8 +126,8 @@ func (h *GovernanceHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 	users, total, err := h.governanceService.ListUsers(r.Context(), query, roleFilter, limit, offset)
 	if err != nil {
-		status, msg := service.HTTPStatusAndMessage(err, "Error listando usuarios")
-		response.Error(w, status, msg)
+		status, code, msg := service.HTTPStatusCodeAndMessage(err, "INTERNAL_ERROR", "Failed to list users.")
+		response.ErrorWithCode(w, status, code, msg)
 		return
 	}
 
@@ -139,61 +139,61 @@ func (h *GovernanceHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, users)
 }
 
-// UpdateUserRoleOrStatus maneja PUT /api/v1/governance/users/{id}/access (CU03, RN08)
+// UpdateUserRoleOrStatus handles PUT /api/v1/governance/users/{id}/access (CU03, RN08)
 func (h *GovernanceHandler) UpdateUserRoleOrStatus(w http.ResponseWriter, r *http.Request) {
 	claims, ok := r.Context().Value(auth.UserContextKey).(*auth.Claims)
 	if !ok || claims == nil {
-		response.Error(w, http.StatusUnauthorized, "No autorizado")
+		response.ErrorWithCode(w, http.StatusUnauthorized, "UNAUTHORIZED", "Authentication required.")
 		return
 	}
 
 	targetUserID := chi.URLParam(r, "id")
 	if targetUserID == "" {
-		response.Error(w, http.StatusBadRequest, "Identificador de usuario requerido")
+		response.ErrorWithCode(w, http.StatusBadRequest, "INVALID_INPUT", "User identifier is required.")
 		return
 	}
 
 	var req models.UpdateUserRoleOrStatusRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		response.Error(w, http.StatusBadRequest, "Cuerpo de petición inválido")
+		response.ErrorWithCode(w, http.StatusBadRequest, "INVALID_JSON", "Invalid request body.")
 		return
 	}
 
 	updated, err := h.governanceService.UpdateUserRoleOrStatus(r.Context(), claims.UserID, targetUserID, req)
 	if err != nil {
-		status, msg := service.HTTPStatusAndMessage(err, "Error al actualizar rol o estado del usuario")
-		response.Error(w, status, msg)
+		status, code, msg := service.HTTPStatusCodeAndMessage(err, "INTERNAL_ERROR", "Failed to update user role or status.")
+		response.ErrorWithCode(w, status, code, msg)
 		return
 	}
 
 	response.JSON(w, http.StatusOK, updated)
 }
 
-// CreateInvitationTicket maneja POST /api/v1/governance/tickets (CU04, RN08)
+// CreateInvitationTicket handles POST /api/v1/governance/tickets (CU04, RN08)
 func (h *GovernanceHandler) CreateInvitationTicket(w http.ResponseWriter, r *http.Request) {
 	claims, ok := r.Context().Value(auth.UserContextKey).(*auth.Claims)
 	if !ok || claims == nil {
-		response.Error(w, http.StatusUnauthorized, "No autorizado")
+		response.ErrorWithCode(w, http.StatusUnauthorized, "UNAUTHORIZED", "Authentication required.")
 		return
 	}
 
 	var req models.CreateTicketRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		response.Error(w, http.StatusBadRequest, "Cuerpo de petición inválido")
+		response.ErrorWithCode(w, http.StatusBadRequest, "INVALID_JSON", "Invalid request body.")
 		return
 	}
 
 	ticket, err := h.governanceService.CreateInvitationTicket(r.Context(), claims.UserID, req)
 	if err != nil {
-		status, msg := service.HTTPStatusAndMessage(err, "Error al crear boleto de invitación")
-		response.Error(w, status, msg)
+		status, code, msg := service.HTTPStatusCodeAndMessage(err, "INTERNAL_ERROR", "Failed to create invitation ticket.")
+		response.ErrorWithCode(w, status, code, msg)
 		return
 	}
 
 	response.JSON(w, http.StatusCreated, ticket)
 }
 
-// ListInvitationTickets maneja GET /api/v1/governance/tickets (CU04)
+// ListInvitationTickets handles GET /api/v1/governance/tickets (CU04)
 func (h *GovernanceHandler) ListInvitationTickets(w http.ResponseWriter, r *http.Request) {
 	activeOnly := false
 	if a := r.URL.Query().Get("active_only"); a == "true" {
@@ -202,8 +202,8 @@ func (h *GovernanceHandler) ListInvitationTickets(w http.ResponseWriter, r *http
 
 	tickets, err := h.governanceService.ListInvitationTickets(r.Context(), activeOnly)
 	if err != nil {
-		status, msg := service.HTTPStatusAndMessage(err, "Error listando boletos de invitación")
-		response.Error(w, status, msg)
+		status, code, msg := service.HTTPStatusCodeAndMessage(err, "INTERNAL_ERROR", "Failed to list invitation tickets.")
+		response.ErrorWithCode(w, status, code, msg)
 		return
 	}
 
@@ -214,47 +214,47 @@ func (h *GovernanceHandler) ListInvitationTickets(w http.ResponseWriter, r *http
 	response.JSON(w, http.StatusOK, tickets)
 }
 
-// RevokeInvitationTicket maneja DELETE /api/v1/governance/tickets/{id} (CU04)
+// RevokeInvitationTicket handles DELETE /api/v1/governance/tickets/{id} (CU04)
 func (h *GovernanceHandler) RevokeInvitationTicket(w http.ResponseWriter, r *http.Request) {
 	claims, ok := r.Context().Value(auth.UserContextKey).(*auth.Claims)
 	if !ok || claims == nil {
-		response.Error(w, http.StatusUnauthorized, "No autorizado")
+		response.ErrorWithCode(w, http.StatusUnauthorized, "UNAUTHORIZED", "Authentication required.")
 		return
 	}
 
 	ticketID := chi.URLParam(r, "id")
 	if ticketID == "" {
-		response.Error(w, http.StatusBadRequest, "Identificador de boleto requerido")
+		response.ErrorWithCode(w, http.StatusBadRequest, "INVALID_INPUT", "Ticket identifier is required.")
 		return
 	}
 
 	if err := h.governanceService.RevokeInvitationTicket(r.Context(), claims.UserID, ticketID); err != nil {
-		status, msg := service.HTTPStatusAndMessage(err, "Error revocando boleto de invitación")
-		response.Error(w, status, msg)
+		status, code, msg := service.HTTPStatusCodeAndMessage(err, "INTERNAL_ERROR", "Failed to revoke invitation ticket.")
+		response.ErrorWithCode(w, status, code, msg)
 		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// RedeemInvitationTicket maneja POST /api/v1/governance/tickets/redeem (CU04)
+// RedeemInvitationTicket handles POST /api/v1/governance/tickets/redeem (CU04)
 func (h *GovernanceHandler) RedeemInvitationTicket(w http.ResponseWriter, r *http.Request) {
 	claims, ok := r.Context().Value(auth.UserContextKey).(*auth.Claims)
 	if !ok || claims == nil {
-		response.Error(w, http.StatusUnauthorized, "No autorizado")
+		response.ErrorWithCode(w, http.StatusUnauthorized, "UNAUTHORIZED", "Authentication required.")
 		return
 	}
 
 	var req models.RedeemTicketRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		response.Error(w, http.StatusBadRequest, "Cuerpo de petición inválido")
+		response.ErrorWithCode(w, http.StatusBadRequest, "INVALID_JSON", "Invalid request body.")
 		return
 	}
 
 	profile, err := h.governanceService.RedeemInvitationTicket(r.Context(), claims.UserID, req.Code)
 	if err != nil {
-		status, msg := service.HTTPStatusAndMessage(err, "Error al redimir boleto de invitación")
-		response.Error(w, status, msg)
+		status, code, msg := service.HTTPStatusCodeAndMessage(err, "INTERNAL_ERROR", "Failed to redeem invitation ticket.")
+		response.ErrorWithCode(w, status, code, msg)
 		return
 	}
 

@@ -75,7 +75,7 @@ Model the phenomenon of **Transdialectal Heteronymy** (*"How do they say it over
 ## Part B — Technical Contracts
 
 > [!IMPORTANT]
-> Contract-first rules apply: no invented JSON fields, strict `snake_case`, typed `sqlc` queries only, and `response.Error(w, status, message)` for every error. See [`DOMAIN.md`](../DOMAIN.md#3-global-contract-first-rules-cross-cutting).
+> Contract-first rules apply: no invented JSON fields, strict `snake_case`, typed `sqlc` queries only, and English error responses using `response.ErrorWithCode(w, status, code, message)` / `response.Error(w, status, message)` (`{ "code", "error" }`). See [`DOMAIN.md`](../DOMAIN.md#3-global-contract-first-rules-cross-cutting). Option B middleware verifies `is_active`, `token_version`, and live `role` against PostgreSQL on all write methods (`POST`/`PUT`/`DELETE`).
 
 ### MODULE 3: Panhispanic Dictionary, Lexical Authorship, and Heteronymy (`DictionaryService` — `CU05, CU06`)
 
@@ -318,7 +318,7 @@ In addition to the base queries (`SearchVocabularyDropdown`, `GetWordDetailByID`
 
 #### 2.3.3. Dictionary HTTP Endpoints Specification (`/api/v1/regions`, `/api/v1/words`, `/api/v1/senses`, `/api/v1/examples`, `/api/v1/concepts`)
 
-Authoring routes are registered in `core-service/internal/api/router.go` inside a group with `RequireAuth` followed by `RequireRole(EDITOR, ADMIN)` (`401` without a valid token, `403` for a `LEARNER`). `OptionalAuth` injects the JWT claims when a valid Bearer token is sent but never rejects anonymous requests; the handlers use `claims.AnchorDialect` as the default dialect.
+Authoring routes are registered in `core-service/internal/api/router.go` inside a group with `RequireAuth` followed by `RequireRole(EDITOR, ADMIN)` (`401` without a valid token, `403` for a `LEARNER` or suspended account). Under **Option B** middleware, all write routes (`POST`, `PUT`, `DELETE`) also verify `is_active`, `token_version`, and sync live `role` against PostgreSQL before `RequireRole` executes. `OptionalAuth` allows anonymous requests when no `Authorization` header is present (injecting `claims.AnchorDialect` when a valid Bearer token is sent), **but returns `401` (`INVALID_TOKEN_FORMAT` / `TOKEN_EXPIRED` / `INVALID_TOKEN`) whenever an invalid or expired `Authorization` header is supplied**.
 
 | Method | Path | Middleware | Use Case | Status | Successful Response |
 | :---: | :--- | :---: | :---: | :---: | :--- |

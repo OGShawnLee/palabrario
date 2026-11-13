@@ -399,3 +399,106 @@ func TestCurationService_ContentReports_CU09(t *testing.T) {
 		t.Errorf("se esperaba ErrConflict al intentar re-resolver un reporte, obtenido: %v", err)
 	}
 }
+
+func TestGovernanceService_TokenVersionAndRefreshRevocation(t *testing.T) {
+	testDB := testutil.SetupTestDB(t)
+	if testDB == nil {
+		return
+	}
+
+	tokenSvc := auth.NewTokenService("test-secret-key-minimum-32-chars", 15*time.Minute)
+	identitySvc := service.NewIdentityService(testDB, tokenSvc, 168*time.Hour)
+	govSvc := service.NewGovernanceService(testDB)
+	ctx := context.Background()
+
+	// 1. Seed Gael refresh token and read initial token_version
+	gaelLogin, err := identitySvc.SignIn(ctx, models.SignInRequest{
+		Email:    "gael@palabrario.org",
+		Password: "password123",
+	})
+	if err != nil {
+		t.Fatalf("SignIn failed for Gael: %v", err)
+	}
+
+	getTokenVersion := func(accountID string) int {
+		t.Helper()
+		var v int
+		if err := testDB.Pool.QueryRow(ctx, `SELECT token_version FROM accounts WHERE id_account = $1`, accountID).Scan(&v); err != nil {
+			t.Fatalf("failed reading token_version: %v", err)
+		}
+		return v
+	}
+
+	v0 := getTokenVersion(gaelUUIDStr)
+
+	// 2. Role promotion via ResolveEditorRequest(APPROVED) bumps token_version
+	edReq, err := govSvc.CreateEditorRequest(ctx, gaelUUIDStr, models.CreateEditorRequestDTO{
+		InstitutionName: "Universidad Complutense de Madrid",
+		Justification:   "Specialist in comparative Hispanic lexicography and morphology.",
+	})
+	if err != nil {
+		t.Fatalf("CreateEditorRequest failed: %v", err)
+	}
+	if _, err := govSvc.ResolveEditorRequest(ctx, adminUUIDStr, edReq.IDRequest, models.ResolveEditorRequestDTO{
+		Status: models.RequestApproved,
+	}); err != nil {
+		t.Fatalf("ResolveEditorRequest failed: %v", err)
+	}
+	v1 := getTokenVersion(gaelUUIDStr)
+	if v1 != v0+1 {
+		t.Fatalf("expected ResolveEditorRequest to increment token_version from %d to %d, got %d", v0, v0+1, v1)
+	}
+
+	// 3. Role change via UpdateUserRoleOrStatus bumps token_version
+	if _, err := govSvc.UpdateUserRoleOrStatus(ctx, adminUUIDStr, gaelUUIDStr, models.UpdateUserRoleOrStatusRequest{
+		Role: utils.ToPtr(models.RoleLearner),
+	}); err != nil {
+		t.Fatalf("UpdateUserRoleOrStatus demote failed: %v", err)
+	}
+	v2 := getTokenVersion(gaelUUIDStr)
+	if v2 != v1+1 {
+		t.Fatalf("expected UpdateUserRoleOrStatus(role) to increment token_version from %d to %d, got %d", v1, v1+1, v2)
+	}
+
+	// 4. Promotion via RedeemInvitationTicket(EDITOR) bumps token_version
+	ticket, err := govSvc.CreateInvitationTicket(ctx, adminUUIDStr, models.CreateTicketRequest{
+		Code:        utils.ToPtr("TICKET-TV-CHECK"),
+		GrantedRole: models.RoleEditor,
+		MaxUses:     1,
+	})
+	if err != nil {
+		t.Fatalf("CreateInvitationTicket failed: %v", err)
+	}
+	if _, err := govSvc.RedeemInvitationTicket(ctx, gaelUUIDStr, ticket.Code); err != nil {
+		t.Fatalf("RedeemInvitationTicket failed: %v", err)
+	}
+	v3 := getTokenVersion(gaelUUIDStr)
+	if v3 != v2+1 {
+		t.Fatalf("expected RedeemInvitationTicket(EDITOR) to increment token_version from %d to %d, got %d", v2, v2+1, v3)
+	}
+
+	// 5. Suspending user (is_active=false) bumps token_version AND revokes all refresh tokens
+	if _, err := govSvc.UpdateUserRoleOrStatus(ctx, adminUUIDStr, gaelUUIDStr, models.UpdateUserRoleOrStatusRequest{
+		IsActive: utils.ToPtr(false),
+	}); err != nil {
+		t.Fatalf("UpdateUserRoleOrStatus suspend failed: %v", err)
+	}
+	v4 := getTokenVersion(gaelUUIDStr)
+	if v4 != v3+1 {
+		t.Fatalf("expected suspension to increment token_version from %d to %d, got %d", v3, v3+1, v4)
+	}
+
+	var activeRefresh int
+	if err := testDB.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM refresh_tokens WHERE id_account = $1 AND revoked_at IS NULL`, gaelUUIDStr).Scan(&activeRefresh); err != nil {
+		t.Fatalf("failed counting active refresh tokens: %v", err)
+	}
+	if activeRefresh != 0 {
+		t.Fatalf("expected 0 active refresh tokens after suspension, got %d", activeRefresh)
+	}
+
+	_, err = identitySvc.RefreshToken(ctx, gaelLogin.RefreshToken)
+	if !errors.Is(err, service.ErrUnauthorized) {
+		t.Fatalf("expected ErrUnauthorized for revoked refresh token after suspension, got %v", err)
+	}
+}
+

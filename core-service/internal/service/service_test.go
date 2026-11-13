@@ -4,8 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"palabrario/core-service/internal/service"
 	"palabrario/core-service/internal/testutil"
@@ -620,8 +625,9 @@ func TestArenaCatalogService_ListPublicWaitingMatches(t *testing.T) {
 	}
 
 	for i := 1; i <= 8; i++ {
-		email := fmt.Sprintf("p%d_%d@test.org", i, time.Now().UnixNano())
-		userName := fmt.Sprintf("p%d_test_%d", i, time.Now().UnixNano())
+		uid := strings.ReplaceAll(uuid.NewString(), "-", "")[:12]
+		email := fmt.Sprintf("p%d_%s@test.org", i, uid)
+		userName := fmt.Sprintf("p%d_test_%s", i, uid)
 		var pUserID string
 		err = testDB.Pool.QueryRow(ctx, `
 			INSERT INTO accounts (email, password_hash, role)
@@ -710,4 +716,369 @@ func TestArenaCatalogService_ListPublicWaitingMatches(t *testing.T) {
 		t.Errorf("se esperaba como máximo 1 resultado con limit=1, obtenido %d", len(limitedMatches))
 	}
 }
+
+func assertDomainCode(t *testing.T, err error, wantBase error, wantCode string) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("expected error with code %q, got nil", wantCode)
+	}
+	if !errors.Is(err, wantBase) {
+		t.Fatalf("expected errors.Is(err, %v), got %v", wantBase, err)
+	}
+	var domErr *service.DomainError
+	if !errors.As(err, &domErr) {
+		t.Fatalf("expected *service.DomainError, got %T (%v)", err, err)
+	}
+	if domErr.Code != wantCode {
+		t.Fatalf("expected error code %q, got %q (msg=%q)", wantCode, domErr.Code, domErr.Message)
+	}
+}
+
+func TestIdentityService_SignUp_Validation_And_ConflictCodes(t *testing.T) {
+	testDB := testutil.SetupTestDB(t)
+	if testDB == nil {
+		return
+	}
+
+	tokenSvc := auth.NewTokenService("test-secret-key-minimum-32-chars", 15*time.Minute)
+	identitySvc := service.NewIdentityService(testDB, tokenSvc, 168*time.Hour)
+	ctx := context.Background()
+
+	cases := []struct {
+		name string
+		req  models.SignUpRequest
+	}{
+		{
+			name: "invalid email",
+			req: models.SignUpRequest{
+				Email:         "not-an-email",
+				Password:      "ValidPass123!",
+				Name:          "Test User",
+				UserName:      "valid_user_1",
+				AnchorDialect: "MX",
+			},
+		},
+		{
+			name: "short password",
+			req: models.SignUpRequest{
+				Email:         "short@palabrario.org",
+				Password:      "1234567",
+				Name:          "Test User",
+				UserName:      "valid_user_2",
+				AnchorDialect: "MX",
+			},
+		},
+		{
+			name: "password exceeds 72 bytes",
+			req: models.SignUpRequest{
+				Email:         "longpw@palabrario.org",
+				Password:      strings.Repeat("a", 73),
+				Name:          "Test User",
+				UserName:      "valid_user_3",
+				AnchorDialect: "MX",
+			},
+		},
+		{
+			name: "invalid username",
+			req: models.SignUpRequest{
+				Email:         "baduser@palabrario.org",
+				Password:      "ValidPass123!",
+				Name:          "Test User",
+				UserName:      "_invalid_start",
+				AnchorDialect: "MX",
+			},
+		},
+		{
+			name: "username exceeds 50 chars",
+			req: models.SignUpRequest{
+				Email:         "longuser@palabrario.org",
+				Password:      "ValidPass123!",
+				Name:          "Test User",
+				UserName:      strings.Repeat("a", 51),
+				AnchorDialect: "MX",
+			},
+		},
+		{
+			name: "invalid dialect",
+			req: models.SignUpRequest{
+				Email:         "baddialect@palabrario.org",
+				Password:      "ValidPass123!",
+				Name:          "Test User",
+				UserName:      "valid_user_4",
+				AnchorDialect: "ZZ",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := identitySvc.SignUp(ctx, tc.req)
+			assertDomainCode(t, err, service.ErrInvalidInput, "VALIDATION_ERROR")
+		})
+	}
+
+	// Leading '@' stripped, empty dialect defaults to MX, both tokens issued
+	created, err := identitySvc.SignUp(ctx, models.SignUpRequest{
+		Email:         "CleanUser@Palabrario.org",
+		Password:      "ValidPass123!",
+		Name:          "",
+		UserName:      "@Clean_Handle",
+		AnchorDialect: "",
+	})
+	if err != nil {
+		t.Fatalf("SignUp failed unexpectedly: %v", err)
+	}
+	if created.Token == "" || created.RefreshToken == "" {
+		t.Fatalf("expected both access and refresh tokens, got token=%q refresh=%q", created.Token, created.RefreshToken)
+	}
+	if created.User.UserName != "clean_handle" || created.User.AnchorDialect != "MX" {
+		t.Fatalf("unexpected normalized profile: %+v", created.User)
+	}
+
+	// Duplicate email -> EMAIL_ALREADY_EXISTS
+	_, err = identitySvc.SignUp(ctx, models.SignUpRequest{
+		Email:         "cleanuser@palabrario.org",
+		Password:      "ValidPass123!",
+		Name:          "Another Name",
+		UserName:      "brand_new_handle",
+		AnchorDialect: "ES",
+	})
+	assertDomainCode(t, err, service.ErrConflict, "EMAIL_ALREADY_EXISTS")
+
+	// Duplicate username -> USERNAME_ALREADY_EXISTS
+	_, err = identitySvc.SignUp(ctx, models.SignUpRequest{
+		Email:         "other_email@palabrario.org",
+		Password:      "ValidPass123!",
+		Name:          "Another Name",
+		UserName:      "CLEAN_HANDLE",
+		AnchorDialect: "ES",
+	})
+	assertDomainCode(t, err, service.ErrConflict, "USERNAME_ALREADY_EXISTS")
+}
+
+func TestIdentityService_RefreshToken_SignOut_And_Revocation(t *testing.T) {
+	testDB := testutil.SetupTestDB(t)
+	if testDB == nil {
+		return
+	}
+
+	tokenSvc := auth.NewTokenService("test-secret-key-minimum-32-chars", 15*time.Minute)
+	identitySvc := service.NewIdentityService(testDB, tokenSvc, 168*time.Hour)
+	ctx := context.Background()
+
+	// 1. SignIn issues access + refresh tokens
+	loginResp, err := identitySvc.SignIn(ctx, models.SignInRequest{
+		Email:    "gael@palabrario.org",
+		Password: "password123",
+	})
+	if err != nil {
+		t.Fatalf("SignIn failed: %v", err)
+	}
+	if loginResp.Token == "" || loginResp.RefreshToken == "" {
+		t.Fatal("expected non-empty access and refresh tokens on SignIn")
+	}
+
+	// 2. RefreshToken rotates the token atomically
+	rotated, err := identitySvc.RefreshToken(ctx, loginResp.RefreshToken)
+	if err != nil {
+		t.Fatalf("RefreshToken failed: %v", err)
+	}
+	if rotated.RefreshToken == "" || rotated.RefreshToken == loginResp.RefreshToken {
+		t.Fatal("expected RefreshToken to issue a new distinct refresh token")
+	}
+
+	// 3. Reusing the already-rotated refresh token fails with TOKEN_REVOKED
+	_, err = identitySvc.RefreshToken(ctx, loginResp.RefreshToken)
+	assertDomainCode(t, err, service.ErrUnauthorized, "TOKEN_REVOKED")
+
+	// 4. SignOut revokes the rotated refresh token; empty SignOut is a no-op
+	if err := identitySvc.SignOut(ctx, ""); err != nil {
+		t.Fatalf("SignOut with empty token failed: %v", err)
+	}
+	if err := identitySvc.SignOut(ctx, rotated.RefreshToken); err != nil {
+		t.Fatalf("SignOut failed: %v", err)
+	}
+	_, err = identitySvc.RefreshToken(ctx, rotated.RefreshToken)
+	assertDomainCode(t, err, service.ErrUnauthorized, "TOKEN_REVOKED")
+
+	// 5. Expired refresh token returns TOKEN_EXPIRED
+	expiredLogin, err := identitySvc.SignIn(ctx, models.SignInRequest{
+		Email:    "gael@palabrario.org",
+		Password: "password123",
+	})
+	if err != nil {
+		t.Fatalf("SignIn failed: %v", err)
+	}
+	_, err = testDB.Pool.Exec(ctx, `UPDATE refresh_tokens SET expires_at = now() - INTERVAL '1 minute' WHERE token_hash = $1`, auth.HashRefreshToken(expiredLogin.RefreshToken))
+	if err != nil {
+		t.Fatalf("failed to expire refresh token: %v", err)
+	}
+	_, err = identitySvc.RefreshToken(ctx, expiredLogin.RefreshToken)
+	assertDomainCode(t, err, service.ErrUnauthorized, "TOKEN_EXPIRED")
+
+	// 6. Suspended account refresh returns ACCOUNT_SUSPENDED and revokes all refresh tokens
+	activeLogin, err := identitySvc.SignIn(ctx, models.SignInRequest{
+		Email:    "gael@palabrario.org",
+		Password: "password123",
+	})
+	if err != nil {
+		t.Fatalf("SignIn failed: %v", err)
+	}
+	_, err = testDB.Pool.Exec(ctx, `UPDATE accounts SET is_active = false WHERE email = 'gael@palabrario.org'`)
+	if err != nil {
+		t.Fatalf("failed to suspend account: %v", err)
+	}
+	_, err = identitySvc.RefreshToken(ctx, activeLogin.RefreshToken)
+	assertDomainCode(t, err, service.ErrForbidden, "ACCOUNT_SUSPENDED")
+
+	var activeTokens int
+	err = testDB.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM refresh_tokens rt
+		JOIN accounts a ON a.id_account = rt.id_account
+		WHERE a.email = 'gael@palabrario.org' AND rt.revoked_at IS NULL
+	`).Scan(&activeTokens)
+	if err != nil {
+		t.Fatalf("failed to query active refresh tokens: %v", err)
+	}
+	if activeTokens != 0 {
+		t.Fatalf("expected all refresh tokens revoked after suspended refresh, got %d active", activeTokens)
+	}
+}
+
+func TestIdentityService_GetMe_And_ChangePassword_Revocation(t *testing.T) {
+	testDB := testutil.SetupTestDB(t)
+	if testDB == nil {
+		return
+	}
+
+	tokenSvc := auth.NewTokenService("test-secret-key-minimum-32-chars", 15*time.Minute)
+	identitySvc := service.NewIdentityService(testDB, tokenSvc, 168*time.Hour)
+	ctx := context.Background()
+
+	// 1. Missing account UUID -> 401 UNAUTHORIZED
+	_, err := identitySvc.GetMe(ctx, uuid.NewString())
+	assertDomainCode(t, err, service.ErrUnauthorized, "UNAUTHORIZED")
+
+	// 2. SignIn Gael & record initial token_version + refresh token
+	loginResp, err := identitySvc.SignIn(ctx, models.SignInRequest{
+		Email:    "gael@palabrario.org",
+		Password: "password123",
+	})
+	if err != nil {
+		t.Fatalf("SignIn failed: %v", err)
+	}
+
+	var beforeVersion int
+	err = testDB.Pool.QueryRow(ctx, `SELECT token_version FROM accounts WHERE id_account = $1`, loginResp.User.IDUser).Scan(&beforeVersion)
+	if err != nil {
+		t.Fatalf("failed to read token_version: %v", err)
+	}
+
+	// 3. Password > 72 bytes rejected in ChangePassword
+	err = identitySvc.ChangePassword(ctx, loginResp.User.IDUser, models.ChangePasswordRequest{
+		CurrentPassword: "password123",
+		NewPassword:     strings.Repeat("x", 73),
+	})
+	assertDomainCode(t, err, service.ErrInvalidInput, "VALIDATION_ERROR")
+
+	// 4. Successful ChangePassword bumps token_version and revokes prior refresh tokens
+	if err := identitySvc.ChangePassword(ctx, loginResp.User.IDUser, models.ChangePasswordRequest{
+		CurrentPassword: "password123",
+		NewPassword:     "NewSecurePass123!",
+	}); err != nil {
+		t.Fatalf("ChangePassword failed: %v", err)
+	}
+
+	var afterVersion int
+	err = testDB.Pool.QueryRow(ctx, `SELECT token_version FROM accounts WHERE id_account = $1`, loginResp.User.IDUser).Scan(&afterVersion)
+	if err != nil {
+		t.Fatalf("failed to read updated token_version: %v", err)
+	}
+	if afterVersion != beforeVersion+1 {
+		t.Fatalf("expected token_version=%d, got %d", beforeVersion+1, afterVersion)
+	}
+
+	_, err = identitySvc.RefreshToken(ctx, loginResp.RefreshToken)
+	assertDomainCode(t, err, service.ErrUnauthorized, "TOKEN_REVOKED")
+
+	// 5. Suspended account -> GetMe returns 403 ACCOUNT_SUSPENDED
+	_, err = testDB.Pool.Exec(ctx, `UPDATE accounts SET is_active = false WHERE id_account = $1`, loginResp.User.IDUser)
+	if err != nil {
+		t.Fatalf("failed to suspend account: %v", err)
+	}
+	_, err = identitySvc.GetMe(ctx, loginResp.User.IDUser)
+	assertDomainCode(t, err, service.ErrForbidden, "ACCOUNT_SUSPENDED")
+}
+
+func TestErrors_MapDBError(t *testing.T) {
+	cases := []struct {
+		name     string
+		err      error
+		wantBase error
+		wantCode string
+	}{
+		{
+			name:     "pgx no rows",
+			err:      pgx.ErrNoRows,
+			wantBase: service.ErrNotFound,
+			wantCode: "NOT_FOUND",
+		},
+		{
+			name:     "string truncation 22001",
+			err:      &pgconn.PgError{Code: "22001"},
+			wantBase: service.ErrInvalidInput,
+			wantCode: "INPUT_TOO_LONG",
+		},
+		{
+			name:     "check violation 23514",
+			err:      &pgconn.PgError{Code: "23514"},
+			wantBase: service.ErrValidation,
+			wantCode: "VALIDATION_ERROR",
+		},
+		{
+			name:     "foreign key violation 23503",
+			err:      &pgconn.PgError{Code: "23503"},
+			wantBase: service.ErrInvalidInput,
+			wantCode: "INVALID_REFERENCE",
+		},
+		{
+			name:     "unique email idx_accounts_email_lower",
+			err:      &pgconn.PgError{Code: "23505", ConstraintName: "idx_accounts_email_lower"},
+			wantBase: service.ErrConflict,
+			wantCode: "EMAIL_ALREADY_EXISTS",
+		},
+		{
+			name:     "unique email accounts_email_key",
+			err:      &pgconn.PgError{Code: "23505", ConstraintName: "accounts_email_key"},
+			wantBase: service.ErrConflict,
+			wantCode: "EMAIL_ALREADY_EXISTS",
+		},
+		{
+			name:     "unique username idx_users_user_name_lower",
+			err:      &pgconn.PgError{Code: "23505", ConstraintName: "idx_users_user_name_lower"},
+			wantBase: service.ErrConflict,
+			wantCode: "USERNAME_ALREADY_EXISTS",
+		},
+		{
+			name:     "unique username users_user_name_key",
+			err:      &pgconn.PgError{Code: "23505", ConstraintName: "users_user_name_key"},
+			wantBase: service.ErrConflict,
+			wantCode: "USERNAME_ALREADY_EXISTS",
+		},
+		{
+			name:     "generic conflict 23505",
+			err:      &pgconn.PgError{Code: "23505", ConstraintName: "other_unique"},
+			wantBase: service.ErrConflict,
+			wantCode: "CONFLICT",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mapped := service.MapDBError(tc.err, "default error")
+			assertDomainCode(t, mapped, tc.wantBase, tc.wantCode)
+		})
+	}
+}
+
 

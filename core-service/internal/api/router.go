@@ -11,6 +11,7 @@ import (
 	"palabrario/core-service/internal/api/middleware"
 	"palabrario/core-service/internal/config"
 	"palabrario/core-service/internal/database"
+	"palabrario/core-service/internal/db"
 	"palabrario/core-service/internal/service"
 	"palabrario/pkg/auth"
 	"palabrario/pkg/models"
@@ -35,19 +36,24 @@ func (rt *Router) Setup() http.Handler {
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 
-	// CORS permisivo para desarrollo y Wails/Frontend
+	allowedOrigins := rt.cfg.AllowedOrigins
+	if len(allowedOrigins) == 0 {
+		allowedOrigins = auth.ParseCORSAllowedOrigins("")
+	}
+
+	// CORS configured from environment allowlist without credentials (Bearer auth only)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link", "X-Total-Count"},
-		AllowCredentials: true,
+		AllowCredentials: false,
 		MaxAge:           300,
 	}))
 
-	// 1. Capa de Servicios SOA (Contratos de .context/INTERFACES.md)
-	tokenService := auth.NewTokenService(rt.cfg.JWTSecret, rt.cfg.JWTExpirationHours)
-	identityService := service.NewIdentityService(rt.db, tokenService)
+	// 1. Capa de Servicios SOA (Contratos de .routing/)
+	tokenService := auth.NewTokenService(rt.cfg.JWTSecret, rt.cfg.AccessTokenTTL)
+	identityService := service.NewIdentityService(rt.db, tokenService, rt.cfg.RefreshTokenTTL)
 	governanceService := service.NewGovernanceService(rt.db)
 	dictionaryService := service.NewDictionaryService(rt.db)
 	curationService := service.NewCurationService(rt.db)
@@ -56,7 +62,7 @@ func (rt *Router) Setup() http.Handler {
 	arenaCatalogService := service.NewArenaCatalogService(rt.db)
 
 	// 2. Capa de Middlewares y Handlers HTTP
-	authMiddleware := middleware.NewAuthMiddleware(tokenService)
+	authMiddleware := middleware.NewAuthMiddleware(tokenService, db.New(rt.db.Pool))
 	authHandler := handlers.NewAuthHandler(identityService)
 	userHandler := handlers.NewUserHandler(identityService)
 	governanceHandler := handlers.NewGovernanceHandler(governanceService)
@@ -71,7 +77,7 @@ func (rt *Router) Setup() http.Handler {
 	r.Get("/health", healthHandler.HealthCheck)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		response.JSON(w, http.StatusOK, map[string]string{
-			"message": "Bienvenido a Palabrario Core API (Golang + PostgreSQL 17)",
+			"message": "Welcome to Palabrario Core API (Golang + PostgreSQL 17)",
 		})
 	})
 
@@ -81,6 +87,8 @@ func (rt *Router) Setup() http.Handler {
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/sign-up", authHandler.SignUp)
 			r.Post("/sign-in", authHandler.SignIn)
+			r.Post("/refresh", authHandler.RefreshToken)
+			r.Post("/sign-out", authHandler.SignOut)
 
 			// Rutas protegidas de Auth
 			r.Group(func(r chi.Router) {

@@ -9,20 +9,21 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// Errores canónicos de dominio según la sección 1.2 de .context/INTERFACES.md.
+// Canonical domain errors mapped to HTTP statuses across core-service.
 var (
-	ErrInvalidInput  = errors.New("datos de entrada inválidos")
-	ErrValidation    = errors.New("error de validación")
-	ErrUnauthorized  = errors.New("no autorizado")
-	ErrForbidden     = errors.New("acceso denegado")
-	ErrNotFound      = errors.New("recurso no encontrado")
-	ErrConflict      = errors.New("conflicto de estado o registro duplicado")
-	ErrUnprocessable = errors.New("entidad no procesable")
+	ErrInvalidInput  = errors.New("invalid input")
+	ErrValidation    = errors.New("validation error")
+	ErrUnauthorized  = errors.New("unauthorized")
+	ErrForbidden     = errors.New("forbidden")
+	ErrNotFound      = errors.New("resource not found")
+	ErrConflict      = errors.New("conflict or duplicate record")
+	ErrUnprocessable = errors.New("unprocessable entity")
 )
 
-// DomainError envuelve un error canónico de dominio con un mensaje legible para el usuario final.
+// DomainError wraps a canonical domain error with a machine-readable code and user-facing message.
 type DomainError struct {
 	Base    error
+	Code    string
 	Message string
 }
 
@@ -38,54 +39,107 @@ func NewDomainError(base error, message string) error {
 	return &DomainError{Base: base, Message: message}
 }
 
-// MapDBError traduce errores de pgx / PostgreSQL (como unique_violation 23505
-// o excepciones de triggers PL/pgSQL P0001 de RN07) a errores tipados de dominio.
+func NewDomainErrorWithCode(base error, code, message string) error {
+	return &DomainError{Base: base, Code: code, Message: message}
+}
+
+// MapDBError translates pgx / PostgreSQL errors into typed domain errors with machine-readable codes.
 func MapDBError(err error, defaultMsg string) error {
 	if err == nil {
 		return nil
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
-		return NewDomainError(ErrNotFound, defaultMsg)
+		return NewDomainErrorWithCode(ErrNotFound, "NOT_FOUND", defaultMsg)
 	}
 
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		switch pgErr.Code {
-		case "23505": // unique_violation
-			return NewDomainError(ErrConflict, defaultMsg)
-		case "P0001": // raise_exception (ej. trg_prevent_self_approval RN07)
-			return NewDomainError(ErrForbidden, pgErr.Message)
+		case "22001": // string_data_right_truncation
+			return NewDomainErrorWithCode(ErrInvalidInput, "INPUT_TOO_LONG", "Input exceeds maximum allowed length.")
 		case "23514": // check_violation
-			return NewDomainError(ErrConflict, defaultMsg)
+			return NewDomainErrorWithCode(ErrValidation, "VALIDATION_ERROR", defaultMsg)
+		case "23503": // foreign_key_violation
+			return NewDomainErrorWithCode(ErrInvalidInput, "INVALID_REFERENCE", defaultMsg)
+		case "23505": // unique_violation
+			switch pgErr.ConstraintName {
+			case "idx_accounts_email_lower", "accounts_email_key":
+				return NewDomainErrorWithCode(ErrConflict, "EMAIL_ALREADY_EXISTS", "An account with that email already exists.")
+			case "idx_users_user_name_lower", "users_user_name_key":
+				return NewDomainErrorWithCode(ErrConflict, "USERNAME_ALREADY_EXISTS", "That username is already taken.")
+			default:
+				return NewDomainErrorWithCode(ErrConflict, "CONFLICT", defaultMsg)
+			}
+		case "P0001": // raise_exception (e.g., trg_prevent_self_approval RN07)
+			return NewDomainErrorWithCode(ErrForbidden, "FORBIDDEN", pgErr.Message)
 		}
 	}
 
 	return fmt.Errorf("%s: %w", defaultMsg, err)
 }
 
-// HTTPStatusAndMessage traduce cualquier error devuelto por un servicio SOA
-// al código de estado HTTP y mensaje JSON correspondiente.
+// HTTPStatusAndMessage translates a service error into an HTTP status code and message.
 func HTTPStatusAndMessage(err error, fallbackMsg string) (int, string) {
+	status, _, msg := HTTPStatusCodeAndMessage(err, "", fallbackMsg)
+	return status, msg
+}
+
+// HTTPStatusCodeAndMessage translates a service error into an HTTP status code, machine-readable code, and message.
+func HTTPStatusCodeAndMessage(err error, fallbackCode, fallbackMsg string) (int, string, string) {
 	msg := fallbackMsg
+	code := ""
 	var domErr *DomainError
-	if errors.As(err, &domErr) && domErr.Message != "" {
-		msg = domErr.Message
+	if errors.As(err, &domErr) {
+		if domErr.Message != "" {
+			msg = domErr.Message
+		}
+		if domErr.Code != "" {
+			code = domErr.Code
+		}
 	}
 
 	switch {
-	case errors.Is(err, ErrInvalidInput), errors.Is(err, ErrValidation):
-		return http.StatusBadRequest, msg
+	case errors.Is(err, ErrInvalidInput):
+		if code == "" {
+			code = "INVALID_INPUT"
+		}
+		return http.StatusBadRequest, code, msg
+	case errors.Is(err, ErrValidation):
+		if code == "" {
+			code = "VALIDATION_ERROR"
+		}
+		return http.StatusBadRequest, code, msg
 	case errors.Is(err, ErrUnauthorized):
-		return http.StatusUnauthorized, msg
+		if code == "" {
+			code = "UNAUTHORIZED"
+		}
+		return http.StatusUnauthorized, code, msg
 	case errors.Is(err, ErrForbidden):
-		return http.StatusForbidden, msg
+		if code == "" {
+			code = "FORBIDDEN"
+		}
+		return http.StatusForbidden, code, msg
 	case errors.Is(err, ErrNotFound):
-		return http.StatusNotFound, msg
+		if code == "" {
+			code = "NOT_FOUND"
+		}
+		return http.StatusNotFound, code, msg
 	case errors.Is(err, ErrConflict):
-		return http.StatusConflict, msg
+		if code == "" {
+			code = "CONFLICT"
+		}
+		return http.StatusConflict, code, msg
 	case errors.Is(err, ErrUnprocessable):
-		return http.StatusUnprocessableEntity, msg
+		if code == "" {
+			code = "UNPROCESSABLE_ENTITY"
+		}
+		return http.StatusUnprocessableEntity, code, msg
 	default:
-		return http.StatusInternalServerError, fallbackMsg
+		if fallbackCode != "" {
+			code = fallbackCode
+		} else {
+			code = "INTERNAL_ERROR"
+		}
+		return http.StatusInternalServerError, code, fallbackMsg
 	}
 }

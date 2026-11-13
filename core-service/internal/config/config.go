@@ -6,28 +6,30 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"palabrario/pkg/auth"
 )
 
-// Config centraliza y tipa todas las variables de entorno de core-service.
-// Cumple con la metodología 12-Factor App y el principio Fail-Fast:
-// si alguna variable crítica no está configurada, el servicio se niega a iniciar.
+// Config centralizes and types all environment variables for core-service.
+// Follows the 12-Factor App methodology with strict fail-fast validation.
 type Config struct {
 	Port               string
 	Environment        string
 	DatabaseURL        string
 	JWTSecret          string
+	AccessTokenTTL     time.Duration
+	RefreshTokenTTL    time.Duration
 	JWTExpirationHours time.Duration
 	ImageServiceURL    string
 	RealtimeServiceURL string
+	AllowedOrigins     []string
 }
 
-// Load lee, valida rigurosamente y estructura las variables de entorno.
-// Arroja un error grave con el detalle exacto de las variables faltantes
-// en lugar de usar valores predeterminados inseguros en memoria.
+// Load reads, strictly validates, and structures environment variables.
+// Fails fast with explicit details instead of falling back to insecure defaults.
 func Load() (*Config, error) {
 	var missingVars []string
 
-	// Función auxiliar para validar variables estrictamente obligatorias
 	requireEnv := func(name string) string {
 		val := strings.TrimSpace(os.Getenv(name))
 		if val == "" {
@@ -42,45 +44,65 @@ func Load() (*Config, error) {
 
 	env := strings.TrimSpace(os.Getenv("ENVIRONMENT"))
 	if env == "" {
-		// Validar si viene como NODE_ENV por compatibilidad previa
 		env = strings.TrimSpace(os.Getenv("NODE_ENV"))
 	}
 	if env == "" {
 		missingVars = append(missingVars, "ENVIRONMENT")
 	}
 
-	// Si hay variables obligatorias ausentes, fallar de inmediato
 	if len(missingVars) > 0 {
-		return nil, fmt.Errorf("error grave de configuración: las siguientes variables de entorno son obligatorias y no están definidas: [%s]", strings.Join(missingVars, ", "))
+		return nil, fmt.Errorf("fatal configuration error: missing required environment variables: [%s]", strings.Join(missingVars, ", "))
 	}
 
-	// Validación semántica de seguridad para JWT_SECRET (mínimo 32 caracteres)
 	if len(jwtSecret) < 32 {
-		return nil, fmt.Errorf("error de seguridad en configuración: JWT_SECRET debe tener una longitud mínima de 32 caracteres (obtenidos: %d caracteres)", len(jwtSecret))
+		return nil, fmt.Errorf("security configuration error: JWT_SECRET must be at least 32 characters long (got %d)", len(jwtSecret))
 	}
 
-	// Validación de puerto numérico
 	if _, err := strconv.Atoi(port); err != nil {
-		return nil, fmt.Errorf("error de formato en configuración: PORT '%s' no es un puerto TCP válido", port)
+		return nil, fmt.Errorf("configuration format error: PORT %q is not a valid TCP port", port)
 	}
 
-	// Expiración de JWT configurable (opcional, por defecto 72 horas)
-	expHours := 72
-	if expStr := strings.TrimSpace(os.Getenv("JWT_EXPIRATION_HOURS")); expStr != "" {
-		if parsedExp, err := strconv.Atoi(expStr); err == nil && parsedExp > 0 {
-			expHours = parsedExp
-		} else {
-			return nil, fmt.Errorf("error de formato en configuración: JWT_EXPIRATION_HOURS '%s' debe ser un entero positivo", expStr)
+	accessTTL := auth.DefaultAccessTokenTTL
+	if ttlStr := strings.TrimSpace(os.Getenv("ACCESS_TOKEN_TTL_MINUTES")); ttlStr != "" {
+		val, err := strconv.Atoi(ttlStr)
+		if err != nil || val <= 0 {
+			return nil, fmt.Errorf("configuration format error: ACCESS_TOKEN_TTL_MINUTES %q must be a positive integer", ttlStr)
 		}
+		accessTTL = time.Duration(val) * time.Minute
 	}
+
+	refreshHours := 168
+	if refreshStr := strings.TrimSpace(os.Getenv("REFRESH_TOKEN_TTL_HOURS")); refreshStr != "" {
+		val, err := strconv.Atoi(refreshStr)
+		if err != nil || val <= 0 {
+			return nil, fmt.Errorf("configuration format error: REFRESH_TOKEN_TTL_HOURS %q must be a positive integer", refreshStr)
+		}
+		refreshHours = val
+	} else if expStr := strings.TrimSpace(os.Getenv("JWT_EXPIRATION_HOURS")); expStr != "" {
+		val, err := strconv.Atoi(expStr)
+		if err != nil || val <= 0 {
+			return nil, fmt.Errorf("configuration format error: JWT_EXPIRATION_HOURS %q must be a positive integer", expStr)
+		}
+		refreshHours = val
+	}
+	refreshTTL := time.Duration(refreshHours) * time.Hour
+
+	corsRaw := strings.TrimSpace(os.Getenv("CORS_ALLOWED_ORIGINS"))
+	if corsRaw == "" && strings.EqualFold(env, "production") {
+		return nil, fmt.Errorf("security configuration error: CORS_ALLOWED_ORIGINS must be set in production")
+	}
+	allowedOrigins := auth.ParseCORSAllowedOrigins(corsRaw)
 
 	return &Config{
 		Port:               port,
 		Environment:        env,
 		DatabaseURL:        dbURL,
 		JWTSecret:          jwtSecret,
-		JWTExpirationHours: time.Duration(expHours) * time.Hour,
+		AccessTokenTTL:     accessTTL,
+		RefreshTokenTTL:    refreshTTL,
+		JWTExpirationHours: refreshTTL,
 		ImageServiceURL:    strings.TrimSpace(os.Getenv("IMAGE_SERVICE_URL")),
 		RealtimeServiceURL: strings.TrimSpace(os.Getenv("REALTIME_SERVICE_URL")),
+		AllowedOrigins:     allowedOrigins,
 	}, nil
 }

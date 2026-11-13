@@ -44,35 +44,35 @@ func NewGovernanceService(databaseInstance *database.DB) GovernanceService {
 }
 
 // ------------------------------------------------------------------------------
-// CU02: Solicitud de Ascenso a Editor (RN02)
+// CU02: Editor Promotion Requests (RN02)
 // ------------------------------------------------------------------------------
 
 func (s *governanceService) CreateEditorRequest(ctx context.Context, learnerID string, req models.CreateEditorRequestDTO) (*models.EditorRequest, error) {
-	learnerUUID, err := ParseDomainUUID(learnerID, "Identificador de usuario inválido")
+	learnerUUID, err := ParseDomainUUID(learnerID, "Invalid user identifier.")
 	if err != nil {
 		return nil, err
 	}
 
 	req.InstitutionName = strings.TrimSpace(req.InstitutionName)
 	if len(req.InstitutionName) < 3 || len(req.InstitutionName) > 150 {
-		return nil, NewDomainError(ErrInvalidInput, "El nombre de la institución debe tener entre 3 y 150 caracteres")
+		return nil, NewDomainErrorWithCode(ErrInvalidInput, "VALIDATION_ERROR", "Institution name must be between 3 and 150 characters.")
 	}
 
 	req.Justification = strings.TrimSpace(req.Justification)
 	if len(req.Justification) < 20 {
-		return nil, NewDomainError(ErrInvalidInput, "La justificación debe tener al menos 20 caracteres")
+		return nil, NewDomainErrorWithCode(ErrInvalidInput, "VALIDATION_ERROR", "Justification must be at least 20 characters long.")
 	}
 
-	// RN02: Verificar si ya cuenta con rol superior
+	// RN02: Check if user already holds a higher role
 	account, err := s.queries.GetAccountByID(ctx, learnerUUID)
 	if err != nil {
-		return nil, MapDBError(err, "Cuenta de usuario no encontrada")
+		return nil, MapDBError(err, "User account not found.")
 	}
 	if account.Role == db.AccountRoleEDITOR || account.Role == db.AccountRoleADMIN {
-		return nil, NewDomainError(ErrConflict, "El usuario ya cuenta con rol de Editor o Administrador")
+		return nil, NewDomainErrorWithCode(ErrConflict, "ALREADY_PRIVILEGED", "User already has the Editor or Administrator role.")
 	}
 
-	// RN12: Validar formato seguro de credenciales multimedia si se suministró URL
+	// RN12: Validate credential media URL if supplied
 	if err := ValidateInternalMediaURL(req.CredentialsURL); err != nil {
 		return nil, err
 	}
@@ -89,22 +89,21 @@ func (s *governanceService) CreateEditorRequest(ctx context.Context, learnerID s
 		CredentialsUrl:  credURL,
 	})
 	if err != nil {
-		return nil, MapDBError(err, "Ya tienes una solicitud de promoción pendiente de revisión")
+		return nil, MapDBError(err, "You already have a pending promotion request.")
 	}
 
-	// Obtener la solicitud completa con datos de usuario
 	return s.getEditorRequestDetail(ctx, createdReq.IDRequest)
 }
 
 func (s *governanceService) ListMyEditorRequests(ctx context.Context, learnerID string) ([]models.EditorRequest, error) {
-	learnerUUID, err := ParseDomainUUID(learnerID, "Identificador de usuario inválido")
+	learnerUUID, err := ParseDomainUUID(learnerID, "Invalid user identifier.")
 	if err != nil {
 		return nil, err
 	}
 
 	rows, err := s.queries.ListMyEditorRequests(ctx, learnerUUID)
 	if err != nil {
-		return nil, fmt.Errorf("error listando solicitudes del usuario: %w", err)
+		return nil, fmt.Errorf("failed to list user editor requests: %w", err)
 	}
 
 	results := make([]models.EditorRequest, len(rows))
@@ -115,7 +114,7 @@ func (s *governanceService) ListMyEditorRequests(ctx context.Context, learnerID 
 }
 
 // ------------------------------------------------------------------------------
-// CU03: Administración de Solicitudes y Usuarios (RN08, Protección Último Admin)
+// CU03: Request & User Administration (RN08, Last Admin Protection)
 // ------------------------------------------------------------------------------
 
 func (s *governanceService) ListEditorRequests(ctx context.Context, statusFilter *string) ([]models.EditorRequest, error) {
@@ -126,7 +125,7 @@ func (s *governanceService) ListEditorRequests(ctx context.Context, statusFilter
 
 	rows, err := s.queries.ListEditorRequests(ctx, st)
 	if err != nil {
-		return nil, fmt.Errorf("error listando solicitudes de acreditación: %w", err)
+		return nil, fmt.Errorf("failed to list editor requests: %w", err)
 	}
 
 	results := make([]models.EditorRequest, len(rows))
@@ -137,22 +136,22 @@ func (s *governanceService) ListEditorRequests(ctx context.Context, statusFilter
 }
 
 func (s *governanceService) ResolveEditorRequest(ctx context.Context, adminID string, requestID string, req models.ResolveEditorRequestDTO) (*models.EditorRequest, error) {
-	adminUUID, err := ParseDomainUUID(adminID, "Identificador de administrador inválido")
+	adminUUID, err := ParseDomainUUID(adminID, "Invalid administrator identifier.")
 	if err != nil {
 		return nil, err
 	}
-	requestUUID, err := ParseDomainUUID(requestID, "Identificador de solicitud inválido")
+	requestUUID, err := ParseDomainUUID(requestID, "Invalid request identifier.")
 	if err != nil {
 		return nil, err
 	}
 
 	if req.Status != models.RequestApproved && req.Status != models.RequestRejected {
-		return nil, NewDomainError(ErrInvalidInput, "El estado debe ser 'APPROVED' o 'REJECTED'")
+		return nil, NewDomainErrorWithCode(ErrInvalidInput, "VALIDATION_ERROR", "Status must be 'APPROVED' or 'REJECTED'.")
 	}
 
 	tx, err := s.databaseInstance.Pool.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("error iniciando transacción: %w", err)
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
@@ -160,10 +159,10 @@ func (s *governanceService) ResolveEditorRequest(ctx context.Context, adminID st
 
 	currentReq, err := qtx.GetEditorRequestByID(ctx, requestUUID)
 	if err != nil {
-		return nil, MapDBError(err, "Solicitud de acreditación no encontrada")
+		return nil, MapDBError(err, "Editor promotion request not found.")
 	}
 	if currentReq.Status != "PENDING" {
-		return nil, NewDomainError(ErrConflict, "La solicitud ya ha sido resuelta previamente")
+		return nil, NewDomainErrorWithCode(ErrConflict, "REQUEST_ALREADY_RESOLVED", "This request has already been resolved.")
 	}
 
 	_, err = qtx.ResolveEditorRequest(ctx, db.ResolveEditorRequestParams{
@@ -173,22 +172,24 @@ func (s *governanceService) ResolveEditorRequest(ctx context.Context, adminID st
 		ReviewNotes: PtrToText(req.ReviewNotes),
 	})
 	if err != nil {
-		return nil, MapDBError(err, "Error resolviendo la solicitud de acreditación")
+		return nil, MapDBError(err, "Failed to resolve editor promotion request.")
 	}
 
-	// Promoción atómica a EDITOR si fue aprobada
+	// Atomic promotion to EDITOR + token_version bump if approved
 	if req.Status == models.RequestApproved {
-		err = qtx.UpdateAccountRole(ctx, db.UpdateAccountRoleParams{
+		if err := qtx.UpdateAccountRole(ctx, db.UpdateAccountRoleParams{
 			IDAccount: currentReq.IDUser,
 			Role:      db.AccountRoleEDITOR,
-		})
-		if err != nil {
-			return nil, MapDBError(err, "Error actualizando rol a EDITOR")
+		}); err != nil {
+			return nil, MapDBError(err, "Failed to promote account to EDITOR.")
+		}
+		if _, err := qtx.IncrementAccountTokenVersion(ctx, currentReq.IDUser); err != nil {
+			return nil, fmt.Errorf("failed to increment token version: %w", err)
 		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("error confirmando transacción: %w", err)
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return s.getEditorRequestDetail(ctx, requestUUID)
@@ -218,7 +219,7 @@ func (s *governanceService) ListUsers(ctx context.Context, search string, roleFi
 		OffsetVal: int32(offset),
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("error listando usuarios: %w", err)
+		return nil, 0, fmt.Errorf("failed to list users: %w", err)
 	}
 
 	total, err := s.queries.CountUsers(ctx, db.CountUsersParams{
@@ -226,7 +227,7 @@ func (s *governanceService) ListUsers(ctx context.Context, search string, roleFi
 		Role:   rText,
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("error contando usuarios: %w", err)
+		return nil, 0, fmt.Errorf("failed to count users: %w", err)
 	}
 
 	users := make([]models.UserProfile, len(rows))
@@ -252,33 +253,44 @@ func (s *governanceService) ListUsers(ctx context.Context, search string, roleFi
 }
 
 func (s *governanceService) UpdateUserRoleOrStatus(ctx context.Context, adminID string, targetUserID string, req models.UpdateUserRoleOrStatusRequest) (*models.UserProfile, error) {
-	targetUUID, err := ParseDomainUUID(targetUserID, "Identificador de usuario inválido")
+	targetUUID, err := ParseDomainUUID(targetUserID, "Invalid user identifier.")
 	if err != nil {
 		return nil, err
 	}
 
-	targetAcc, err := s.queries.GetAccountByID(ctx, targetUUID)
+	tx, err := s.databaseInstance.Pool.Begin(ctx)
 	if err != nil {
-		return nil, MapDBError(err, "Cuenta de usuario no encontrada")
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	qtx := s.queries.WithTx(tx)
+
+	targetAcc, err := qtx.GetAccountByID(ctx, targetUUID)
+	if err != nil {
+		return nil, MapDBError(err, "User account not found.")
 	}
 
-	// CU03 4a: Protección del último Administrador activo
+	// CU03 4a: Protect the last active administrator
 	if targetAcc.Role == db.AccountRoleADMIN {
 		willDemote := req.Role != nil && *req.Role != models.RoleAdmin
 		willDeactivate := req.IsActive != nil && !*req.IsActive
 		if willDemote || willDeactivate {
-			activeAdmins, err := s.queries.CountActiveAdmins(ctx)
+			activeAdmins, err := qtx.CountActiveAdmins(ctx)
 			if err != nil {
-				return nil, fmt.Errorf("error verificando administradores activos: %w", err)
+				return nil, fmt.Errorf("failed to check active administrators: %w", err)
 			}
 			if activeAdmins <= 1 {
-				return nil, NewDomainError(ErrConflict, "No se puede revocar ni desactivar al único Administrador activo del sistema")
+				return nil, NewDomainErrorWithCode(ErrConflict, "LAST_ADMIN_PROTECTED", "Cannot demote or deactivate the only active administrator.")
 			}
 		}
 	}
 
 	var roleParam db.NullAccountRole
 	if req.Role != nil {
+		if *req.Role != models.RoleLearner && *req.Role != models.RoleEditor && *req.Role != models.RoleAdmin {
+			return nil, NewDomainErrorWithCode(ErrInvalidInput, "VALIDATION_ERROR", "Role must be 'LEARNER', 'EDITOR', or 'ADMIN'.")
+		}
 		roleParam = db.NullAccountRole{AccountRole: db.AccountRole(*req.Role), Valid: true}
 	}
 
@@ -287,13 +299,29 @@ func (s *governanceService) UpdateUserRoleOrStatus(ctx context.Context, adminID 
 		activeParam = pgtype.Bool{Bool: *req.IsActive, Valid: true}
 	}
 
-	row, err := s.queries.UpdateUserRoleOrStatus(ctx, db.UpdateUserRoleOrStatusParams{
+	row, err := qtx.UpdateUserRoleOrStatus(ctx, db.UpdateUserRoleOrStatusParams{
 		IDUser:   targetUUID,
 		Role:     roleParam,
 		IsActive: activeParam,
 	})
 	if err != nil {
-		return nil, MapDBError(err, "Error actualizando rol o estado del usuario")
+		return nil, MapDBError(err, "Failed to update user role or status.")
+	}
+
+	deactivating := req.IsActive != nil && !*req.IsActive
+	if req.Role != nil || deactivating {
+		if _, err := qtx.IncrementAccountTokenVersion(ctx, targetUUID); err != nil {
+			return nil, fmt.Errorf("failed to increment token version: %w", err)
+		}
+	}
+	if deactivating {
+		if err := qtx.RevokeAllRefreshTokensForAccount(ctx, targetUUID); err != nil {
+			return nil, fmt.Errorf("failed to revoke refresh tokens: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return &models.UserProfile{
@@ -314,11 +342,11 @@ func (s *governanceService) UpdateUserRoleOrStatus(ctx context.Context, adminID 
 }
 
 // ------------------------------------------------------------------------------
-// CU04: Boletos de Invitación Institucionales (Emisión, Revocación y Redención FOR UPDATE)
+// CU04: Institutional Invitation Tickets (Issue, Revoke & Redeem FOR UPDATE)
 // ------------------------------------------------------------------------------
 
 func (s *governanceService) CreateInvitationTicket(ctx context.Context, adminID string, req models.CreateTicketRequest) (*models.InvitationTicket, error) {
-	adminUUID, err := ParseDomainUUID(adminID, "Identificador de administrador inválido")
+	adminUUID, err := ParseDomainUUID(adminID, "Invalid administrator identifier.")
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +366,7 @@ func (s *governanceService) CreateInvitationTicket(ctx context.Context, adminID 
 		req.GrantedRole = models.RoleLearner
 	}
 	if req.GrantedRole != models.RoleLearner && req.GrantedRole != models.RoleEditor {
-		return nil, NewDomainError(ErrInvalidInput, "El rol otorgado debe ser 'LEARNER' o 'EDITOR'")
+		return nil, NewDomainErrorWithCode(ErrInvalidInput, "VALIDATION_ERROR", "Granted role must be 'LEARNER' or 'EDITOR'.")
 	}
 
 	exp := time.Now().Add(30 * 24 * time.Hour)
@@ -355,7 +383,7 @@ func (s *governanceService) CreateInvitationTicket(ctx context.Context, adminID 
 		ExpiresAt:       pgtype.Timestamptz{Time: exp, Valid: true},
 	})
 	if err != nil {
-		return nil, MapDBError(err, "El código de boleto ya existe")
+		return nil, MapDBError(err, "An invitation ticket with that code already exists.")
 	}
 
 	return mapInvitationTicketRow(row.IDTicket, row.Code, row.CreatedBy, row.GrantedRole, row.InstitutionName, row.MaxUses, row.CurrentUses, row.IsActive, row.ExpiresAt, row.CreatedAt), nil
@@ -364,7 +392,7 @@ func (s *governanceService) CreateInvitationTicket(ctx context.Context, adminID 
 func (s *governanceService) ListInvitationTickets(ctx context.Context, activeOnly bool) ([]models.InvitationTicket, error) {
 	rows, err := s.queries.ListInvitationTickets(ctx, pgtype.Bool{Bool: activeOnly, Valid: true})
 	if err != nil {
-		return nil, fmt.Errorf("error listando boletos: %w", err)
+		return nil, fmt.Errorf("failed to list invitation tickets: %w", err)
 	}
 
 	tickets := make([]models.InvitationTicket, len(rows))
@@ -375,107 +403,106 @@ func (s *governanceService) ListInvitationTickets(ctx context.Context, activeOnl
 }
 
 func (s *governanceService) RevokeInvitationTicket(ctx context.Context, adminID string, ticketID string) error {
-	ticketUUID, err := ParseDomainUUID(ticketID, "Identificador de boleto inválido")
+	ticketUUID, err := ParseDomainUUID(ticketID, "Invalid ticket identifier.")
 	if err != nil {
 		return err
 	}
 
 	_, err = s.queries.GetInvitationTicketByID(ctx, ticketUUID)
 	if err != nil {
-		return MapDBError(err, "Boleto de invitación no encontrado")
+		return MapDBError(err, "Invitation ticket not found.")
 	}
 
 	if err := s.queries.RevokeInvitationTicket(ctx, ticketUUID); err != nil {
-		return MapDBError(err, "Error revocando boleto de invitación")
+		return MapDBError(err, "Failed to revoke invitation ticket.")
 	}
 
 	return nil
 }
 
 func (s *governanceService) RedeemInvitationTicket(ctx context.Context, userID string, code string) (*models.UserProfile, error) {
-	userUUID, err := ParseDomainUUID(userID, "Identificador de usuario inválido")
+	userUUID, err := ParseDomainUUID(userID, "Invalid user identifier.")
 	if err != nil {
 		return nil, err
 	}
 
 	code = strings.TrimSpace(strings.ToUpper(code))
 	if code == "" {
-		return nil, NewDomainError(ErrInvalidInput, "Código de boleto requerido")
+		return nil, NewDomainErrorWithCode(ErrInvalidInput, "VALIDATION_ERROR", "Invitation ticket code is required.")
 	}
 
 	tx, err := s.databaseInstance.Pool.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("error iniciando transacción: %w", err)
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	qtx := s.queries.WithTx(tx)
 
-	// SELECT FOR UPDATE para serialización estricta de concurrencia
+	// SELECT FOR UPDATE for strict concurrency serialization
 	ticket, err := qtx.GetInvitationTicketByCodeForUpdate(ctx, code)
 	if err != nil {
-		return nil, MapDBError(err, "Boleto de invitación no encontrado")
+		return nil, MapDBError(err, "Invitation ticket not found.")
 	}
 
 	if !ticket.IsActive {
-		return nil, NewDomainError(ErrConflict, "El boleto de invitación ha sido revocado o ya no está activo")
+		return nil, NewDomainErrorWithCode(ErrConflict, "TICKET_REVOKED", "This invitation ticket has been revoked or is no longer active.")
 	}
 
 	if ticket.ExpiresAt.Valid && ticket.ExpiresAt.Time.Before(time.Now()) {
-		return nil, NewDomainError(ErrConflict, "El boleto de invitación ha expirado")
+		return nil, NewDomainErrorWithCode(ErrConflict, "TICKET_EXPIRED", "This invitation ticket has expired.")
 	}
 
 	if ticket.CurrentUses >= ticket.MaxUses {
-		return nil, NewDomainError(ErrConflict, "El boleto de invitación ha alcanzado su límite máximo de usos")
+		return nil, NewDomainErrorWithCode(ErrConflict, "TICKET_EXHAUSTED", "This invitation ticket has reached its maximum number of uses.")
 	}
 
-	// Verificar si el usuario ya redimió este boleto
 	hasRedeemed, err := qtx.HasUserRedeemedTicket(ctx, db.HasUserRedeemedTicketParams{
 		IDTicket: ticket.IDTicket,
 		IDUser:   userUUID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error verificando redención previa: %w", err)
+		return nil, fmt.Errorf("failed to verify prior ticket redemption: %w", err)
 	}
 	if hasRedeemed {
-		return nil, NewDomainError(ErrConflict, "Ya has redimido este boleto de invitación previamente")
+		return nil, NewDomainErrorWithCode(ErrConflict, "TICKET_ALREADY_REDEEMED", "You have already redeemed this invitation ticket.")
 	}
 
-	// Registrar redención
 	if err := qtx.CreateTicketRedemption(ctx, db.CreateTicketRedemptionParams{
 		IDTicket: ticket.IDTicket,
 		IDUser:   userUUID,
 	}); err != nil {
-		return nil, MapDBError(err, "Error registrando redención del boleto")
+		return nil, MapDBError(err, "Failed to record ticket redemption.")
 	}
 
-	// Incrementar contador de usos
 	if _, err := qtx.IncrementTicketUses(ctx, ticket.IDTicket); err != nil {
-		return nil, MapDBError(err, "Error actualizando usos del boleto")
+		return nil, MapDBError(err, "Failed to update ticket usage count.")
 	}
 
-	// Si el boleto otorga rol EDITOR y el usuario es LEARNER, promover cuenta
+	// If ticket grants EDITOR and user is LEARNER, promote account + bump token_version
 	currentAcc, err := qtx.GetAccountByID(ctx, userUUID)
 	if err != nil {
-		return nil, MapDBError(err, "Cuenta de usuario no encontrada")
+		return nil, MapDBError(err, "User account not found.")
 	}
 	if ticket.GrantedRole == db.AccountRoleEDITOR && currentAcc.Role == db.AccountRoleLEARNER {
 		if err := qtx.UpdateAccountRole(ctx, db.UpdateAccountRoleParams{
 			IDAccount: userUUID,
 			Role:      db.AccountRoleEDITOR,
 		}); err != nil {
-			return nil, MapDBError(err, "Error al promover cuenta a Editor")
+			return nil, MapDBError(err, "Failed to promote account to EDITOR.")
+		}
+		if _, err := qtx.IncrementAccountTokenVersion(ctx, userUUID); err != nil {
+			return nil, fmt.Errorf("failed to increment token version: %w", err)
 		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("error confirmando transacción: %w", err)
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Obtener perfil actualizado
 	row, err := s.queries.GetUserProfileByID(ctx, userUUID)
 	if err != nil {
-		return nil, MapDBError(err, "Error obteniendo perfil de usuario actualizado")
+		return nil, MapDBError(err, "Failed to load updated user profile.")
 	}
 
 	return &models.UserProfile{
@@ -496,13 +523,13 @@ func (s *governanceService) RedeemInvitationTicket(ctx context.Context, userID s
 }
 
 // ------------------------------------------------------------------------------
-// Helpers Internos
+// Internal Helpers
 // ------------------------------------------------------------------------------
 
 func (s *governanceService) getEditorRequestDetail(ctx context.Context, id uuid.UUID) (*models.EditorRequest, error) {
 	r, err := s.queries.GetEditorRequestByID(ctx, id)
 	if err != nil {
-		return nil, MapDBError(err, "Solicitud de acreditación no encontrada")
+		return nil, MapDBError(err, "Editor promotion request not found.")
 	}
 	res := mapEditorRequestRow(r.IDRequest, r.IDUser, r.UserName, r.UserFullName, r.UserEmail, r.InstitutionName, r.Justification, r.CredentialsUrl, r.Status, r.ReviewedBy, r.ReviewNotes, r.CreatedAt, r.ResolvedAt)
 	return &res, nil

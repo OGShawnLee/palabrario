@@ -13,7 +13,16 @@ type SignUpRequest struct {
 	AnchorDialect string `json:"anchor_dialect"`
 }
 
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+type SignOutRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
 type AuthResponse struct {
-	Token string      `json:"token"`
-	User  UserProfile `json:"user"`
+	Token        string      `json:"token"`
+	RefreshToken string      `json:"refresh_token"`
+	User         UserProfile `json:"user"`
 }

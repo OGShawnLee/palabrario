@@ -65,9 +65,12 @@ Open the service file that matches your route or use case. Each file contains bo
 > 1. **Inventing JSON fields is prohibited:** No HTTP endpoint, WebSocket event, or interface component (`local-app`) may emit or consume properties that are not explicitly declared in the Go structs and JSON contracts of this document.
 > 2. **Strict `snake_case` convention:** All JSON payloads (input and output) use `snake_case` identical to the `json:"..."` tags in [`pkg/models/`](../pkg/models).
 > 3. **Mandatory Typed SQL (`sqlc`):** In `core-service`, concatenating raw SQL in handlers is prohibited. Every new query is defined in `sql/queries/*.sql`, compiled with `sqlc generate` into `core-service/internal/db/`, consumed by an implementation in `core-service/internal/service/`, and exposed by a handler in `core-service/internal/api/handlers/`.
-> 4. **Single HTTP Error Format:** Every error response (`4xx` / `5xx`) exclusively uses [`response.Error(w, status, message)`](../pkg/response/json.go):
+> 4. **Single HTTP Error Format:** Every error response (`4xx` / `5xx`) uses [`response.ErrorWithCode(w, status, code, message)`](../pkg/response/json.go) (or `response.Error(w, status, message)` where `code` is omitted):
 >    ```json
->    { "error": "Clear and human-readable description of the error in Spanish" }
+>    {
+>      "code": "MACHINE_READABLE_CODE",
+>      "error": "Clear and human-readable description of the error in English"
+>    }
 >    ```
 
 ---
@@ -97,7 +100,7 @@ flowchart TB
     end
 
     subgraph CoreService["core-service (:8000) — Modular Monolith in Go 1.24 + Chi v5 + sqlc"]
-        Router["Chi v5 Router + Middlewares (RequireAuth, OptionalAuth, RequireRole, RequireInternalService)"]
+        Router["Chi v5 Router + Option B Auth Middlewares\n(15m JWT on all protected routes; live DB is_active/token_version/role check on writes, /auth/*, /governance/*)"]
         subgraph SOALayer["SOA Layer (core-service/internal/service)"]
             S1["IdentityService (CU01)"]
             S2["GovernanceService (CU02, CU03, CU04)"]
@@ -181,11 +184,11 @@ core-service/
 
 ### 4.2. Standard Domain Error to HTTP Status Code Mapping (`core-service/internal/service/errors.go`)
 
-| Domain Error (`service.*`) | HTTP Status Code | When Triggered |
-| :--- | :---: | :--- |
-| `ErrInvalidInput` | `400 Bad Request` | Required fields empty, invalid format, `quality_rating` outside `1..4`, etc. |
-| `ErrUnauthorized` | `401 Unauthorized` | Missing or expired JWT token, invalid signature, or incorrect login credentials. |
-| `ErrForbidden` | `403 Forbidden` | Insufficient role (`RBAC`), attempt to edit another user's resource (`RN01`, `RN03`), attempt to read another user's private deck (`RN04`), attempt to self-approve own sense (`RN07`), or user token attempting to invoke internal S2S endpoint. |
-| `ErrNotFound` | `404 Not Found` | Non-existent resource (`id_word`, `id_sense`, `id_deck`, `room_code`, `id_match`, `user_name`), or sense in `HIDDEN`/`DRAFT` state queried from a public route. |
-| `ErrConflict` | `409 Conflict` | Duplicate email/`user_name`, existing `PENDING` Editor request (`RN02`), duplicate vote, exhausted/expired ticket (`CU04`), or match already consolidated (`FINISHED`). |
-| `ErrUnprocessable` | `422 Unprocessable Entity` | Selected deck to open an Arena has fewer than 8 `APPROVED` senses or fewer approved senses than the requested number of rounds `total_rounds` (`CU14 1a`). |
+| Domain Error (`service.*`) | HTTP Status Code | Machine-Readable `code` Values | When Triggered |
+| :--- | :---: | :--- | :--- |
+| `ErrInvalidInput` / `ErrValidation` | `400 Bad Request` | `INVALID_INPUT`, `INPUT_TOO_LONG` (`22001`), `VALIDATION_ERROR` (`23514` / DTO validation), `INVALID_REFERENCE` (`23503`), `INVALID_JSON` | Required fields empty, invalid format/length, password outside `8..72` bytes, invalid dialect, malformed JSON, or DB length/check/FK violation. |
+| `ErrUnauthorized` | `401 Unauthorized` | `UNAUTHORIZED`, `MISSING_TOKEN`, `INVALID_TOKEN_FORMAT`, `INVALID_TOKEN`, `TOKEN_EXPIRED`, `TOKEN_REVOKED`, `INVALID_CREDENTIALS` | Missing/malformed/expired/revoked JWT or refresh token, invalid signature, mismatched `token_version`, or incorrect login/current credentials. |
+| `ErrForbidden` | `403 Forbidden` | `FORBIDDEN`, `ACCOUNT_SUSPENDED` | Insufficient live DB role (`RBAC`), suspended account (`is_active = false`), attempt to edit another user's resource (`RN01`, `RN03`), private deck (`RN04`), self-approval (`RN07`), or non-internal token on S2S endpoint. |
+| `ErrNotFound` | `404 Not Found` | `NOT_FOUND` | Non-existent resource (`id_word`, `id_sense`, `id_deck`, `room_code`, `id_match`, `user_name`), suspended account queried via `/users/u/{username}`, or `HIDDEN`/`DRAFT` sense on a public route. |
+| `ErrConflict` | `409 Conflict` | `CONFLICT`, `EMAIL_ALREADY_EXISTS` (`23505`), `USERNAME_ALREADY_EXISTS` (`23505`), `ALREADY_PRIVILEGED`, `REQUEST_ALREADY_RESOLVED`, `LAST_ADMIN_PROTECTED`, `TICKET_REVOKED`, `TICKET_EXPIRED`, `TICKET_EXHAUSTED`, `TICKET_ALREADY_REDEEMED` | Duplicate email/`user_name`, existing `PENDING` Editor request (`RN02`), duplicate vote, last active `ADMIN` protection, exhausted/expired/revoked ticket (`CU04`), or already consolidated match. |
+| `ErrUnprocessable` | `422 Unprocessable Entity` | `UNPROCESSABLE_ENTITY` | Selected deck to open an Arena has fewer than 8 `APPROVED` senses or fewer approved senses than the requested number of rounds `total_rounds` (`CU14 1a`). |

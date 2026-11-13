@@ -45,7 +45,7 @@ A **Collection (`Collection`)** groups multiple decks in pedagogical order (`Col
 ## Part B — Technical Contracts
 
 > [!IMPORTANT]
-> Contract-first rules apply: no invented JSON fields, strict `snake_case`, typed `sqlc` queries only, and `response.Error(w, status, message)` for every error. See [`DOMAIN.md`](../DOMAIN.md#3-global-contract-first-rules-cross-cutting).
+> Contract-first rules apply: no invented JSON fields, strict `snake_case`, typed `sqlc` queries only, and English error responses using `response.ErrorWithCode(w, status, code, message)` / `response.Error(w, status, message)` (`{ "code", "error" }`). See [`DOMAIN.md`](../DOMAIN.md#3-global-contract-first-rules-cross-cutting). Option B middleware verifies `is_active`, `token_version`, and live `role` against PostgreSQL on all write methods (`POST`/`PUT`/`DELETE`).
 
 ### MODULE 5: Personal Studio — Decks and Collections (`StudioService` — `CU10, CU11`)
 
