@@ -5,6 +5,7 @@ import { Plus } from "lucide-vue-next"
 import { api } from "@/api"
 import CollectionGridItem from "@/components/collections/CollectionGridItem.vue"
 import DeckGridItem from "@/components/decks/DeckGridItem.vue"
+import CollectionFormDialog from "@/components/studio/CollectionFormDialog.vue"
 import DeckFormDialog from "@/components/studio/DeckFormDialog.vue"
 import { useAuth } from "@/composables/useAuth"
 import type { Collection, Deck, StudioDeckSummary } from "@bindings/palabrario/pkg/models/index.js"
@@ -20,6 +21,7 @@ const isLoading = ref(true)
 const loadError = ref<string | null>(null)
 const actionError = ref<string | null>(null)
 const isCreateDeckOpen = ref(false)
+const isCreateCollectionOpen = ref(false)
 
 const deckFilter = ref<OwnershipFilter>("all")
 const collectionFilter = ref<OwnershipFilter>("all")
@@ -178,6 +180,10 @@ async function handleUnsaveCollection(collectionId: number) {
 function handleDeckCreated(deck: Deck) {
   void router.push(`/studio/decks/${deck.id_deck}`)
 }
+
+function handleCollectionCreated(collection: Collection) {
+  void router.push(`/studio/collections/${collection.id_collection}`)
+}
 </script>
 
 <template>
@@ -307,20 +313,30 @@ function handleDeckCreated(deck: Deck) {
             </h2>
           </div>
 
-          <div role="tablist" aria-label="Filter your collections" class="flex flex-wrap items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <div role="tablist" aria-label="Filter your collections" class="flex flex-wrap items-center gap-2">
+              <button
+                v-for="tab in collectionTabs"
+                :key="tab.id"
+                type="button"
+                role="tab"
+                :aria-selected="collectionFilter === tab.id"
+                :class="[
+                  'button--small cursor-pointer tabular-nums',
+                  collectionFilter === tab.id ? 'button-main' : 'button-side--light',
+                ]"
+                @click="collectionFilter = tab.id"
+              >
+                {{ tab.label }} ({{ tab.count }})
+              </button>
+            </div>
             <button
-              v-for="tab in collectionTabs"
-              :key="tab.id"
               type="button"
-              role="tab"
-              :aria-selected="collectionFilter === tab.id"
-              :class="[
-                'button--small cursor-pointer tabular-nums',
-                collectionFilter === tab.id ? 'button-main' : 'button-side--light',
-              ]"
-              @click="collectionFilter = tab.id"
+              class="button-main button--small inline-flex items-center gap-1.5 cursor-pointer"
+              @click="isCreateCollectionOpen = true"
             >
-              {{ tab.label }} ({{ tab.count }})
+              <Plus class="size-4" />
+              <span>New Collection</span>
             </button>
           </div>
         </div>
@@ -365,6 +381,11 @@ function handleDeckCreated(deck: Deck) {
     <DeckFormDialog
       v-model:open="isCreateDeckOpen"
       @saved="handleDeckCreated"
+    />
+
+    <CollectionFormDialog
+      v-model:open="isCreateCollectionOpen"
+      @saved="handleCollectionCreated"
     />
   </main>
 </template>

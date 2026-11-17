@@ -45,13 +45,13 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 
 - [x] `.tickets/036-build-studio-hub-route/` (`completed`): replaced `/studio` placeholder with spacious Swiss-broadsheet Decks & Collections Hub (`All`/`Owned`/`Saved` filters on both, reused parameterized `DeckGridItem.vue` & `CollectionGridItem.vue`, `Home / Studio` breadcrumb, quiet typographic metadata + user-refined `StudioView.vue` / `DeckGridItem.vue`), and passed `wails3 task check` (`0`).
 - [x] `.tickets/037-build-studio-deck-workspace/` (`completed`): registered `/studio/decks/:id` (`Home / Studio / <Deck Title>`), built `StudioDeckDetailView.vue`, `DeckFormDialog.vue`, `AddSenseToDeckDialog.vue`, reusable `DeleteConfirmDialog.vue`, `New Deck` trigger in `StudioView.vue` (+ `button-side--light` fix), `RN03`/`RN04`/`RN05` enforcement, and Arena `8+` card readiness CTA; passed `wails3 task check` (`0`).
+- [x] `.tickets/038-build-studio-collection-workspace/` (`completed`): registered `/studio/collections/:id` (`Home / Studio / <Collection Title>`), built `StudioCollectionDetailView.vue`, `CollectionFormDialog.vue`, `CollectionDeckPickerDialog.vue`, parameterized `CollectionDeckItem.vue`, `New Collection` trigger in `StudioView.vue`, ordered `deck_ids` persistence with hydrated re-fetch, and `RN03`/`RN04`/`RN05` enforcement; passed `wails3 task check` (`0`).
 
 ## In progress
 - None.
 
 ## Draft tickets
 - [ ] `.tickets/019-build-arena-history-route/` (`draft`): expand `IArenaAPI` and build dedicated `/arena/history` route and 3NF round-by-round replay modal (`MatchReplayDialog.vue`) backed by `api.arena`.
-- [ ] `.tickets/038-build-studio-collection-workspace/` (`draft`): build `/studio/collections/:id` workspace (`Home / Studio / <Collection Title>` breadcrumb, reusing `CollectionDeckItem.vue`), `CollectionFormDialog` (metadata only), `New Collection` trigger, and `CollectionDeckPickerDialog` with `deck_ids` ordering and `RN03`/`RN05`.
 - [ ] `.tickets/043-build-public-deck-detail-route/` (`draft`): build missing public `/decks/:id` detail route (`Home / Decks / <Deck Title>` breadcrumb, `Save to Studio`, `/studio/decks/:id` owner link, `/arena` link for `8+` cards).
 - [ ] `.tickets/041-wire-public-to-studio-flows/` (`draft`): wire `"Add to Studio"` in `WordOfTheDayCard`, public `/decks` & `/collections/:id` & `/u/:username` links to `/decks/:id` (keeping `"Study ..."` labels untouched until `039`), and `CreateMatchDialog` Studio deck selection.
 - [ ] `.tickets/042-verify-and-review-studio-flows/` (`draft`): read-only Reviewer gate and `ui-ux-audit` pass for active Studio/Decks routes (`035`–`038`, `043`, `041`), including Vagrant DB-backed `core-service` tests.

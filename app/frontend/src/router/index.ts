@@ -111,6 +111,19 @@ const router = createRouter({
           },
         },
         {
+          path: "studio/collections/:id",
+          name: "studio-collection-detail",
+          component: () => import("@/views/studio/StudioCollectionDetailView.vue"),
+          meta: {
+            requiresAuth: true,
+            breadcrumb: [
+              { label: "Home", to: "/" },
+              { label: "Studio", to: "/studio" },
+              { label: "Collection" },
+            ],
+          },
+        },
+        {
           path: "settings",
           name: "settings",
           component: () => import("@/views/SettingsView.vue"),
