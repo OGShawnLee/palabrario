@@ -9,19 +9,19 @@ Canonical inventory of active and planned routes in app/. Read this file only wh
 | `/` | `home` | `views/HomeView.vue` | `app` | public | built | 004 |
 | `/auth/sign-in` | `sign-in` | `views/auth/SignInView.vue` | `auth` | guest only | built | 005, 027, 033 |
 | `/auth/sign-up` | `sign-up` | `views/auth/SignUpView.vue` | `auth` | guest only | built | 005, 027, 033 |
-| `/dictionary` | `dictionary` | `views/DictionaryView.vue` | `app` | public | built | 009, 015, 023 |
-| `/dictionary/word/:id` | `word-detail` | `views/WordDetailView.vue` | `app` | public | built | 025 |
+| `/dictionary` | `dictionary` | `views/DictionaryView.vue` | `app` | public | built | 009, 015, 023, 041 |
+| `/dictionary/word/:id` | `word-detail` | `views/WordDetailView.vue` | `app` | public | built | 025, 041 |
 | `/collections` | `collections` | `views/CollectionsView.vue` | `app` | public | built | 010 |
-| `/collections/:id` | `collection-detail` | `views/CollectionDetailView.vue` | `app` | public | built | 021 |
-| `/decks` | `decks` | `views/DecksView.vue` | `app` | public | built | 011 |
+| `/collections/:id` | `collection-detail` | `views/CollectionDetailView.vue` | `app` | public | built | 021, 041 |
+| `/decks` | `decks` | `views/DecksView.vue` | `app` | public | built | 011, 041 |
 | `/decks/:id` | `deck-detail` | `views/DeckDetailView.vue` | `app` | public | built | 043 |
-| `/arena` | `arena` | `views/ArenaView.vue` | `app` | public | built | 017, 033 |
+| `/arena` | `arena` | `views/ArenaView.vue` | `app` | public | built | 017, 033, 041 |
 | `/arena/history` | `arena-history` | `views/ArenaView.vue` | `app` | requireAuth | placeholder | 017, 033 (impl: 019) |
 | `/studio` | `studio` | `views/StudioView.vue` | `app` | requireAuth | built | 007, 033, 036, 037, 038 |
 | `/studio/decks/:id` | `studio-deck-detail` | `views/studio/StudioDeckDetailView.vue` | `app` | requireAuth | built | 037 |
 | `/studio/collections/:id` | `studio-collection-detail` | `views/studio/StudioCollectionDetailView.vue` | `app` | requireAuth | built | 038 |
 | `/settings` | `settings` | `views/SettingsView.vue` | `app` | requireAuth | placeholder | 007, 033 |
-| `/u/:username` | `profile` | `views/ProfileView.vue` | `app` | public | built | 026, 033 |
+| `/u/:username` | `profile` | `views/ProfileView.vue` | `app` | public | built | 026, 033, 041 |
 
 ## Layouts
 

@@ -73,8 +73,10 @@ const studioMetaParts = computed(() => {
       <p v-if="collection.description" class="text-sm text-side leading-relaxed">{{ collection.description }}</p>
     </div>
 
-    <p v-if="showRegions && visibleRegions.length > 0" class="mt-4 text-xs text-dull leading-relaxed">
-      {{ visibleRegions.join(" · ") }}
+    <p v-if="showRegions && visibleRegions.length > 0" class="mt-4 text-xs flex flex-wrap gap-2">
+      <span v-for="region in visibleRegions" class="badge-side">
+        {{ region }}
+      </span>
     </p>
   </article>
 </template>

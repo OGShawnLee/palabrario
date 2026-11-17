@@ -6,14 +6,14 @@ import type { Deck, StudioDeckSummary } from "@bindings/palabrario/pkg/models/in
 const props = withDefaults(
   defineProps<{
     deck: Deck | StudioDeckSummary
-    to?: RouteLocationRaw
+    to?: RouteLocationRaw | null
     actionLabel?: string
     ownership?: "owned" | "saved" | null
     showVisibility?: boolean
     showRegions?: boolean
   }>(),
   {
-    to: "/studio",
+    to: null,
     actionLabel: "Explore →",
     ownership: null,
     showVisibility: false,
@@ -21,6 +21,7 @@ const props = withDefaults(
   },
 )
 
+const resolvedTo = computed<RouteLocationRaw>(() => props.to ?? `/decks/${props.deck.id_deck}`)
 const isStudioMode = computed(() => Boolean(props.ownership) || props.showVisibility)
 const visibleRegions = computed(() => (props.deck.region_names ?? []).slice(0, 3))
 const ownerHandle = computed(() => {
@@ -57,22 +58,24 @@ const studioMetaParts = computed(() => {
 
         <div class="flex items-center gap-3 shrink-0">
           <slot name="actions" />
-          <RouterLink :to="to" class="button-side button--small cursor-pointer">
+          <RouterLink :to="resolvedTo" class="button-side button--small cursor-pointer">
             {{ actionLabel }}
           </RouterLink>
         </div>
       </div>
-      
+
       <h3 class="text-xl sm:text-2xl font-bold text-main">{{ deck.title }}</h3>
       <p v-if="deck.description" class="text-side leading-relaxed">{{ deck.description }}</p>
-    
+
       <span class="text-dull text-sm" v-if="props.ownership === 'saved' && ownerHandle">
         Created by <RouterLink :to="'/u/' + ownerHandle" class="font-bold"> @{{ ownerHandle }} </RouterLink>
       </span>
     </div>
 
-    <p v-if="showRegions && visibleRegions.length > 0" class="mt-4 text-xs text-dull leading-relaxed">
-      {{ visibleRegions.join(" · ") }}
-    </p>
+    <div v-if="showRegions && visibleRegions.length > 0" class="mt-4 flex flex-wrap gap-2">
+      <span v-for="region in visibleRegions" :key="region" class="badge-side">
+        {{ region }}
+      </span>
+    </div>
   </article>
 </template>

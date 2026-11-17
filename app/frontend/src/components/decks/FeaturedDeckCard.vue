@@ -1,13 +1,29 @@
 <script setup lang="ts">
 import { computed, ref, watchEffect } from "vue"
-import { useRouter } from "vue-router"
+import { RouterLink, useRouter } from "vue-router"
 import { api } from "@/api"
 import type { Deck } from "@bindings/palabrario/pkg/models/index.js"
 
-const props = defineProps<{ deck: Deck }>()
+const props = withDefaults(
+  defineProps<{
+    deck: Deck
+    isSaved?: boolean
+    isSaving?: boolean
+    isOwned?: boolean
+  }>(),
+  {
+    isSaved: false,
+    isSaving: false,
+    isOwned: false,
+  },
+)
+
+const emit = defineEmits<{ "toggle-save": [deck: Deck] }>()
+
 const router = useRouter()
 
 const previewItems = computed(() => (props.deck.items ?? []).filter((item) => item.sense).slice(0, 3))
+const visibleRegions = computed(() => (props.deck.region_names ?? []).slice(0, 3))
 
 // Deck items carry senses only; lemmas are resolved through the dictionary API.
 const lemmas = ref<Record<number, string>>({})
@@ -36,14 +52,48 @@ watchEffect(async () => {
         Featured Deck · {{ deck.is_official ? "Official" : "Community" }} · {{ deck.item_count }} terms
       </div>
       <h2 class="text-2xl sm:text-3xl font-black text-main leading-tight mb-3">{{ deck.title }}</h2>
-      <p v-if="deck.description" class="mb-6 text-sm sm:text-base text-side leading-relaxed">
+      <p v-if="deck.description" class="mb-4 text-sm sm:text-base text-side leading-relaxed">
         {{ deck.description }}
       </p>
-      <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+      <div v-if="visibleRegions.length > 0" class="flex flex-wrap gap-2 mb-6">
+        <span v-for="region in visibleRegions" :key="region" class="badge-side">
+          {{ region }}
+        </span>
+      </div>
+      <div class="flex flex-wrap gap-3 w-full sm:w-auto mt-auto">
         <button type="button" class="button-main cursor-pointer" @click="router.push('/studio')">
           Study Deck →
         </button>
-        <button type="button" class="button-side cursor-pointer">Save to Studio</button>
+        <RouterLink
+          v-if="isOwned"
+          :to="`/studio/decks/${deck.id_deck}`"
+          class="button-side inline-flex items-center justify-center cursor-pointer"
+        >
+          In Studio →
+        </RouterLink>
+        <button
+          v-else
+          type="button"
+          class="button-side cursor-pointer"
+          :disabled="isSaving"
+          @click="emit('toggle-save', deck)"
+        >
+          {{
+            isSaving
+              ? isSaved
+                ? "Removing..."
+                : "Saving..."
+              : isSaved
+                ? "✓ Saved in Studio"
+                : "Save to Studio"
+          }}
+        </button>
+        <RouterLink
+          :to="`/decks/${deck.id_deck}`"
+          class="button-side--light inline-flex items-center justify-center cursor-pointer"
+        >
+          Explore →
+        </RouterLink>
       </div>
     </div>
 

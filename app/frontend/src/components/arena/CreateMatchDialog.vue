@@ -9,6 +9,7 @@ import {
   CreateMatchRequest,
   type Deck,
   type MatchPackage,
+  type StudioDeckSummary,
 } from "@bindings/palabrario/pkg/models/index.js"
 
 const MIN_TERMS = 8
@@ -21,7 +22,7 @@ const emit = defineEmits<{ created: [match: MatchPackage] }>()
 const router = useRouter()
 const { isAuthenticated } = useAuth()
 
-const decks = ref<Deck[]>([])
+const decks = ref<Array<Deck | StudioDeckSummary>>([])
 const isLoadingDecks = ref(false)
 const selectedDeckId = ref<number | null>(null)
 const totalRounds = ref(8)
@@ -36,7 +37,7 @@ const canSubmit = computed(
   () => selectedDeck.value !== null && totalRounds.value <= maxRounds.value && !isSubmitting.value,
 )
 
-function isLocked(deck: Deck): boolean {
+function isLocked(deck: Deck | StudioDeckSummary): boolean {
   return deck.item_count < MIN_TERMS
 }
 
@@ -52,15 +53,24 @@ watch(selectedDeck, (deck) => {
 
 watch(open, async (isOpen) => {
   if (!isOpen) return
-  if (!isAuthenticated.value) {
-    open.value = false
-    void router.push({ name: "sign-in", query: { redirect: "/arena" } })
-    return
-  }
   errorMessage.value = ""
   isLoadingDecks.value = true
   try {
-    decks.value = (await api.studio.listDecks()) ?? []
+    const [studioDecks, publicDecks] = await Promise.all([
+      isAuthenticated.value ? api.studio.listStudioDecks().catch(() => []) : Promise.resolve([]),
+      api.studio.listDecks(),
+    ])
+    const seen = new Set<number>()
+    const merged: Array<Deck | StudioDeckSummary> = []
+    for (const deck of [...(studioDecks ?? []), ...(publicDecks ?? [])]) {
+      if (seen.has(deck.id_deck)) continue
+      seen.add(deck.id_deck)
+      merged.push(deck)
+    }
+    decks.value = merged
+    if (selectedDeckId.value !== null && !seen.has(selectedDeckId.value)) {
+      selectedDeckId.value = null
+    }
   } catch {
     decks.value = []
   } finally {

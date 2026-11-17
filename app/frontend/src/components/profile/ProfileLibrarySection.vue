@@ -76,7 +76,7 @@ const firstName = computed(() => props.authorName.trim().split(/\s+/)[0] || prop
         <RouterLink
           v-for="deck in decks"
           :key="deck.id_deck"
-          to="/decks"
+          :to="`/decks/${deck.id_deck}`"
           class="py-4 md:py-0 md:px-6 md:first:pl-0 flex items-start justify-between gap-4"
         >
           <div class="flex items-start gap-3">

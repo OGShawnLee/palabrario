@@ -1,7 +1,13 @@
 <script setup lang="ts">
-import { computed } from "vue"
-import { RouterLink } from "vue-router"
-import type { WordDetail, HeteronymItem } from "@bindings/palabrario/pkg/models/index.js"
+import { computed, ref } from "vue"
+import { RouterLink, useRoute, useRouter } from "vue-router"
+import AddToDeckModal from "@/components/studio/AddToDeckModal.vue"
+import { useAuth } from "@/composables/useAuth"
+import type {
+  HeteronymItem,
+  SenseDetail,
+  WordDetail,
+} from "@bindings/palabrario/pkg/models/index.js"
 
 export interface HeteronymGroup {
   label: string
@@ -23,6 +29,22 @@ const props = withDefaults(
   },
 )
 
+const route = useRoute()
+const router = useRouter()
+const { isAuthenticated } = useAuth()
+
+const selectedSense = ref<SenseDetail | null>(null)
+const isAddModalOpen = ref(false)
+
+function handleAddToStudio(sense: SenseDetail) {
+  if (!isAuthenticated.value) {
+    void router.push({ name: "sign-in", query: { redirect: route.fullPath } })
+    return
+  }
+  selectedSense.value = sense
+  isAddModalOpen.value = true
+}
+
 const groups = computed<HeteronymGroup[]>(() => {
   if (props.heteronymGroups && props.heteronymGroups.length > 0) {
     return props.heteronymGroups
@@ -36,9 +58,9 @@ const groups = computed<HeteronymGroup[]>(() => {
   return [{ label: "Regional variants", items: props.word.heteronyms }]
 })
 
-function formatFrequency(frequency: string, regionCode?: string): string {
+function formatFrequency(frequency: string, regionName?: string): string {
   if (frequency === "EVERYDAY") {
-    return regionCode === "CL" ? "Daily, family use" : "Daily colloquial use"
+    return regionName === "Chile" ? "Daily, family use" : "Daily colloquial use"
   }
   if (frequency === "COMMON") return "Common usage"
   if (frequency === "SLANG") return "Colloquial slang"
@@ -101,7 +123,7 @@ function formatFrequency(frequency: string, regionCode?: string): string {
 
         <!-- Register / Frequency -->
         <div class="mb-6 text-xs text-dull">
-          {{ formatFrequency(sense.usage_frequency, sense.region_code) }}
+          {{ formatFrequency(sense.usage_frequency, sense.region_name) }}
         </div>
 
         <!-- Detailed Definition & Cultural Note -->
@@ -120,8 +142,14 @@ function formatFrequency(frequency: string, regionCode?: string): string {
         </div>
 
         <div class="flex items-center gap-3">
-          <button class="button-main button--small">Add to Studio</button>
-          <button class="button-side button--small">Report Sense</button>
+          <button
+            type="button"
+            class="button-main button--small cursor-pointer"
+            @click="handleAddToStudio(sense)"
+          >
+            Add to Studio
+          </button>
+          <button type="button" class="button-side button--small">Report Sense</button>
         </div>
       </article>
     </div>
@@ -171,5 +199,11 @@ function formatFrequency(frequency: string, regionCode?: string): string {
         <span>→</span>
       </RouterLink>
     </div>
+
+    <AddToDeckModal
+      v-model:open="isAddModalOpen"
+      :sense="selectedSense"
+      :lemma="word.lemma"
+    />
   </div>
 </template>

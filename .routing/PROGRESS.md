@@ -47,13 +47,13 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 - [x] `.tickets/037-build-studio-deck-workspace/` (`completed`): registered `/studio/decks/:id` (`Home / Studio / <Deck Title>`), built `StudioDeckDetailView.vue`, `DeckFormDialog.vue`, `AddSenseToDeckDialog.vue`, reusable `DeleteConfirmDialog.vue`, `New Deck` trigger in `StudioView.vue` (+ `button-side--light` fix), `RN03`/`RN04`/`RN05` enforcement, and Arena `8+` card readiness CTA; passed `wails3 task check` (`0`).
 - [x] `.tickets/038-build-studio-collection-workspace/` (`completed`): registered `/studio/collections/:id` (`Home / Studio / <Collection Title>`), built `StudioCollectionDetailView.vue`, `CollectionFormDialog.vue`, `CollectionDeckPickerDialog.vue`, parameterized `CollectionDeckItem.vue`, `New Collection` trigger in `StudioView.vue`, ordered `deck_ids` persistence with hydrated re-fetch, and `RN03`/`RN04`/`RN05` enforcement; passed `wails3 task check` (`0`).
 - [x] `.tickets/043-build-public-deck-detail-route/` (`completed`): registered public `/decks/:id` (`Home / Decks / <Deck Title>`), built `DeckDetailView.vue` with guest-safe `getDeck`, authenticated `listStudioDecks` hydration, `Save to Studio` sign-in redirect for guests, `"Open in Studio →"` for owners/`ADMIN`, and `"Play in Arena →"` for `8+` card decks; passed `wails3 task check` (`0`).
+- [x] `.tickets/041-wire-public-to-studio-flows/` (`completed`): created `AddToDeckModal.vue` (`WordOfTheDayCard.vue`), wired live save hydration & `/decks/:id` links across `DecksView.vue`, `FeaturedDeckCard.vue`, `DeckGridItem.vue`, `CollectionDetailView.vue`, `CollectionAdminBar.vue`, and `ProfileLibrarySection.vue` (leaving `"Study ..."` labels untouched until `039`), updated `CreateMatchDialog.vue` with auth-safe Studio+public decks (+ user `CollectionGridItem.vue` alignment); passed `wails3 task check` (`0`).
 
 ## In progress
 - None.
 
 ## Draft tickets
 - [ ] `.tickets/019-build-arena-history-route/` (`draft`): expand `IArenaAPI` and build dedicated `/arena/history` route and 3NF round-by-round replay modal (`MatchReplayDialog.vue`) backed by `api.arena`.
-- [ ] `.tickets/041-wire-public-to-studio-flows/` (`draft`): wire `"Add to Studio"` in `WordOfTheDayCard`, public `/decks` & `/collections/:id` & `/u/:username` links to `/decks/:id` (keeping `"Study ..."` labels untouched until `039`), and `CreateMatchDialog` Studio deck selection.
 - [ ] `.tickets/042-verify-and-review-studio-flows/` (`draft`): read-only Reviewer gate and `ui-ux-audit` pass for active Studio/Decks routes (`035`–`038`, `043`, `041`), including Vagrant DB-backed `core-service` tests.
 
 ## Deferred tickets (Spaced Repetition Redesign)
