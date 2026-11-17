@@ -43,12 +43,13 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 
 - [x] `.tickets/035-studio-contracts-bff-and-mock-parity/` (`completed`): hydrated `RegionNames` on `StudioService` write paths, fixed `app/app_studio.go` `ListMasteryItems` (`[]models.StudyCardItem`) decode + removed 15 unused aliases, added `app/app_studio_test.go` (`go test -race ./...` passing), expanded `IStudioAPI` + added `IMasteryAPI`, wired `WailsAdapter` (`404 -> null`, `403` preserved) + stateful SM-2 `MockAdapter` parity, updated `.routing/API.md`, and passed `wails3 task check` (`0`). *(DB-backed `TestStudioService_DynamicRegionDetection` queued for Vagrant `postgres-test` `:5433` run in `042`.)*
 
+- [x] `.tickets/036-build-studio-hub-route/` (`completed`): replaced `/studio` placeholder with spacious Swiss-broadsheet Decks & Collections Hub (`All`/`Owned`/`Saved` filters on both, reused parameterized `DeckGridItem.vue` & `CollectionGridItem.vue`, `Home / Studio` breadcrumb, quiet typographic metadata + user-refined `StudioView.vue` / `DeckGridItem.vue`), and passed `wails3 task check` (`0`).
+
 ## In progress
 - None.
 
 ## Draft tickets
 - [ ] `.tickets/019-build-arena-history-route/` (`draft`): expand `IArenaAPI` and build dedicated `/arena/history` route and 3NF round-by-round replay modal (`MatchReplayDialog.vue`) backed by `api.arena`.
-- [ ] `.tickets/036-build-studio-hub-route/` (`draft`): replace `/studio` placeholder with focused Decks & Collections Hub (`All`/`Owned`/`Saved` filters on both, reusing `DeckGridItem` & `CollectionGridItem`, `Home / Studio` breadcrumb, inline UnoCSS classes).
 - [ ] `.tickets/037-build-studio-deck-workspace/` (`draft`): build `/studio/decks/:id` workspace (`Home / Studio / <Deck Title>` breadcrumb), `DeckFormDialog`, `AddSenseToDeckDialog`, `DeleteConfirmDialog`, `New Deck` trigger, and `"Play in Arena →"` link for `8+` card decks (`RN03`/`RN04`/`RN05`).
 - [ ] `.tickets/038-build-studio-collection-workspace/` (`draft`): build `/studio/collections/:id` workspace (`Home / Studio / <Collection Title>` breadcrumb, reusing `CollectionDeckItem.vue`), `CollectionFormDialog` (metadata only), `New Collection` trigger, and `CollectionDeckPickerDialog` with `deck_ids` ordering and `RN03`/`RN05`.
 - [ ] `.tickets/043-build-public-deck-detail-route/` (`draft`): build missing public `/decks/:id` detail route (`Home / Decks / <Deck Title>` breadcrumb, `Save to Studio`, `/studio/decks/:id` owner link, `/arena` link for `8+` cards).

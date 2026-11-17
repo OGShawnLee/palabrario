@@ -92,7 +92,10 @@ const router = createRouter({
           path: "studio",
           name: "studio",
           component: () => import("@/views/StudioView.vue"),
-          meta: { requiresAuth: true },
+          meta: {
+            requiresAuth: true,
+            breadcrumb: [{ label: "Home", to: "/" }, { label: "Studio" }],
+          },
         },
         {
           path: "settings",
