@@ -41,13 +41,26 @@ Work tracker for the minibrario rework. Decisions already made are in `DESIGN.md
 
 - [x] `.tickets/024-backend-dynamic-region-detection/` (`completed`): added PostgreSQL/`sqlc` top 1–3 `region_names` aggregation across all 7 Deck/Collection queries, hydrated non-nil `RegionNames []string` in `pkg/models/studio.go`, `studio_service.go`, and `app/app_studio.go`, updated `decks.fixture.ts` & `studio_service.md`, regenerated Wails TS bindings (`wails3 task check` exit `0`), and verified `TestStudioService_DynamicRegionDetection` + `core-service` `-race` tests.
 
+- [x] `.tickets/035-studio-contracts-bff-and-mock-parity/` (`completed`): hydrated `RegionNames` on `StudioService` write paths, fixed `app/app_studio.go` `ListMasteryItems` (`[]models.StudyCardItem`) decode + removed 15 unused aliases, added `app/app_studio_test.go` (`go test -race ./...` passing), expanded `IStudioAPI` + added `IMasteryAPI`, wired `WailsAdapter` (`404 -> null`, `403` preserved) + stateful SM-2 `MockAdapter` parity, updated `.routing/API.md`, and passed `wails3 task check` (`0`). *(DB-backed `TestStudioService_DynamicRegionDetection` queued for Vagrant `postgres-test` `:5433` run in `042`.)*
+
 ## In progress
 - None.
 
 ## Draft tickets
 - [ ] `.tickets/019-build-arena-history-route/` (`draft`): expand `IArenaAPI` and build dedicated `/arena/history` route and 3NF round-by-round replay modal (`MatchReplayDialog.vue`) backed by `api.arena`.
+- [ ] `.tickets/036-build-studio-hub-route/` (`draft`): replace `/studio` placeholder with focused Decks & Collections Hub (`All`/`Owned`/`Saved` filters on both, reusing `DeckGridItem` & `CollectionGridItem`, `Home / Studio` breadcrumb, inline UnoCSS classes).
+- [ ] `.tickets/037-build-studio-deck-workspace/` (`draft`): build `/studio/decks/:id` workspace (`Home / Studio / <Deck Title>` breadcrumb), `DeckFormDialog`, `AddSenseToDeckDialog`, `DeleteConfirmDialog`, `New Deck` trigger, and `"Play in Arena →"` link for `8+` card decks (`RN03`/`RN04`/`RN05`).
+- [ ] `.tickets/038-build-studio-collection-workspace/` (`draft`): build `/studio/collections/:id` workspace (`Home / Studio / <Collection Title>` breadcrumb, reusing `CollectionDeckItem.vue`), `CollectionFormDialog` (metadata only), `New Collection` trigger, and `CollectionDeckPickerDialog` with `deck_ids` ordering and `RN03`/`RN05`.
+- [ ] `.tickets/043-build-public-deck-detail-route/` (`draft`): build missing public `/decks/:id` detail route (`Home / Decks / <Deck Title>` breadcrumb, `Save to Studio`, `/studio/decks/:id` owner link, `/arena` link for `8+` cards).
+- [ ] `.tickets/041-wire-public-to-studio-flows/` (`draft`): wire `"Add to Studio"` in `WordOfTheDayCard`, public `/decks` & `/collections/:id` & `/u/:username` links to `/decks/:id` (keeping `"Study ..."` labels untouched until `039`), and `CreateMatchDialog` Studio deck selection.
+- [ ] `.tickets/042-verify-and-review-studio-flows/` (`draft`): read-only Reviewer gate and `ui-ux-audit` pass for active Studio/Decks routes (`035`–`038`, `043`, `041`), including Vagrant DB-backed `core-service` tests.
+
+## Deferred tickets (Spaced Repetition Redesign)
+- [ ] `.tickets/039-build-studio-study-session/` (`deferred`): interactive study session runner (`/studio/study`) deferred until SM-2 is replaced with a more engaging spaced-repetition mechanic.
+- [ ] `.tickets/040-build-studio-mastery-ledger/` (`deferred`): mastery stage table, XP ledger, and achievements view (`/studio/mastery`) deferred alongside `039`.
 
 ## Next steps
+- [ ] Run `task test:up` (Vagrant) and `go test -race ./internal/service/...` in `core-service/` to verify DB-backed `TestStudioService_DynamicRegionDetection` against `:5433`.
 - [ ] Optionally rebuild/sync `core-service` on the running Vagrant VM (`task rebuild:core`) if testing live desktop flows against it.
 - [ ] Continue the Arena route (`/arena/history` in `.tickets/019-build-arena-history-route/` or live WebSocket match room `ConnectArenaRoom`) or build `/studio` / `/settings`.
 - [ ] Surface `region_names` metadata badges in Collection/Deck UI cards once desired.

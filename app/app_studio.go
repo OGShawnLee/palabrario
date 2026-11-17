@@ -33,11 +33,6 @@ func normalizeCollectionRegions(c *models.Collection) {
 	}
 }
 
-// ExplorePublicCollections lista colecciones públicas con filtro de destacadas.
-func (a *App) ExplorePublicCollections(featured bool) ([]models.Collection, error) {
-	return a.ListCollections(featured)
-}
-
 // ListCollections lista colecciones temáticas públicas.
 func (a *App) ListCollections(featured bool) ([]models.Collection, error) {
 	targetURL := a.coreURL + "/api/v1/collections"
@@ -80,11 +75,6 @@ func (a *App) SearchCollections(q string, limit int) ([]models.CollectionSearchR
 	return list, nil
 }
 
-// GetCollectionDetail obtiene la ficha detallada de una colección.
-func (a *App) GetCollectionDetail(id int) (*models.Collection, error) {
-	return a.GetCollection(id)
-}
-
 // GetCollection obtiene colección por id.
 func (a *App) GetCollection(id int) (*models.Collection, error) {
 	var col models.Collection
@@ -94,11 +84,6 @@ func (a *App) GetCollection(id int) (*models.Collection, error) {
 	}
 	normalizeCollectionRegions(&col)
 	return &col, nil
-}
-
-// ExplorePublicDecks busca y lista barajas públicas.
-func (a *App) ExplorePublicDecks(q string, officialOnly bool) ([]models.Deck, error) {
-	return a.ListDecks(q, officialOnly)
 }
 
 // ListDecks busca barajas públicas.
@@ -150,11 +135,6 @@ func (a *App) SearchDecks(q string, limit int) ([]models.DeckSearchResult, error
 	return list, nil
 }
 
-// GetDeckDetail obtiene el detalle y tarjetas de una baraja.
-func (a *App) GetDeckDetail(id int) (*models.Deck, error) {
-	return a.GetDeck(id)
-}
-
 // GetDeck obtiene baraja por id.
 func (a *App) GetDeck(id int) (*models.Deck, error) {
 	var deck models.Deck
@@ -164,11 +144,6 @@ func (a *App) GetDeck(id int) (*models.Deck, error) {
 	}
 	normalizeDeckRegions(&deck)
 	return &deck, nil
-}
-
-// ClonePublicDeck guarda una baraja comunitaria en el Studio personal.
-func (a *App) ClonePublicDeck(deckId int) error {
-	return a.SaveDeck(deckId)
 }
 
 // SaveDeck guarda baraja en Studio.
@@ -181,11 +156,6 @@ func (a *App) SaveDeck(deckId int) error {
 func (a *App) UnsaveDeck(deckId int) error {
 	targetURL := a.coreURL + "/api/v1/decks/" + strconv.Itoa(deckId) + "/save"
 	return a.doRequest(a.context(), http.MethodDelete, targetURL, nil, nil)
-}
-
-// ListMyDecks lista las barajas del Studio del usuario logueado.
-func (a *App) ListMyDecks() ([]models.StudioDeckSummary, error) {
-	return a.ListStudioDecks()
 }
 
 // ListStudioDecks lista barajas del Studio.
@@ -229,11 +199,6 @@ func (a *App) DeleteDeck(id int) error {
 	return a.doRequest(a.context(), http.MethodDelete, a.coreURL+"/api/v1/decks/"+strconv.Itoa(id), nil, nil)
 }
 
-// AddSenseToDeck vincula un sentido léxico a una baraja.
-func (a *App) AddSenseToDeck(deckId int, req models.AddDeckItemRequest) (*models.DeckItem, error) {
-	return a.AddDeckItem(deckId, req)
-}
-
 // AddDeckItem añade tarjeta a baraja.
 func (a *App) AddDeckItem(deckId int, req models.AddDeckItemRequest) (*models.DeckItem, error) {
 	var item models.DeckItem
@@ -244,20 +209,10 @@ func (a *App) AddDeckItem(deckId int, req models.AddDeckItemRequest) (*models.De
 	return &item, nil
 }
 
-// RemoveSenseFromDeck retira un sentido de una baraja.
-func (a *App) RemoveSenseFromDeck(deckId int, senseId int) error {
-	return a.RemoveDeckItem(deckId, senseId)
-}
-
 // RemoveDeckItem retira tarjeta de baraja.
 func (a *App) RemoveDeckItem(deckId int, senseId int) error {
 	targetURL := a.coreURL + "/api/v1/decks/" + strconv.Itoa(deckId) + "/items/" + strconv.Itoa(senseId)
 	return a.doRequest(a.context(), http.MethodDelete, targetURL, nil, nil)
-}
-
-// ListMyCollections lista las colecciones temáticas propias del usuario.
-func (a *App) ListMyCollections() ([]models.Collection, error) {
-	return a.ListStudioCollections()
 }
 
 // ListStudioCollections lista colecciones del Studio.
@@ -366,11 +321,6 @@ func (a *App) RemoveDeckFromCollection(collectionID int, deckID int) (*models.Co
 	})
 }
 
-// GetStudySessionQueue genera una sesión de repaso SM-2.
-func (a *App) GetStudySessionQueue(deckId int, limit int) (*models.StudySessionPayload, error) {
-	return a.GetStudySession(deckId, limit)
-}
-
 // GetStudySession obtiene tarjetas programadas para repaso hoy.
 func (a *App) GetStudySession(deckId int, limit int) (*models.StudySessionPayload, error) {
 	params := url.Values{}
@@ -391,11 +341,6 @@ func (a *App) GetStudySession(deckId int, limit int) (*models.StudySessionPayloa
 	return &payload, nil
 }
 
-// SubmitCardReview procesa la calificación de repaso aplicando el algoritmo SM-2.
-func (a *App) SubmitCardReview(req models.SubmitReviewRequest) (*models.CardReviewResult, error) {
-	return a.SubmitReview(req)
-}
-
 // SubmitReview califica una tarjeta y actualiza la maestría.
 func (a *App) SubmitReview(req models.SubmitReviewRequest) (*models.CardReviewResult, error) {
 	var res models.CardReviewResult
@@ -403,16 +348,6 @@ func (a *App) SubmitReview(req models.SubmitReviewRequest) (*models.CardReviewRe
 		return nil, err
 	}
 	return &res, nil
-}
-
-// SubmitStudyReview alias para calificación de tarjeta.
-func (a *App) SubmitStudyReview(req models.SubmitReviewRequest) (*models.CardReviewResult, error) {
-	return a.SubmitReview(req)
-}
-
-// GetMasterySummary obtiene el resumen integral de maestría, racha y logros.
-func (a *App) GetMasterySummary() (*models.MasteryDashboard, error) {
-	return a.GetMasteryDashboard()
 }
 
 // GetMasteryDashboard obtiene métricas y estado del tablero de maestría.
@@ -425,24 +360,19 @@ func (a *App) GetMasteryDashboard() (*models.MasteryDashboard, error) {
 }
 
 // ListMasteryItems lista tarjetas estudiadas con filtro opcional de etapa SM-2.
-func (a *App) ListMasteryItems(stage string) ([]models.UserMastery, error) {
+func (a *App) ListMasteryItems(stage string) ([]models.StudyCardItem, error) {
 	targetURL := a.coreURL + "/api/v1/studio/mastery/items"
 	if stage != "" {
 		targetURL += "?stage=" + url.QueryEscape(stage)
 	}
-	var list []models.UserMastery
+	var list []models.StudyCardItem
 	if err := a.doRequest(a.context(), http.MethodGet, targetURL, nil, &list); err != nil {
 		return nil, err
 	}
 	if list == nil {
-		list = []models.UserMastery{}
+		list = []models.StudyCardItem{}
 	}
 	return list, nil
-}
-
-// GetMyXPTransactions lista transacciones recientes del libro mayor de XP.
-func (a *App) GetMyXPTransactions(limit int) ([]models.XPTransactionItem, error) {
-	return a.ListXPLedger(limit)
 }
 
 // ListXPLedger obtiene historial de XP.
@@ -459,16 +389,4 @@ func (a *App) ListXPLedger(limit int) ([]models.XPTransactionItem, error) {
 		list = []models.XPTransactionItem{}
 	}
 	return list, nil
-}
-
-// GetMyAchievements obtiene el catálogo de logros con estado de desbloqueo.
-func (a *App) GetMyAchievements() ([]models.AchievementStatus, error) {
-	dash, err := a.GetMasteryDashboard()
-	if err != nil {
-		return nil, err
-	}
-	if dash.Achievements == nil {
-		return []models.AchievementStatus{}, nil
-	}
-	return dash.Achievements, nil
 }

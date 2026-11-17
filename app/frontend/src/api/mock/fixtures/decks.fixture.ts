@@ -7,6 +7,15 @@ import {
 } from "@bindings/palabrario/pkg/models/index.js"
 import { mockWords } from "./words.fixture"
 
+const OWNER_IDS: Record<string, string> = {
+  camila_rojas: "00000000-0000-4000-8000-000000000001",
+  valentina_ospina: "00000000-0000-4000-8000-000000000002",
+  editora_andina: "00000000-0000-4000-8000-000000000004",
+  caribe_viva: "00000000-0000-4000-8000-000000000005",
+  paisa_parlante: "00000000-0000-4000-8000-000000000006",
+  palabrario: "00000000-0000-4000-8000-000000000099",
+}
+
 export const mockDecks: DeckSearchResult[] = [
   new DeckSearchResult({
     id_deck: 1,
@@ -14,7 +23,7 @@ export const mockDecks: DeckSearchResult[] = [
     description:
       "Las palabras y giros que necesitas para entender una charla de café en Buenos Aires o Montevideo: che, boludo, quilombo, mango y mucho más.",
     region_name: "Argentina",
-    owner_user_name: "palabrario",
+    owner_user_name: "valentina_ospina",
     item_count: 48,
     is_official: true,
   }),
@@ -63,10 +72,20 @@ export const mockDecks: DeckSearchResult[] = [
     title: "Español de México en el Mercado",
     description:
       "Frases y palabras que se oyen en un tianguis: marchanta, jitomate, ándale, regalado y otras expresiones de regateo.",
-    region_name: "Mexico",
-    owner_user_name: "palabrario",
+    region_name: "México",
+    owner_user_name: "valentina_ospina",
     item_count: 40,
     is_official: true,
+  }),
+  new DeckSearchResult({
+    id_deck: 7,
+    title: "Voces de Santiago y el Sur",
+    description:
+      "Selección personal de modismos chilenos y rioplatenses para mis repasos diarios.",
+    region_name: "Chile",
+    owner_user_name: "camila_rojas",
+    item_count: 4,
+    is_official: false,
   }),
 ]
 
@@ -76,7 +95,7 @@ export const mockCollections: CollectionSearchResult[] = [
     title: "Camino por el Cono Sur",
     description:
       "Un recorrido por el habla de Argentina, Chile y Uruguay: mate, cachai, che y otras claves para sentirse local.",
-    owner_user_name: "palabrario",
+    owner_user_name: "valentina_ospina",
     deck_count: 3,
     item_count: 140,
     is_official: true,
@@ -104,13 +123,18 @@ export const mockCollections: CollectionSearchResult[] = [
     is_official: false,
     is_featured: false,
   }),
+  new CollectionSearchResult({
+    id_collection: 4,
+    title: "Bitácora Andina y Chilena",
+    description:
+      "Ruta personal que reúne expresiones cotidianas de Chile, Colombia y el Cono Sur.",
+    owner_user_name: "camila_rojas",
+    deck_count: 2,
+    item_count: 34,
+    is_official: false,
+    is_featured: false,
+  }),
 ]
-
-const OWNER_IDS: Record<string, string> = {
-  palabrario: "00000000-0000-4000-8000-000000000099",
-  caribe_viva: "00000000-0000-4000-8000-000000000002",
-  editora_andina: "00000000-0000-4000-8000-000000000003",
-}
 
 const DECK_REGION_NAMES: Record<number, string[]> = {
   1: ["Argentina", "Uruguay"],
@@ -119,6 +143,30 @@ const DECK_REGION_NAMES: Record<number, string[]> = {
   4: ["Cuba", "Puerto Rico", "República Dominicana"],
   5: ["Colombia"],
   6: ["México"],
+  7: ["Chile", "Argentina"],
+  8: ["Colombia", "Cuba"],
+}
+
+/** Sense ids (from words.fixture) used as term previews, per deck id. */
+const DECK_SENSE_IDS: Record<number, number[]> = {
+  1: [211, 201, 221, 231],
+  2: [231, 241, 222],
+  3: [221, 232, 202],
+  4: [201, 211, 241],
+  5: [241, 222, 231],
+  6: [211, 221, 232, 201],
+  7: [202, 221, 232, 211],
+  8: [201, 231, 241],
+}
+
+function itemsOf(idDeck: number): DeckItem[] {
+  const senses = mockWords.flatMap((word) => word.senses)
+  return (DECK_SENSE_IDS[idDeck] ?? []).flatMap((idSense, index) => {
+    const sense = senses.find((candidate) => candidate.id_sense === idSense)
+    return sense
+      ? [new DeckItem({ id_deck: idDeck, id_sense: idSense, sort_order: index + 1, sense })]
+      : []
+  })
 }
 
 function deckOf(id: number, owner: string): Deck {
@@ -151,32 +199,30 @@ function aggregateCollectionRegions(decks: Deck[]): string[] {
     .map(([name]) => name)
 }
 
-/** Sense ids (from words.fixture) used as term previews, per deck id. */
-const DECK_SENSE_IDS: Record<number, number[]> = {
-  1: [211, 201, 221, 231],
-  2: [231, 241, 222],
-  3: [221, 232, 202],
-  4: [201, 211, 241],
-  5: [241, 222, 231],
-  6: [211, 221, 232, 201],
-}
-
-function itemsOf(idDeck: number): DeckItem[] {
-  const senses = mockWords.flatMap((word) => word.senses)
-  return (DECK_SENSE_IDS[idDeck] ?? []).flatMap((idSense, index) => {
-    const sense = senses.find((candidate) => candidate.id_sense === idSense)
-    return sense
-      ? [new DeckItem({ id_deck: idDeck, id_sense: idSense, sort_order: index, sense })]
-      : []
-  })
-}
-
-/** Public decks with populated items, for the decks catalog. */
-export const mockDeckDetails: Deck[] = mockDecks.map((source) => {
-  const deck = deckOf(source.id_deck, source.owner_user_name)
-  deck.items = itemsOf(source.id_deck)
-  return deck
+const camilaPrivateDeck = new Deck({
+  id_deck: 8,
+  id_user: OWNER_IDS.camila_rojas,
+  title: "Apuntes Privados de Colombia y Cuba",
+  description:
+    "Tarjetas en borrador para distinguir acepciones caribeñas y andinas antes de publicar.",
+  is_public: false,
+  is_official: false,
+  item_count: 3,
+  region_names: DECK_REGION_NAMES[8],
+  items: itemsOf(8),
+  created_at: "2026-02-18T14:20:00.000Z",
+  updated_at: "2026-03-09T11:00:00.000Z",
 })
+
+/** Catalog + private decks with populated items, for Studio and public exploration. */
+export const mockDeckDetails: Deck[] = [
+  ...mockDecks.map((source) => {
+    const deck = deckOf(source.id_deck, source.owner_user_name)
+    deck.items = itemsOf(source.id_deck)
+    return deck
+  }),
+  camilaPrivateDeck,
+]
 
 function collectionOf(
   params: Omit<Partial<Collection>, "region_names"> & { decks: Deck[] },
@@ -190,14 +236,14 @@ function collectionOf(
 export const mockCollectionDetails: Collection[] = [
   collectionOf({
     id_collection: 1,
-    id_user: OWNER_IDS.palabrario,
+    id_user: OWNER_IDS.valentina_ospina,
     title: "Camino por el Cono Sur",
     description:
       "Un recorrido por el habla de Argentina, Chile y Uruguay: mate, cachai, che y otras claves para sentirse local.",
     is_public: true,
     is_featured: true,
     is_official: true,
-    decks: [deckOf(1, "palabrario"), deckOf(3, "palabrario"), deckOf(2, "palabrario")],
+    decks: [deckOf(1, "valentina_ospina"), deckOf(3, "palabrario"), deckOf(2, "editora_andina")],
     created_at: "2026-01-20T10:00:00.000Z",
     updated_at: "2026-03-05T10:00:00.000Z",
   }),
@@ -210,7 +256,7 @@ export const mockCollectionDetails: Collection[] = [
     is_public: true,
     is_featured: false,
     is_official: false,
-    decks: [deckOf(4, "caribe_viva"), deckOf(5, "caribe_viva")],
+    decks: [deckOf(4, "caribe_viva"), deckOf(5, "paisa_parlante")],
     created_at: "2026-02-01T10:00:00.000Z",
     updated_at: "2026-03-08T10:00:00.000Z",
   }),
@@ -224,12 +270,34 @@ export const mockCollectionDetails: Collection[] = [
     is_featured: false,
     is_official: false,
     decks: [
-      deckOf(6, "editora_andina"),
+      deckOf(6, "valentina_ospina"),
       deckOf(2, "editora_andina"),
-      deckOf(5, "editora_andina"),
-      deckOf(4, "editora_andina"),
+      deckOf(5, "paisa_parlante"),
+      deckOf(4, "caribe_viva"),
     ],
     created_at: "2026-02-10T10:00:00.000Z",
     updated_at: "2026-03-10T10:00:00.000Z",
   }),
+  collectionOf({
+    id_collection: 4,
+    id_user: OWNER_IDS.camila_rojas,
+    title: "Bitácora Andina y Chilena",
+    description:
+      "Ruta personal que reúne expresiones cotidianas de Chile, Colombia y el Cono Sur.",
+    is_public: true,
+    is_featured: false,
+    is_official: false,
+    decks: [deckOf(7, "camila_rojas"), deckOf(5, "paisa_parlante")],
+    created_at: "2026-02-22T12:00:00.000Z",
+    updated_at: "2026-03-09T15:00:00.000Z",
+  }),
 ]
+
+export const mockInitialSavedDeckIdsByUser: Record<string, number[]> = {
+  [OWNER_IDS.camila_rojas]: [1],
+  [OWNER_IDS.valentina_ospina]: [3],
+}
+
+export const mockInitialSavedCollectionIdsByUser: Record<string, number[]> = {
+  [OWNER_IDS.camila_rojas]: [1],
+}

@@ -628,6 +628,7 @@ func TestStudioService_DynamicRegionDetection(t *testing.T) {
 
 	// 3. Populated multi-region deck (>3 regions) verifies count DESC, name ASC, LIMIT 3:
 	// Senses: 101(MX), 102(MX), 103(CU), 104(CL), 106(ES) => MX:2, CL:1, CU:1, ES:1 -> top 3: [México, Chile, Cuba]
+	expectedMulti := []string{"México", "Chile", "Cuba"}
 	multiDeck, err := studioSvc.CreateDeck(ctx, adminID, models.RoleAdmin, models.CreateDeckRequest{
 		Title:    "Baraja Multirregional",
 		IsPublic: true,
@@ -635,6 +636,20 @@ func TestStudioService_DynamicRegionDetection(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("CreateDeck multi failed: %v", err)
+	}
+	if !reflect.DeepEqual(multiDeck.RegionNames, expectedMulti) {
+		t.Errorf("expected CreateDeck RegionNames %v, got %#v", expectedMulti, multiDeck.RegionNames)
+	}
+
+	updatedMultiDeck, err := studioSvc.UpdateDeck(ctx, adminID, models.RoleAdmin, multiDeck.IDDeck, models.UpdateDeckRequest{
+		Title:    "Baraja Multirregional Editada",
+		IsPublic: true,
+	})
+	if err != nil {
+		t.Fatalf("UpdateDeck multi failed: %v", err)
+	}
+	if !reflect.DeepEqual(updatedMultiDeck.RegionNames, expectedMulti) {
+		t.Errorf("expected UpdateDeck RegionNames %v, got %#v", expectedMulti, updatedMultiDeck.RegionNames)
 	}
 
 	// Secondary deck: 104(CL), 106(ES) => [Chile, España]
@@ -646,8 +661,10 @@ func TestStudioService_DynamicRegionDetection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateDeck secondary failed: %v", err)
 	}
+	if !reflect.DeepEqual(secondaryDeck.RegionNames, []string{"Chile", "España"}) {
+		t.Errorf("expected CreateDeck secondary RegionNames [Chile España], got %#v", secondaryDeck.RegionNames)
+	}
 
-	expectedMulti := []string{"México", "Chile", "Cuba"}
 	multiDetail, err := studioSvc.GetDeckDetail(ctx, &adminID, utils.ToPtr(models.RoleAdmin), multiDeck.IDDeck)
 	if err != nil {
 		t.Fatalf("GetDeckDetail multi failed: %v", err)
@@ -722,6 +739,7 @@ func TestStudioService_DynamicRegionDetection(t *testing.T) {
 
 	// 5. Populated collection aggregating multiDeck (MX:2, CL:1, CU:1, ES:1) + secondaryDeck (CL:1, ES:1)
 	// Aggregated counts: Chile:2, España:2, México:2, Cuba:1 -> alphabetical tiebreak LIMIT 3: [Chile, España, México]
+	expectedColRegions := []string{"Chile", "España", "México"}
 	popCol, err := studioSvc.CreateCollection(ctx, adminID, models.RoleAdmin, models.CreateCollectionRequest{
 		Title:      "Ruta Dialectal Variada",
 		IsPublic:   true,
@@ -731,8 +749,22 @@ func TestStudioService_DynamicRegionDetection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateCollection populated failed: %v", err)
 	}
+	if !reflect.DeepEqual(popCol.RegionNames, expectedColRegions) {
+		t.Errorf("CreateCollection RegionNames = %#v, want %v", popCol.RegionNames, expectedColRegions)
+	}
 
-	expectedColRegions := []string{"Chile", "España", "México"}
+	updatedPopCol, err := studioSvc.UpdateCollection(ctx, adminID, models.RoleAdmin, popCol.IDCollection, models.UpdateCollectionRequest{
+		Title:      "Ruta Dialectal Variada Editada",
+		IsPublic:   true,
+		IsOfficial: true,
+	})
+	if err != nil {
+		t.Fatalf("UpdateCollection populated failed: %v", err)
+	}
+	if !reflect.DeepEqual(updatedPopCol.RegionNames, expectedColRegions) {
+		t.Errorf("UpdateCollection RegionNames = %#v, want %v", updatedPopCol.RegionNames, expectedColRegions)
+	}
+
 	colDetail, err := studioSvc.GetCollectionDetail(ctx, &adminID, utils.ToPtr(models.RoleAdmin), popCol.IDCollection)
 	if err != nil {
 		t.Fatalf("GetCollectionDetail populated failed: %v", err)

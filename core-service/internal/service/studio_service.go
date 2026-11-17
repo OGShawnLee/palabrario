@@ -257,6 +257,8 @@ func (s *studioService) CreateDeck(ctx context.Context, userID string, userRole 
 	}
 
 	// Insertar tarjetas iniciales si fueron enviadas
+	regionNames := []string{}
+	itemCount := 0
 	if len(req.SenseIDs) > 0 {
 		for idx, senseID := range req.SenseIDs {
 			_, _ = s.queries.AddDeckItem(ctx, db.AddDeckItemParams{
@@ -265,6 +267,12 @@ func (s *studioService) CreateDeck(ctx context.Context, userID string, userRole 
 				SortOrder: int32(idx + 1),
 			})
 		}
+		refreshed, err := s.queries.GetDeckByID(ctx, created.IDDeck)
+		if err != nil {
+			return nil, fmt.Errorf("error al obtener baraja creada: %w", err)
+		}
+		regionNames = nonNilStrings(refreshed.RegionNames)
+		itemCount = int(refreshed.ItemCount)
 	}
 
 	return &models.Deck{
@@ -274,8 +282,8 @@ func (s *studioService) CreateDeck(ctx context.Context, userID string, userRole 
 		Description: TextToPtr(created.Description),
 		IsPublic:    created.IsPublic,
 		IsOfficial:  created.IsOfficial,
-		ItemCount:   len(req.SenseIDs),
-		RegionNames: []string{},
+		ItemCount:   itemCount,
+		RegionNames: regionNames,
 		CreatedAt:   created.CreatedAt.Time,
 		UpdatedAt:   created.UpdatedAt.Time,
 	}, nil
@@ -318,6 +326,11 @@ func (s *studioService) UpdateDeck(ctx context.Context, userID string, userRole 
 		return nil, fmt.Errorf("error al actualizar baraja: %w", err)
 	}
 
+	refreshed, err := s.queries.GetDeckByID(ctx, int32(deckID))
+	if err != nil {
+		return nil, MapDBError(err, "Baraja no encontrada")
+	}
+
 	return &models.Deck{
 		IDDeck:      int(updated.IDDeck),
 		IDUser:      updated.IDUser.String(),
@@ -325,8 +338,8 @@ func (s *studioService) UpdateDeck(ctx context.Context, userID string, userRole 
 		Description: TextToPtr(updated.Description),
 		IsPublic:    updated.IsPublic,
 		IsOfficial:  updated.IsOfficial,
-		ItemCount:   int(deckRow.ItemCount),
-		RegionNames: []string{},
+		ItemCount:   int(refreshed.ItemCount),
+		RegionNames: nonNilStrings(refreshed.RegionNames),
 		CreatedAt:   updated.CreatedAt.Time,
 		UpdatedAt:   updated.UpdatedAt.Time,
 	}, nil
@@ -605,6 +618,7 @@ func (s *studioService) CreateCollection(ctx context.Context, userID string, use
 	}
 
 	// Vincular barajas
+	regionNames := []string{}
 	if len(req.DeckIDs) > 0 {
 		for idx, deckID := range req.DeckIDs {
 			_ = s.queries.AddCollectionDeck(ctx, db.AddCollectionDeckParams{
@@ -613,6 +627,11 @@ func (s *studioService) CreateCollection(ctx context.Context, userID string, use
 				SortOrder:    int32(idx + 1),
 			})
 		}
+		refreshed, err := s.queries.GetCollectionByID(ctx, created.IDCollection)
+		if err != nil {
+			return nil, fmt.Errorf("error al obtener colección creada: %w", err)
+		}
+		regionNames = nonNilStrings(refreshed.RegionNames)
 	}
 
 	return &models.Collection{
@@ -623,7 +642,7 @@ func (s *studioService) CreateCollection(ctx context.Context, userID string, use
 		IsPublic:     created.IsPublic,
 		IsFeatured:   created.IsFeatured,
 		IsOfficial:   created.IsOfficial,
-		RegionNames:  []string{},
+		RegionNames:  regionNames,
 		CreatedAt:    created.CreatedAt.Time,
 		UpdatedAt:    created.UpdatedAt.Time,
 	}, nil
@@ -680,6 +699,11 @@ func (s *studioService) UpdateCollection(ctx context.Context, userID string, use
 		}
 	}
 
+	refreshed, err := s.queries.GetCollectionByID(ctx, int32(collectionID))
+	if err != nil {
+		return nil, MapDBError(err, "Colección no encontrada")
+	}
+
 	return &models.Collection{
 		IDCollection: int(updated.IDCollection),
 		IDUser:       updated.IDUser.String(),
@@ -688,7 +712,7 @@ func (s *studioService) UpdateCollection(ctx context.Context, userID string, use
 		IsPublic:     updated.IsPublic,
 		IsFeatured:   updated.IsFeatured,
 		IsOfficial:   updated.IsOfficial,
-		RegionNames:  []string{},
+		RegionNames:  nonNilStrings(refreshed.RegionNames),
 		CreatedAt:    updated.CreatedAt.Time,
 		UpdatedAt:    updated.UpdatedAt.Time,
 	}, nil

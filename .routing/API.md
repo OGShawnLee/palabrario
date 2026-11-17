@@ -12,7 +12,7 @@ In the legacy implementation (`local-app/frontend/src/api/`), the frontend was t
 The rebuilt architecture in `app/frontend/src/api/` introduces a **Pluggable Static Adapter Pattern**:
 1. **Instant Offline Exploration:** The entire application can run and be fully explored offline using rich, realistic in-memory Spanish mock fixtures without running Vagrant, Docker, or PostgreSQL.
 2. **Compile-Time Go Backend Synchronization:** Strong TypeScript interfaces that automatically enforce zero drift against Go backend models.
-3. **Domain Segregation:** Granular, domain-scoped API clients (`api.auth`, `api.dictionary`, `api.studio`, `api.arena`) rather than an 800-line god-object.
+3. **Domain Segregation:** Granular, domain-scoped API clients (`api.auth`, `api.dictionary`, `api.studio`, `api.mastery`, `api.arena`) rather than an 800-line god-object.
 
 ---
 
@@ -25,24 +25,27 @@ app/frontend/src/api/
 │   ├── auth.contract.ts            # IAuthAPI
 │   ├── dictionary.contract.ts      # IDictionaryAPI
 │   ├── studio.contract.ts          # IStudioAPI
-│   ├── arena.contract.ts           # IArenaAPI & IArenaStream
-│   └── ...
+│   ├── mastery.contract.ts         # IMasteryAPI
+│   └── arena.contract.ts           # IArenaAPI & IArenaStream
 │
 ├── mock/                           # Offline Static Mock Adapter & Fixtures
-│   ├── mock.adapter.ts             # Implements IPalabrarioAPI with in-memory persistence
+│   ├── mock.adapter.ts             # Implements IPalabrarioAPI with localStorage + SM-2 parity
 │   ├── mock.arena-socket.ts        # Simulated arena WebSocket with bot participants
 │   └── fixtures/                   # Authentic, realistic Spanish linguistic data
 │       ├── words.fixture.ts        # WordDetail fixtures (Guagua exemplar, common lemmas)
 │       ├── regions.fixture.ts      # Hispanophone regions metadata
-│       ├── decks.fixture.ts        # Studio decks and curated collections
-│       └── user.fixture.ts         # User profiles (Learner, Editor, Admin)
+│       ├── decks.fixture.ts        # Studio decks, private/owned items, curated collections
+│       ├── mastery.fixture.ts      # StudyCardItem catalog, UserMastery stages & XP ledger
+│       ├── arena.fixture.ts        # Waiting arena match rooms
+│       └── user.fixture.ts         # User profiles (Learner, Editor, Admin) & achievements
 │
 ├── live/                           # Live Backend Implementations
 │   ├── wails/                      # Desktop Wails v3 IPC adapter
 │   │   ├── wails.adapter.ts        # Composes Wails domain services
 │   │   ├── auth.wails.ts
 │   │   ├── dictionary.wails.ts
-│   │   └── studio.wails.ts
+│   │   ├── studio.wails.ts
+│   │   └── mastery.wails.ts
 │   └── http/                       # Web SPA & Capacitor mobile HTTP adapter
 │       ├── http.client.ts          # Fetch client with token interceptors and error handling
 │       └── http.adapter.ts
@@ -200,3 +203,63 @@ export interface IAuthAPI {
 3. **`getPublicProfileByUsername`:** Returns `null` when the user does not exist or is inactive (`is_active = false`); throws on network/server failures so views can distinguish `404` from retryable errors.
 4. **`onSessionExpired`:** Subscribes to out-of-band session eviction events (in Wails, `"auth:expired"` emitted by `App` on unrecoverable `401` or `403 ACCOUNT_SUSPENDED`). `useAuth()` registers this listener once on initialization to clear `currentUser`, populate `sessionNotice`, and trigger a redirect to `/auth/sign-in` when on a `meta.requiresAuth` route.
 
+---
+
+## 7. Studio Contract (`IStudioAPI`)
+
+`api.studio` covers both public catalog discovery (`listCollections`, `listDecks`, `searchCollections`, `searchDecks`, `getCollection`, `getDeck`) and authenticated Studio workbench management (`listStudioCollections`, `listStudioDecks`, CRUD, item membership, and community bookmarking).
+
+```ts
+// app/frontend/src/api/contract/studio.contract.ts
+export interface IStudioAPI {
+  listCollections(featured?: boolean): Promise<Collection[]>
+  listStudioCollections(): Promise<Collection[]>
+  getCollection(id: number): Promise<Collection | null>
+  createCollection(req: CreateCollectionRequest): Promise<Collection>
+  updateCollection(id: number, req: UpdateCollectionRequest): Promise<Collection>
+  deleteCollection(id: number): Promise<void>
+  saveCollection(id: number): Promise<void>
+  unsaveCollection(id: number): Promise<void>
+  listDecks(q?: string, officialOnly?: boolean): Promise<Deck[]>
+  listStudioDecks(): Promise<StudioDeckSummary[]>
+  getDeck(id: number): Promise<Deck | null>
+  createDeck(req: CreateDeckRequest): Promise<Deck>
+  updateDeck(id: number, req: UpdateDeckRequest): Promise<Deck>
+  deleteDeck(id: number): Promise<void>
+  addDeckItem(deckId: number, req: AddDeckItemRequest): Promise<DeckItem>
+  removeDeckItem(deckId: number, senseId: number): Promise<void>
+  saveDeck(id: number): Promise<void>
+  unsaveDeck(id: number): Promise<void>
+  searchDecks(query: string, limit?: number): Promise<DeckSearchResult[]>
+  searchCollections(query: string, limit?: number): Promise<CollectionSearchResult[]>
+}
+```
+
+### Contract Guarantees
+1. **Authentication & Ownership (`RN03`):** All write operations, bookmarking (`save*`/`unsave*`), and `listStudio*` endpoints require an active session. Mutations (`update*`, `delete*`, `addDeckItem`, `removeDeckItem`) are permitted only for the resource owner (`id_user`) or `ADMIN`.
+2. **Private Visibility (`RN04`):** `getDeck(id)` and `getCollection(id)` return `null` when the resource does not exist (`404` / `"not found"` / `"no encontrada"`), and **throw** (`403` Forbidden) when a private resource belongs to another user (and the viewer is not `ADMIN`) so views can render distinct 404 vs. 403 states.
+3. **Official / Featured Curation (`RN05`):** Non-curators (`LEARNER`) cannot mark a deck or collection as `is_official` or `is_featured`; both Go `StudioService` and `MockStudioAPI` force those flags to `false` for learners.
+4. **Hydrated Regions:** `region_names` on `Deck` and `Collection` carry the top 3 full region names (by sense frequency, alphabetical tiebreak) on both read and write responses (or `[]` when empty), never raw dialect codes or `flag_emoji`.
+
+---
+
+## 8. Mastery & Study Session Contract (`IMasteryAPI`)
+
+`api.mastery` manages SM-2 spaced-repetition study sessions, card reviews, dashboard progress, mastery item filtering, and the user's XP ledger. All methods require authentication.
+
+```ts
+// app/frontend/src/api/contract/mastery.contract.ts
+export interface IMasteryAPI {
+  getStudySession(deckId?: number, limit?: number): Promise<StudySessionPayload>
+  submitReview(req: SubmitReviewRequest): Promise<CardReviewResult>
+  getMasteryDashboard(): Promise<MasteryDashboard>
+  listMasteryItems(stage?: MasteryStage): Promise<StudyCardItem[]>
+  listXPLedger(limit?: number): Promise<XPTransactionItem[]>
+}
+```
+
+### Contract Guarantees & Mock SM-2 Parity
+1. **Study Queue (`getStudySession`):** Passing `deckId` (or `0` / `undefined` for all Studio decks) returns up to `limit` (default `15`, max `50`) due or unstarted `StudyCardItem` entries alongside `total_due`. Accessing someone else's private deck throws `403` (`RN04`).
+2. **SM-2 Review Submission (`submitReview`):** Accepts `quality_rating` in `1..4` (mapped to SM-2 qualities `1, 3, 4, 5`). Rating `1` resets `consecutive_correct` to `0`, `current_interval_days` to `1`, awards `+5` XP, and reduces `easiness_factor` (floor `1.3`). Ratings `2..4` advance intervals (`1 -> 6 -> ceil(I * EF)`), transition stages (`LEARNING` -> `REVIEWING` -> `MASTERED`), and award `+15` XP (`2..3`) or `+20` XP (`4`).
+3. **Session & Profile Sync:** `submitReview` persists updated mastery, XP transactions, streaks, level (`floor(total_xp / 1000) + 1`), and unlocked achievements into the active mock session and account store so `api.auth.getMe()` and `api.auth.getPublicProfileByUsername()` immediately reflect earned XP and streaks.
+4. **Mastery Items (`listMasteryItems`):** Returns `StudyCardItem[]` (including nested `current_mastery` and `examples`), optionally filtered by `MasteryStage` (`"LEARNING"`, `"REVIEWING"`, `"MASTERED"`).
