@@ -14,6 +14,7 @@ Canonical inventory of active and planned routes in app/. Read this file only wh
 | `/collections` | `collections` | `views/CollectionsView.vue` | `app` | public | built | 010 |
 | `/collections/:id` | `collection-detail` | `views/CollectionDetailView.vue` | `app` | public | built | 021 |
 | `/decks` | `decks` | `views/DecksView.vue` | `app` | public | built | 011 |
+| `/decks/:id` | `deck-detail` | `views/DeckDetailView.vue` | `app` | public | built | 043 |
 | `/arena` | `arena` | `views/ArenaView.vue` | `app` | public | built | 017, 033 |
 | `/arena/history` | `arena-history` | `views/ArenaView.vue` | `app` | requireAuth | placeholder | 017, 033 (impl: 019) |
 | `/studio` | `studio` | `views/StudioView.vue` | `app` | requireAuth | built | 007, 033, 036, 037, 038 |

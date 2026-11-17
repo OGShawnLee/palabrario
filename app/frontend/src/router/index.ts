@@ -58,6 +58,18 @@ const router = createRouter({
           meta: { breadcrumb: [{ label: "Home", to: "/" }, { label: "Decks" }] },
         },
         {
+          path: "decks/:id",
+          name: "deck-detail",
+          component: () => import("@/views/DeckDetailView.vue"),
+          meta: {
+            breadcrumb: [
+              { label: "Home", to: "/" },
+              { label: "Decks", to: "/decks" },
+              { label: "Deck Detail" },
+            ],
+          },
+        },
+        {
           path: "arena",
           name: "arena",
           component: () => import("@/views/ArenaView.vue"),
