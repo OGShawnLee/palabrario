@@ -98,6 +98,19 @@ const router = createRouter({
           },
         },
         {
+          path: "studio/decks/:id",
+          name: "studio-deck-detail",
+          component: () => import("@/views/studio/StudioDeckDetailView.vue"),
+          meta: {
+            requiresAuth: true,
+            breadcrumb: [
+              { label: "Home", to: "/" },
+              { label: "Studio", to: "/studio" },
+              { label: "Deck" },
+            ],
+          },
+        },
+        {
           path: "settings",
           name: "settings",
           component: () => import("@/views/SettingsView.vue"),

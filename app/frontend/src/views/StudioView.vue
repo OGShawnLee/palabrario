@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
-import { RouterLink } from "vue-router"
+import { RouterLink, useRouter } from "vue-router"
+import { Plus } from "lucide-vue-next"
 import { api } from "@/api"
 import CollectionGridItem from "@/components/collections/CollectionGridItem.vue"
 import DeckGridItem from "@/components/decks/DeckGridItem.vue"
+import DeckFormDialog from "@/components/studio/DeckFormDialog.vue"
 import { useAuth } from "@/composables/useAuth"
-import type { Collection, StudioDeckSummary } from "@bindings/palabrario/pkg/models/index.js"
+import type { Collection, Deck, StudioDeckSummary } from "@bindings/palabrario/pkg/models/index.js"
 
 type OwnershipFilter = "all" | "owned" | "saved"
 
+const router = useRouter()
 const { currentUser } = useAuth()
 
 const decks = ref<StudioDeckSummary[]>([])
@@ -16,6 +19,7 @@ const collections = ref<Collection[]>([])
 const isLoading = ref(true)
 const loadError = ref<string | null>(null)
 const actionError = ref<string | null>(null)
+const isCreateDeckOpen = ref(false)
 
 const deckFilter = ref<OwnershipFilter>("all")
 const collectionFilter = ref<OwnershipFilter>("all")
@@ -170,6 +174,10 @@ async function handleUnsaveCollection(collectionId: number) {
     unsavingCollectionIds.value = next
   }
 }
+
+function handleDeckCreated(deck: Deck) {
+  void router.push(`/studio/decks/${deck.id_deck}`)
+}
 </script>
 
 <template>
@@ -226,20 +234,30 @@ async function handleUnsaveCollection(collectionId: number) {
             </h2>
           </div>
 
-          <div role="tablist" aria-label="Filter your decks" class="flex flex-wrap items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <div role="tablist" aria-label="Filter your decks" class="flex flex-wrap items-center gap-2">
+              <button
+                v-for="tab in deckTabs"
+                :key="tab.id"
+                type="button"
+                role="tab"
+                :aria-selected="deckFilter === tab.id"
+                :class="[
+                  'button--small cursor-pointer tabular-nums',
+                  deckFilter === tab.id ? 'button-main' : 'button-side--light',
+                ]"
+                @click="deckFilter = tab.id"
+              >
+                {{ tab.label }} ({{ tab.count }})
+              </button>
+            </div>
             <button
-              v-for="tab in deckTabs"
-              :key="tab.id"
               type="button"
-              role="tab"
-              :aria-selected="deckFilter === tab.id"
-              :class="[
-                'button--small cursor-pointer tabular-nums',
-                deckFilter === tab.id ? 'button-main' : 'button-side--light',
-              ]"
-              @click="deckFilter = tab.id"
+              class="button-main button--small inline-flex items-center gap-1.5 cursor-pointer"
+              @click="isCreateDeckOpen = true"
             >
-              {{ tab.label }} ({{ tab.count }})
+              <Plus class="size-4" />
+              <span>New Deck</span>
             </button>
           </div>
         </div>
@@ -269,7 +287,7 @@ async function handleUnsaveCollection(collectionId: number) {
             <template v-if="deck.is_saved_from_community" #actions>
               <button
                 type="button"
-                class="button-side-light button--small"
+                class="button-side--light button--small"
                 :disabled="Boolean(unsavingDeckIds[deck.id_deck])"
                 @click="handleUnsaveDeck(deck.id_deck)"
               >
@@ -343,5 +361,10 @@ async function handleUnsaveCollection(collectionId: number) {
         </div>
       </section>
     </template>
+
+    <DeckFormDialog
+      v-model:open="isCreateDeckOpen"
+      @saved="handleDeckCreated"
+    />
   </main>
 </template>
